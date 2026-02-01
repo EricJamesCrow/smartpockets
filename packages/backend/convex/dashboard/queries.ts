@@ -499,3 +499,102 @@ export const getSpendingBreakdown = query({
     };
   },
 });
+
+/**
+ * Get recent transactions for dashboard
+ */
+export const getRecentTransactions = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      transactionId: v.string(),
+      merchantName: v.string(),
+      amount: v.number(),
+      date: v.string(),
+      pending: v.boolean(),
+      categoryPrimary: v.optional(v.string()),
+      cardName: v.string(),
+      cardLastFour: v.optional(v.string()),
+    })
+  ),
+  async handler(ctx, { limit = 10 }) {
+    const viewer = ctx.viewerX();
+
+    // Get user's active Plaid items
+    const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
+      userId: viewer.externalId,
+    });
+    const activeItemIds = new Set(
+      userItems.filter((item) => item.isActive !== false).map((item) => item._id)
+    );
+
+    if (activeItemIds.size === 0) {
+      return [];
+    }
+
+    // Get credit cards for account -> card mapping
+    const allCards = await ctx
+      .table("creditCards", "by_user_active", (q) =>
+        q.eq("userId", viewer._id).eq("isActive", true)
+      )
+      .map((card) => card.doc());
+
+    const accountToCard = new Map(
+      allCards.map((card) => [
+        card.accountId,
+        { name: card.displayName, lastFour: card.lastFour },
+      ])
+    );
+
+    // Get transactions from all active items
+    type Transaction = {
+      transactionId: string;
+      merchantName: string;
+      amount: number;
+      date: string;
+      pending: boolean;
+      categoryPrimary?: string;
+      cardName: string;
+      cardLastFour?: string;
+    };
+
+    const allTransactions: Transaction[] = [];
+
+    for (const itemId of activeItemIds) {
+      const accounts = await ctx.runQuery(
+        components.plaid.public.getAccountsByItem,
+        { plaidItemId: itemId }
+      );
+
+      for (const acc of accounts) {
+        const cardInfo = accountToCard.get(acc.accountId);
+        if (!cardInfo) continue; // Skip non-credit card accounts
+
+        const txs = await ctx.runQuery(
+          components.plaid.public.getTransactionsByAccount,
+          { accountId: acc.accountId }
+        );
+
+        for (const tx of txs) {
+          allTransactions.push({
+            transactionId: tx.transactionId,
+            merchantName: tx.merchantName || tx.name,
+            amount: tx.amount,
+            date: tx.date,
+            pending: tx.pending,
+            categoryPrimary: tx.categoryPrimary,
+            cardName: cardInfo.name,
+            cardLastFour: cardInfo.lastFour,
+          });
+        }
+      }
+    }
+
+    // Sort by date descending and limit
+    return allTransactions
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, limit);
+  },
+});
