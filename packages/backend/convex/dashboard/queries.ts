@@ -305,3 +305,65 @@ export const getAlerts = query({
     return alerts;
   },
 });
+
+/**
+ * Get connected banks with nested accounts
+ */
+export const getConnectedBanks = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      itemId: v.string(),
+      institutionId: v.optional(v.string()),
+      institutionName: v.string(),
+      status: v.string(),
+      lastSyncedAt: v.optional(v.number()),
+      accounts: v.array(
+        v.object({
+          accountId: v.string(),
+          name: v.string(),
+          type: v.string(),
+          subtype: v.optional(v.string()),
+          balance: v.optional(v.number()),
+          mask: v.optional(v.string()),
+        })
+      ),
+    })
+  ),
+  async handler(ctx) {
+    const viewer = ctx.viewerX();
+
+    // Get all Plaid items
+    const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
+      userId: viewer.externalId,
+    });
+
+    const banks = await Promise.all(
+      userItems.map(async (item) => {
+        // Get accounts for this item
+        const accounts = await ctx.runQuery(
+          components.plaid.public.getAccountsByItem,
+          { plaidItemId: item._id }
+        );
+
+        return {
+          itemId: item._id,
+          institutionId: item.institutionId,
+          institutionName: item.institutionName || "Unknown Bank",
+          status: item.status,
+          lastSyncedAt: item.lastSyncedAt,
+          accounts: accounts.map((acc) => ({
+            accountId: acc.accountId,
+            name: acc.name,
+            type: acc.type,
+            subtype: acc.subtype,
+            balance: acc.balances?.current,
+            mask: acc.mask,
+          })),
+        };
+      })
+    );
+
+    return banks;
+  },
+});
