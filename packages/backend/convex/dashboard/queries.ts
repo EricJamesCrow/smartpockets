@@ -367,3 +367,135 @@ export const getConnectedBanks = query({
     return banks;
   },
 });
+
+/**
+ * Get spending breakdown by category for pie chart
+ */
+export const getSpendingBreakdown = query({
+  args: {
+    period: v.optional(v.union(v.literal("this_month"), v.literal("last_month"), v.literal("last_90_days"))),
+  },
+  returns: v.object({
+    totalSpending: v.number(),
+    previousPeriodTotal: v.optional(v.number()),
+    categories: v.array(
+      v.object({
+        category: v.string(),
+        amount: v.number(),
+        percentage: v.number(),
+        transactionCount: v.number(),
+      })
+    ),
+  }),
+  async handler(ctx, { period = "this_month" }) {
+    const viewer = ctx.viewerX();
+
+    // Calculate date range
+    const now = new Date();
+    let startDate: Date;
+    let endDate = now;
+    let previousStartDate: Date | undefined;
+    let previousEndDate: Date | undefined;
+
+    if (period === "this_month") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      previousStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      previousEndDate = new Date(now.getFullYear(), now.getMonth(), 0);
+    } else if (period === "last_month") {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+    } else {
+      // last_90_days
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    }
+
+    // Get user's active Plaid items
+    const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
+      userId: viewer.externalId,
+    });
+    const activeItemIds = new Set(
+      userItems.filter((item) => item.isActive !== false).map((item) => item._id)
+    );
+
+    if (activeItemIds.size === 0) {
+      return { totalSpending: 0, categories: [] };
+    }
+
+    // Get transactions for all active items
+    const allTransactions: Array<{
+      amount: number;
+      date: string;
+      categoryPrimary?: string;
+    }> = [];
+
+    for (const itemId of activeItemIds) {
+      const accounts = await ctx.runQuery(
+        components.plaid.public.getAccountsByItem,
+        { plaidItemId: itemId }
+      );
+
+      for (const acc of accounts) {
+        const txs = await ctx.runQuery(
+          components.plaid.public.getTransactionsByAccount,
+          { accountId: acc.accountId }
+        );
+        allTransactions.push(
+          ...txs.map((tx) => ({
+            amount: tx.amount,
+            date: tx.date,
+            categoryPrimary: tx.categoryPrimary,
+          }))
+        );
+      }
+    }
+
+    // Filter transactions by date range (spending = positive amounts in Plaid)
+    const periodTransactions = allTransactions.filter((tx) => {
+      const txDate = new Date(tx.date);
+      return txDate >= startDate && txDate <= endDate && tx.amount > 0;
+    });
+
+    // Calculate previous period total if applicable
+    let previousPeriodTotal: number | undefined;
+    if (previousStartDate && previousEndDate) {
+      previousPeriodTotal = allTransactions
+        .filter((tx) => {
+          const txDate = new Date(tx.date);
+          return txDate >= previousStartDate! && txDate <= previousEndDate! && tx.amount > 0;
+        })
+        .reduce((sum, tx) => sum + tx.amount, 0);
+    }
+
+    // Group by category
+    const categoryMap = new Map<string, { amount: number; count: number }>();
+    let totalSpending = 0;
+
+    for (const tx of periodTransactions) {
+      const category = tx.categoryPrimary || "OTHER";
+      const existing = categoryMap.get(category) || { amount: 0, count: 0 };
+      existing.amount += tx.amount;
+      existing.count++;
+      categoryMap.set(category, existing);
+      totalSpending += tx.amount;
+    }
+
+    // Convert to array and calculate percentages
+    const categories = Array.from(categoryMap.entries())
+      .map(([category, data]) => ({
+        category,
+        amount: Math.round(data.amount * 100) / 100,
+        percentage: totalSpending > 0 ? Math.round((data.amount / totalSpending) * 1000) / 10 : 0,
+        transactionCount: data.count,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 6); // Top 6, rest would be "Other"
+
+    return {
+      totalSpending: Math.round(totalSpending * 100) / 100,
+      previousPeriodTotal: previousPeriodTotal
+        ? Math.round(previousPeriodTotal * 100) / 100
+        : undefined,
+      categories,
+    };
+  },
+});
