@@ -1,0 +1,11 @@
+{
+  "extends": "@repo/typescript/react-library.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./emails/*"]
+    }
+  },
+  "include": ["emails"],
+  "exclude": ["node_modules"]
+}

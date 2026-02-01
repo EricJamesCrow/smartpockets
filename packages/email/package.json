@@ -1,0 +1,30 @@
+{
+  "name": "@repo/email",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules",
+    "dev": "email dev -p 3003",
+    "build": "email build",
+    "preview": "email start",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    "./templates/*": "./emails/*.tsx",
+    "./components/*": "./emails/_components/*.tsx",
+    "./config": "./emails/_config/email-config.ts"
+  },
+  "dependencies": {
+    "@react-email/components": "^0.4.0",
+    "@react-email/tailwind": "^1.2.2"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.9",
+    "react-email": "^3.0.6",
+    "typescript": "^5.9.2"
+  }
+}
