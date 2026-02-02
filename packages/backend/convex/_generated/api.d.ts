@@ -13,6 +13,8 @@ import type * as creditCards_mutations from "../creditCards/mutations.js";
 import type * as creditCards_queries from "../creditCards/queries.js";
 import type * as creditCards_validators from "../creditCards/validators.js";
 import type * as crons from "../crons.js";
+import type * as dashboard_index from "../dashboard/index.js";
+import type * as dashboard_queries from "../dashboard/queries.js";
 import type * as email_clerk from "../email/clerk.js";
 import type * as email_events from "../email/events.js";
 import type * as email_resend from "../email/resend.js";
@@ -53,6 +55,8 @@ declare const fullApi: ApiFromModules<{
   "creditCards/queries": typeof creditCards_queries;
   "creditCards/validators": typeof creditCards_validators;
   crons: typeof crons;
+  "dashboard/index": typeof dashboard_index;
+  "dashboard/queries": typeof dashboard_queries;
   "email/clerk": typeof email_clerk;
   "email/events": typeof email_events;
   "email/resend": typeof email_resend;
