@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "../functions";
 import { components } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 
 /**
  * Get hero metrics for dashboard: minimum due, total balance, utilization
@@ -159,7 +160,7 @@ export const getUpcomingPayments = query({
           daysUntilDue,
           isOverdue: card.isOverdue || daysUntilDue < 0,
           isPaid,
-          isAutoPay: card.isAutoPay,
+          isAutoPay: card.isAutoPay ?? false,
         };
       })
       // Sort by urgency: overdue first, then by days until due
@@ -204,7 +205,7 @@ export const getAlerts = query({
       severity: "critical" | "warning" | "info";
       title: string;
       description: string;
-      cardId?: typeof viewer._id extends never ? never : ReturnType<typeof ctx.table<"creditCards">>["_id"];
+      cardId?: Id<"creditCards">;
       plaidItemId?: string;
       actionLabel?: string;
       actionHref?: string;
