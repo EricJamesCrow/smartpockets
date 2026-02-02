@@ -7,7 +7,7 @@ import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Form } from "@repo/ui/untitledui/base/form/form";
 import { Input } from "@repo/ui/untitledui/base/input/input";
 import { FeaturedIcon } from "@repo/ui/untitledui/foundations/featured-icon/featured-icon";
-import { UntitledLogo } from "@repo/ui/untitledui/foundations/logo/untitledui-logo";
+import { SmartPocketsLogo } from "@repo/ui/untitledui/foundations/logo";
 import { Header } from "@/components/marketing/header-navigation/header";
 import { ChatCard } from "@repo/ui/untitledui/shared-assets/chat-card/chat-card";
 import { IPhoneMockup } from "@repo/ui/untitledui/shared-assets/iphone-mockup";
@@ -727,7 +727,7 @@ const FooterLarge08 = () => {
             <div className="mx-auto max-w-container px-4 md:px-8">
                 <div className="flex flex-col justify-between gap-x-8 gap-y-12 lg:flex-row">
                     <div className="flex flex-col gap-8 md:items-start">
-                        <UntitledLogo className="h-8 w-min shrink-0" />
+                        <SmartPocketsLogo size="md" />
                         <nav>
                             <ul className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-[repeat(6,max-content)]">
                                 {[
