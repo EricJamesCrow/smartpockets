@@ -75,6 +75,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@repo/typescript": "workspace:*",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/node": "^24.2.1",
     "@types/react": "^19.1.9",
