@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { SearchLg } from "@untitledui/icons";
 import { Input } from "../../../base/input/input";
-import { UntitledLogo } from "../../../foundations/logo/untitledui-logo";
+import { SmartPocketsLogoWithBadge } from "../../../foundations/logo";
 import { cx } from "../../../../../utils/cx";
 import { MobileNavigationHeader } from "../base-components/mobile-header";
 import { NavAccountCard } from "../base-components/nav-account-card";
@@ -62,7 +62,7 @@ export const SidebarSimpleDesktop = ({
             )}
         >
             <div className="flex flex-col gap-5 px-4 lg:px-5">
-                <UntitledLogo className="h-8" />
+                <SmartPocketsLogoWithBadge size="md" />
                 {onSearchClick ? (
                     <button
                         type="button"

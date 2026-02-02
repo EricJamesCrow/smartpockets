@@ -10,8 +10,7 @@ import { Avatar } from "../../../base/avatar/avatar";
 import { AvatarLabelGroup } from "../../../base/avatar/avatar-label-group";
 import { Button } from "../../../base/buttons/button";
 import { ButtonUtility } from "../../../base/buttons/button-utility";
-import { UntitledLogo } from "../../../foundations/logo/untitledui-logo";
-import { UntitledLogoMinimal } from "../../../foundations/logo/untitledui-logo-minimal";
+import { SmartPocketsLogo, SmartPocketsLogoWithBadge } from "../../../foundations/logo";
 import { cx } from "../../../../../utils/cx";
 import { MobileNavigationHeader } from "../base-components/mobile-header";
 import { NavAccountMenu } from "../base-components/nav-account-card";
@@ -79,7 +78,7 @@ export const SidebarSlimDesktop = ({
                     )}
                 >
                     <div className="flex justify-center px-3">
-                        <UntitledLogoMinimal className="size-8" />
+                        <SmartPocketsLogo size="sm" />
                     </div>
 
                     <ul className="mt-4 flex flex-col gap-0.5 px-3">
@@ -223,7 +222,7 @@ export const SidebarNavigationSlim = (props: SidebarNavigationSlimProps) => {
             <MobileNavigationHeader>
                 <aside className="group flex h-full max-h-full w-full max-w-full flex-col justify-between overflow-y-auto bg-primary pt-4">
                     <div className="px-4">
-                        <UntitledLogo className="h-8" />
+                        <SmartPocketsLogoWithBadge size="md" />
                     </div>
 
                     <NavList items={items} />
