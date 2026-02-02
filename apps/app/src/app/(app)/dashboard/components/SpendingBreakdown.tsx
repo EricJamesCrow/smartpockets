@@ -136,7 +136,7 @@ export function SpendingBreakdown() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value) => formatCurrency(Number(value))}
                 />
               </PieChart>
             </ResponsiveContainer>

@@ -14,10 +14,10 @@ function formatCurrency(amount: number): string {
   return amount >= 0 ? `-${formatted}` : `+${formatted}`;
 }
 
-function groupByDate(
-  transactions: Array<{ date: string; [key: string]: unknown }>
-): Map<string, typeof transactions> {
-  const groups = new Map<string, typeof transactions>();
+function groupByDate<T extends { date: string }>(
+  transactions: T[]
+): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today);
@@ -39,10 +39,12 @@ function groupByDate(
       });
     }
 
-    if (!groups.has(label)) {
-      groups.set(label, []);
+    const group = groups.get(label);
+    if (group) {
+      group.push(tx);
+    } else {
+      groups.set(label, [tx]);
     }
-    groups.get(label)!.push(tx);
   }
 
   return groups;
