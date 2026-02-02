@@ -3,7 +3,11 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@repo/ui/utils": ["../../packages/ui/src/utils/index.ts"],
+      "@repo/ui/utils/*": ["../../packages/ui/src/utils/*"],
+      "@repo/ui/hooks/*": ["../../packages/ui/src/hooks/*"],
+      "@repo/ui/untitledui/*": ["../../packages/ui/src/components/untitledui/*"]
     }
   },
   "include": [

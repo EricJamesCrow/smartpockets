@@ -1,8 +1,9 @@
 import "@repo/ui/globals.css";
+import "@repo/ui/theme.css";
 
 export const metadata = {
-  title: "Marketing Site",
-  description: "Public marketing website",
+  title: "SmartPockets - Smart Credit Card Management",
+  description: "Organize your credit cards into wallets, track spending, and never miss a payment.",
 };
 
 export default function RootLayout({
@@ -12,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="bg-primary text-primary antialiased">{children}</body>
     </html>
   );
 }
