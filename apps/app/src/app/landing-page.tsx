@@ -86,7 +86,7 @@ const HeroCardMockup11 = () => {
                             className="flex w-max [transform:var(--transform-mobile)] flex-col gap-4 lg:[transform:var(--transform-desktop)]"
                             style={
                                 {
-                                    "--transform-mobile": "scale(0.585) rotate(30deg) translate(-87px, -50px)",
+                                    "--transform-mobile": "scale(0.585) rotate(30deg) translate(50px, 150px)",
                                     "--transform-desktop": "rotate(30deg) translate(186px, 291px)",
                                 } as React.CSSProperties
                             }

@@ -13,10 +13,10 @@ export function SmartPocketsLogoWithBadge({
   showBadge = true
 }: SmartPocketsLogoWithBadgeProps) {
   return (
-    <span className={cx("relative mr-8 inline-flex items-baseline", className)}>
+    <span className={cx("relative mr-10 inline-flex items-baseline", className)}>
       <SmartPocketsLogo size={size} />
       {showBadge && (
-        <span className="absolute -right-8 -top-0.5 rounded-full bg-gray-100 px-1.5 py-px text-[8px] font-medium uppercase tracking-wide text-gray-500 ring-1 ring-inset ring-gray-200">
+        <span className="absolute -right-10 -top-0.5 rounded-full bg-gray-100 px-1.5 py-px text-[8px] font-medium uppercase tracking-wide text-gray-500 ring-1 ring-inset ring-gray-200">
           Alpha
         </span>
       )}
