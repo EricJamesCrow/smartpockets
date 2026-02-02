@@ -1,4 +1,3 @@
-import { Badge } from "../../base/badges/badges";
 import { SmartPocketsLogo } from "./smartpockets-logo";
 import { cx } from "../../../../utils/cx";
 
@@ -14,13 +13,13 @@ export function SmartPocketsLogoWithBadge({
   showBadge = true
 }: SmartPocketsLogoWithBadgeProps) {
   return (
-    <div className={cx("flex items-center gap-2", className)}>
+    <span className={cx("relative mr-6 inline-flex items-baseline", className)}>
       <SmartPocketsLogo size={size} />
       {showBadge && (
-        <Badge size="sm" color="gray">
+        <span className="absolute -right-6 -top-0.5 rounded-full bg-gray-100 px-1.5 py-px text-[8px] font-medium uppercase tracking-wide text-gray-500 ring-1 ring-inset ring-gray-200">
           Alpha
-        </Badge>
+        </span>
       )}
-    </div>
+    </span>
   );
 }
