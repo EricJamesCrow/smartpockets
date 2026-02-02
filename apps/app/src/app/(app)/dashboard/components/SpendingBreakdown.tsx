@@ -10,10 +10,10 @@ import { Select } from "@repo/ui/untitledui/base/select/select";
 import Link from "next/link";
 
 const COLORS = [
-  "#7F56D9", // Purple
-  "#12B76A", // Green
-  "#F79009", // Orange
+  "#099250", // Green (brand-600)
   "#0BA5EC", // Blue
+  "#F79009", // Orange
+  "#7F56D9", // Purple
   "#F04438", // Red
   "#667085", // Gray (Other)
 ];
