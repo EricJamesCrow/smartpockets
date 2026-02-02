@@ -81,14 +81,13 @@ const HeroCardMockup11 = () => {
                     </div>
                 </div>
                 <div className="relative mt-16 h-80 w-full bg-secondary px-4 md:h-95 md:px-8 lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:h-full lg:w-1/2 lg:px-0">
-                    <div className="pointer-events-none absolute inset-0 overflow-hidden lg:overflow-visible">
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden sm:pl-[30vw] lg:overflow-visible lg:pl-0">
                         <div
-                            className="flex w-max [transform:var(--transform-mobile)] flex-col gap-4 md:[transform:var(--transform-tablet)] lg:[transform:var(--transform-desktop)]"
+                            className="flex w-max [transform:var(--transform-mobile)] flex-col gap-4 lg:[transform:var(--transform-desktop)]"
                             style={
                                 {
-                                    "--transform-mobile": "scale(0.45) rotate(30deg) translate(40px, 180px)",
-                                    "--transform-tablet": "scale(0.55) rotate(30deg) translate(120px, 200px)",
-                                    "--transform-desktop": "scale(0.85) rotate(30deg) translate(120px, 180px)",
+                                    "--transform-mobile": "scale(0.585) rotate(30deg) translate(-87px, -50px)",
+                                    "--transform-desktop": "rotate(30deg) translate(186px, 291px)",
                                 } as React.CSSProperties
                             }
                         >
