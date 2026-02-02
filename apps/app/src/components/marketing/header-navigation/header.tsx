@@ -6,8 +6,7 @@ import { ChevronDown } from "@untitledui/icons";
 import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover } from "react-aria-components";
 import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
-import { UntitledLogo } from "@repo/ui/untitledui/foundations/logo/untitledui-logo";
-import { UntitledLogoMinimal } from "@repo/ui/untitledui/foundations/logo/untitledui-logo-minimal";
+import { SmartPocketsLogoWithBadge } from "@repo/ui/untitledui/foundations/logo";
 import { DropdownMenuSimple } from "@/components/marketing/header-navigation/dropdown-header-navigation";
 import { cx } from "@repo/ui/utils";
 
@@ -129,8 +128,7 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                     )}
                 >
                     <div className="flex flex-1 items-center gap-5">
-                        <UntitledLogo className="h-8 md:max-lg:hidden" />
-                        <UntitledLogoMinimal className="hidden h-8 md:inline-block lg:hidden" />
+                        <SmartPocketsLogoWithBadge size="md" />
 
                         {/* Desktop navigation */}
                         <nav className="max-md:hidden">
