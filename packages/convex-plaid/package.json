@@ -1,0 +1,104 @@
+{
+  "name": "@crowdevelopment/convex-plaid",
+  "description": "A Plaid component for Convex - bank accounts, transactions, and liabilities.",
+  "version": "0.7.3",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EricJamesCrow/convex-plaid.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "convex",
+    "component",
+    "plaid",
+    "banking",
+    "fintech"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "run-p -r 'dev:*'",
+    "dev:backend": "convex dev --typecheck-components",
+    "dev:build": "chokidar 'tsconfig*.json' 'src/**/*.ts' -i '**/*.test.ts' -c 'npx convex codegen --component-dir ./src/component && npm run build' --initial",
+    "predev": "path-exists .env.local || (npm run build && convex dev --skip-push)",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "build": "tsc --project ./tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --typecheck",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest --typecheck --clearScreen false",
+    "prepublishOnly": "npm run clean && npm run build",
+    "preversion": "npm run clean && npm ci && npm run build && run-p test typecheck",
+    "release": "npm version patch && npm publish && git push --follow-tags"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./helpers": {
+      "types": "./dist/client/helpers.d.ts",
+      "default": "./dist/client/helpers.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./test": "./src/test.ts",
+    "./_generated/component.js": {
+      "types": "./dist/component/_generated/component.d.ts"
+    },
+    "./convex.config.js": {
+      "types": "./dist/component/convex.config.d.ts",
+      "default": "./dist/component/convex.config.js"
+    },
+    "./convex.config": {
+      "types": "./dist/component/convex.config.d.ts",
+      "default": "./dist/component/convex.config.js"
+    }
+  },
+  "peerDependencies": {
+    "convex": "^1.29.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-plaid-link": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-plaid-link": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "chokidar-cli": "^3.0.0",
+    "convex": "^1.29.0",
+    "convex-test": "^0.0.40",
+    "npm-run-all2": "^8.0.0",
+    "path-exists-cli": "^2.0.0",
+    "react": "^18.0.0",
+    "react-plaid-link": "^3.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.2.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "jose": "^6.0.0",
+    "plaid": "^41.0.0"
+  },
+  "types": "./dist/client/index.d.ts",
+  "module": "./dist/client/index.js"
+}
