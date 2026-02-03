@@ -95,21 +95,21 @@ const HeroCardMockup11 = () => {
                             }
                         >
                             <div className="flex gap-4 pl-40">
-                                <CreditCard type="brand-dark" cardHolder="Phoenix baker" />
-                                <CreditCard type="gray-dark" cardHolder="Phoenix baker" />
-                                <CreditCard type="brand-dark" cardHolder="Phoenix baker" />
+                                <CreditCard type="brand-dark" cardHolder="Phoenix baker" width={316} />
+                                <CreditCard type="gray-dark" cardHolder="Phoenix baker" width={316} />
+                                <CreditCard type="brand-dark" cardHolder="Phoenix baker" width={316} />
                             </div>
                             <div className="flex gap-4">
-                                <CreditCard type="gradient-strip-vertical" cardHolder="Phoenix baker" />
-                                <CreditCard type="gradient-strip" cardHolder="Phoenix baker" />
-                                <CreditCard type="salmon-strip" cardHolder="Phoenix baker" />
+                                <CreditCard type="gradient-strip-vertical" cardHolder="Phoenix baker" width={316} />
+                                <CreditCard type="gradient-strip" cardHolder="Phoenix baker" width={316} />
+                                <CreditCard type="salmon-strip" cardHolder="Phoenix baker" width={316} />
                             </div>
                             <div className="flex gap-4 pl-40">
-                                <CreditCard type="gray-dark" cardHolder="Phoenix baker" />
-                                <CreditCard type="brand-dark" cardHolder="Phoenix baker" />
+                                <CreditCard type="gray-dark" cardHolder="Phoenix baker" width={316} />
+                                <CreditCard type="brand-dark" cardHolder="Phoenix baker" width={316} />
                             </div>
                             <div className="flex gap-4">
-                                <CreditCard type="salmon-strip" cardHolder="Phoenix baker" />
+                                <CreditCard type="salmon-strip" cardHolder="Phoenix baker" width={316} />
                             </div>
                         </div>
                     </div>
@@ -227,25 +227,25 @@ const IconsAndMockup07 = () => {
                                 className="relative z-4 [--scale:1.13] md:[--scale:1.641]"
                                 style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
                             >
-                                <CreditCard type="transparent-gradient" cardHolder="Demi Wilkinson" />
+                                <CreditCard type="transparent-gradient" cardHolder="Demi Wilkinson" width={316} />
                             </div>
                             <div
                                 className="relative z-3 [--scale:1.13] md:[--scale:1.641]"
                                 style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
                             >
-                                <CreditCard type="brand-dark" cardHolder="Lana Steiner" />
+                                <CreditCard type="brand-dark" cardHolder="Lana Steiner" width={316} />
                             </div>
                             <div
                                 className="relative z-2 [--scale:1.13] md:[--scale:1.641]"
                                 style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
                             >
-                                <CreditCard type="transparent" cardHolder="OLIVIA RHYE" />
+                                <CreditCard type="transparent" cardHolder="OLIVIA RHYE" width={316} />
                             </div>
                             <div
                                 className="relative z-1 [--scale:1.13] md:[--scale:1.641]"
                                 style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
                             >
-                                <CreditCard type="gray-dark" cardHolder="Phoenix Baker" />
+                                <CreditCard type="gray-dark" cardHolder="Phoenix Baker" width={316} />
                             </div>
                             <div
                                 className="relative z-0 [--scale:1.13] md:[--scale:1.641]"

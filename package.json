@@ -33,7 +33,7 @@
     "@clerk/backend": "^2.24.0",
     "@clerk/nextjs": "^6.36.5",
     "@clerk/themes": "^2.4.40",
-    "@crowdevelopment/convex-plaid": "^0.7.1",
+    "@crowdevelopment/convex-plaid": "^0.7.2",
     "@floating-ui/dom": "^1.7.4",
     "@react-aria/utils": "^3.31.0",
     "@react-email/components": "^0.4.0",
