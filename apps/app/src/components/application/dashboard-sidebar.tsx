@@ -7,6 +7,7 @@ import type { Selection } from "react-aria-components";
 import {
     BarChartSquare02,
     CreditCard01,
+    Home03,
     Receipt,
     SearchLg,
     Settings01,
@@ -28,7 +29,7 @@ const footerItems: NavItemType[] = [
 ];
 
 const commandRoutes: Record<string, string> = {
-    dashboard: "/dashboard",
+    home: "/",
     "credit-cards": "/credit-cards",
     transactions: "/transactions",
     wallets: "/wallets",
@@ -53,6 +54,11 @@ export function DashboardSidebar() {
     const pathname = usePathname();
 
     const navItemsSimple: NavItemType[] = [
+        {
+            label: "Home",
+            href: "/",
+            icon: Home03,
+        },
         {
             label: "Credit Cards",
             href: "/credit-cards",
@@ -171,7 +177,7 @@ export function DashboardSidebar() {
             >
                 <CommandMenu.List>
                     <CommandMenu.Section title="Navigation">
-                        <CommandMenu.Item id="dashboard" label="Dashboard" type="icon" icon={BarChartSquare02} />
+                        <CommandMenu.Item id="home" label="Home" type="icon" icon={Home03} />
                         <CommandMenu.Item id="credit-cards" label="Credit Cards" type="icon" icon={CreditCard01} />
                         <CommandMenu.Item id="transactions" label="Transactions" type="icon" icon={Receipt} />
                         <CommandMenu.Item id="wallets" label="Wallets" type="icon" icon={Wallet01} />
