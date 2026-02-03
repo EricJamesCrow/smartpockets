@@ -9,9 +9,6 @@ import { SmartPocketsLogoWithBadge } from "@repo/ui/untitledui/foundations/logo/
 import { DropdownMenuSimple } from "./dropdown-header-navigation";
 import { cx } from "@repo/ui/utils";
 
-// Configure this for your deployment
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.smartpockets.com";
-
 type HeaderNavItem = {
     label: string;
     href?: string;
@@ -82,10 +79,10 @@ const MobileFooter = () => {
                 </ul>
             </div>
             <div className="flex flex-col gap-3">
-                <Button href={`${APP_URL}/sign-up`} size="lg">
+                <Button href="/sign-up" size="lg">
                     Sign up
                 </Button>
-                <Button href={`${APP_URL}/sign-in`} color="secondary" size="lg">
+                <Button href="/sign-in" color="secondary" size="lg">
                     Log in
                 </Button>
             </div>
@@ -180,10 +177,10 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                     </div>
 
                     <div className="hidden items-center gap-3 md:flex">
-                        <Button href={`${APP_URL}/sign-in`} color="secondary" size={isFloating ? "md" : "lg"}>
+                        <Button href="/sign-in" color="secondary" size={isFloating ? "md" : "lg"}>
                             Log in
                         </Button>
-                        <Button href={`${APP_URL}/sign-up`} color="primary" size={isFloating ? "md" : "lg"}>
+                        <Button href="/sign-up" color="primary" size={isFloating ? "md" : "lg"}>
                             Sign up
                         </Button>
                     </div>

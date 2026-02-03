@@ -1,15 +1,14 @@
-// apps/app/src/app/(app)/dashboard/page.tsx
 "use client";
 
-import { AlertBanner } from "./components/AlertBanner";
-import { HeroMetrics } from "./components/HeroMetrics";
-import { UpcomingPayments } from "./components/UpcomingPayments";
-import { YourCards } from "./components/YourCards";
-import { ConnectedBanks } from "./components/ConnectedBanks";
-import { SpendingBreakdown } from "./components/SpendingBreakdown";
-import { RecentTransactions } from "./components/RecentTransactions";
+import { AlertBanner } from "./dashboard/components/AlertBanner";
+import { HeroMetrics } from "./dashboard/components/HeroMetrics";
+import { UpcomingPayments } from "./dashboard/components/UpcomingPayments";
+import { YourCards } from "./dashboard/components/YourCards";
+import { ConnectedBanks } from "./dashboard/components/ConnectedBanks";
+import { SpendingBreakdown } from "./dashboard/components/SpendingBreakdown";
+import { RecentTransactions } from "./dashboard/components/RecentTransactions";
 
-export default function DashboardPage() {
+export default function HomePage() {
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-8">
       {/* Critical Alert Banner */}

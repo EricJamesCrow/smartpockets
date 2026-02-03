@@ -14,9 +14,6 @@ import { CreditCard } from "@repo/ui/untitledui/shared-assets/credit-card/credit
 import { Header } from "@/components/marketing/header-navigation/header";
 import { cx } from "@repo/ui/utils";
 
-// Configure this for your deployment
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.smartpockets.com";
-
 const footerSocials = [
     { label: "X (formerly Twitter)", icon: X, href: "https://x.com/" },
     { label: "LinkedIn", icon: LinkedIn, href: "https://www.linkedin.com/" },
@@ -273,7 +270,7 @@ const CTAAbstractImages = () => {
                         <Button color="secondary" size="xl">
                             Learn more
                         </Button>
-                        <Button href={`${APP_URL}/sign-up`} size="xl">
+                        <Button href="/sign-up" size="xl">
                             Get started
                         </Button>
                     </div>
@@ -456,7 +453,7 @@ const PricingTierCardIcon = (props: PricingTierCardProps) => {
             </ul>
 
             <div className="mt-auto flex flex-col gap-3 rounded-b-2xl border-t border-secondary bg-secondary px-6 pt-6 pb-8 md:p-8">
-                <Button href={`${APP_URL}/sign-up`} size="xl">
+                <Button href="/sign-up" size="xl">
                     Get started
                 </Button>
             </div>
@@ -545,7 +542,7 @@ const CTACardVerticalBrand = () => {
                         <Button color="secondary" size="xl" className="shadow-xs! ring-0">
                             Learn more
                         </Button>
-                        <Button href={`${APP_URL}/sign-up`} size="xl">
+                        <Button href="/sign-up" size="xl">
                             Get started
                         </Button>
                     </div>

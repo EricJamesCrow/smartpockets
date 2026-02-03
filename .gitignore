@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 apps/app/node_modules
+apps/web/node_modules
 packages/backend/node_modules
 /.pnp
 .pnp.*

@@ -91,8 +91,8 @@ const MobileFooter = () => {
                     </SignInButton>
                 </SignedOut>
                 <SignedIn>
-                    <Button href="/dashboard" size="lg">
-                        Dashboard
+                    <Button href="/" size="lg">
+                        Home
                     </Button>
                 </SignedIn>
             </div>
