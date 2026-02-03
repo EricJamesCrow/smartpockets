@@ -2,7 +2,8 @@
 node_modules/
 
 # Build output
-dist/
+# NOTE: dist/ is NOT ignored because this is a workspace package
+# and other packages in the monorepo depend on the built output
 *.tsbuildinfo
 
 # Environment
