@@ -4,8 +4,10 @@ import { NextResponse } from "next/server";
 // API routes should not redirect (they return 401 instead)
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 
-// Marketing site URL
-const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL || "https://smartpockets.com";
+// Marketing site URL (use localhost in development)
+const MARKETING_URL =
+  process.env.NEXT_PUBLIC_MARKETING_URL ||
+  (process.env.NODE_ENV === "development" ? "http://localhost:3001" : "https://smartpockets.com");
 
 export default clerkMiddleware(async (auth, req) => {
   // Skip redirect for API routes
