@@ -110,6 +110,8 @@
       "name": "@repo/web",
       "version": "0.1.0",
       "dependencies": {
+        "@clerk/nextjs": "^6.37.1",
+        "@clerk/themes": "^2.4.51",
         "@repo/ui": "workspace:*",
         "@tailwindcss/postcss": "^4.1.11",
         "next": "^16.0.7",
