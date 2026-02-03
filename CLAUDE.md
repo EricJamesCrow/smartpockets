@@ -545,6 +545,12 @@ The email infrastructure has been migrated from **Inngest + Resend SDK** to the 
 
 ## Plaid Integration (Credit Cards)
 
+> **📦 Workspace Package:** The `@crowdevelopment/convex-plaid` component lives in `packages/convex-plaid/` as a local workspace package (not pulled from npm). This enables local development without publish cycles.
+>
+> **After making changes:** Run `cd packages/convex-plaid && bun run build`
+>
+> **To publish to npm:** Sync changes to the [original repo](https://github.com/EricJamesCrow/convex-plaid), bump version, publish.
+
 ### Architecture Overview
 
 The Plaid integration uses `@crowdevelopment/convex-plaid` component with a denormalized data model:

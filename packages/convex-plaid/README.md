@@ -1,5 +1,18 @@
 # @crowdevelopment/convex-plaid
 
+> **⚠️ Monorepo Development Copy**
+>
+> This is a local copy of [@crowdevelopment/convex-plaid](https://www.npmjs.com/package/@crowdevelopment/convex-plaid) for active development within the SmartPockets monorepo.
+>
+> **Workflow:**
+> 1. Make changes here in `packages/convex-plaid/`
+> 2. After changes, rebuild: `cd packages/convex-plaid && bun run build`
+> 3. To publish to npm: sync changes to the [original repo](https://github.com/EricJamesCrow/convex-plaid), bump version, and publish
+>
+> **Source of truth:** This monorepo copy during active development.
+
+---
+
 A Convex component for integrating Plaid banking into your application.
 
 [![npm version](https://badge.fury.io/js/@crowdevelopment%2Fconvex-plaid.svg)](https://badge.fury.io/js/@crowdevelopment%2Fconvex-plaid)
