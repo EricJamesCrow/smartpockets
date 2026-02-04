@@ -1,5 +1,43 @@
 # TODO
 
+## Alpha Launch Checklist
+
+### 1. Landing Page & Brand Identity
+- [ ] Run brainstorming session to define SmartPockets aesthetic (colors, typography, tone)
+- [ ] Implement new landing page (LandingPage07 template) in `apps/web`
+- [ ] Customize copy and visuals for SmartPockets brand
+- [ ] Add alpha banner/badge making it clear the app is in early access
+
+### 2. Marketing → App Architecture
+- [ ] Move landing page from `apps/app` to `apps/web`
+- [ ] Configure subdomain routing (www → marketing, app → authenticated app)
+- [ ] Set up Clerk auth handoff between domains
+- [ ] Remove marketing components from `apps/app`
+- [ ] Update Vercel deployment config for both apps
+
+### 3. App UI Refresh
+- [ ] Apply SmartPockets aesthetic to authenticated app
+- [ ] Update dashboard, card detail, wallet views
+- [ ] Ensure consistency between marketing and app styling
+
+### 4. Transactional Emails
+- [ ] Test existing email templates (verification, password reset, etc.)
+- [ ] Apply SmartPockets branding to email templates
+- [ ] Verify Clerk → email routing works end-to-end
+
+### 5. Newsletter Setup
+- [ ] Research midday repo newsletter pattern
+- [ ] Implement newsletter subscription (landing page + footer)
+- [ ] Set up email list management (Resend audience or similar)
+
+### 6. Pricing & Payments
+- [ ] Configure Clerk billing for ~$5/month alpha pricing
+- [ ] Add pricing page to marketing site
+- [ ] Set up payment flow and subscription management
+- [ ] Add "Alpha" badge/disclaimer on pricing
+
+---
+
 ## Credit Cards Feature
 
 ### Swipeable Card Carousel
