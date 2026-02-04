@@ -1,28 +1,15 @@
 "use client";
 
-import { useState, useMemo, type FC } from "react";
+import { type FC, useMemo, useState } from "react";
+import { AtSign, Bell01, Building07, CreditCard01, Lock01, Mail01, Mail02, Palette, SearchLg, User01, Users01 } from "@untitledui/icons";
 import { useRouter } from "next/navigation";
-import {
-    AtSign,
-    Bell01,
-    Building07,
-    CreditCard01,
-    Link01,
-    Lock01,
-    Mail01,
-    Mail02,
-    Palette,
-    SearchLg,
-    User01,
-    Users01,
-} from "@untitledui/icons";
 import { Heading as AriaHeading, type Key } from "react-aria-components";
 import { useHotkeys } from "react-hotkeys-hook";
-import { CommandMenu } from "../command-menus/command-menu";
-import { EmptyState } from "../empty-state/empty-state";
+import { cx } from "../../../../utils/cx";
 import { Button } from "../../base/buttons/button";
 import { FeaturedIcon } from "../../foundations/featured-icon/featured-icon";
-import { cx } from "../../../../utils/cx";
+import { CommandMenu } from "../command-menus/command-menu";
+import { EmptyState } from "../empty-state/empty-state";
 
 interface SettingsItem {
     id: string;
@@ -42,7 +29,14 @@ const settingsItems: Record<string, SettingsItem[]> = {
         { id: "password-change", label: "Change password", description: "Update your password", icon: Lock01, href: "/settings/password", section: "password" },
     ],
     appearance: [
-        { id: "appearance-theme", label: "Theme settings", description: "Light, dark, or system", icon: Palette, href: "/settings/appearance", section: "appearance" },
+        {
+            id: "appearance-theme",
+            label: "Theme settings",
+            description: "Light, dark, or system",
+            icon: Palette,
+            href: "/settings/appearance",
+            section: "appearance",
+        },
     ],
     team: [
         { id: "team-orgs", label: "Organizations", description: "Manage your organizations", icon: Building07, href: "/settings/team", section: "team" },
@@ -50,16 +44,34 @@ const settingsItems: Record<string, SettingsItem[]> = {
         { id: "team-invitations", label: "Invitations", description: "Invite new members", icon: Mail01, href: "/settings/team/invitations", section: "team" },
     ],
     billing: [
-        { id: "billing-subscription", label: "Manage subscription", description: "View or change your plan", icon: CreditCard01, href: "/settings/billing", section: "billing" },
+        {
+            id: "billing-subscription",
+            label: "Manage subscription",
+            description: "View or change your plan",
+            icon: CreditCard01,
+            href: "/settings/billing",
+            section: "billing",
+        },
     ],
     email: [
-        { id: "email-addresses", label: "Email addresses", description: "Manage your email addresses", icon: Mail02, href: "/settings/email", section: "email" },
+        {
+            id: "email-addresses",
+            label: "Email addresses",
+            description: "Manage your email addresses",
+            icon: Mail02,
+            href: "/settings/email",
+            section: "email",
+        },
     ],
     notifications: [
-        { id: "notifications-settings", label: "Notification settings", description: "Email and push notifications", icon: Bell01, href: "/settings/notifications", section: "notifications" },
-    ],
-    integrations: [
-        { id: "integrations-accounts", label: "Connected accounts", description: "Manage OAuth connections", icon: Link01, href: "/settings/integrations", section: "integrations" },
+        {
+            id: "notifications-settings",
+            label: "Notification settings",
+            description: "Email and push notifications",
+            icon: Bell01,
+            href: "/settings/notifications",
+            section: "notifications",
+        },
     ],
 };
 
@@ -71,10 +83,9 @@ const sectionTitles: Record<string, string> = {
     billing: "Billing",
     email: "Email",
     notifications: "Notifications",
-    integrations: "Integrations",
 };
 
-const sectionOrder = ["profile", "password", "appearance", "team", "billing", "email", "notifications", "integrations"];
+const sectionOrder = ["profile", "password", "appearance", "team", "billing", "email", "notifications"];
 
 function getOrderedSections(currentPath: string): string[] {
     const pathToSection: Record<string, string> = {
@@ -85,7 +96,6 @@ function getOrderedSections(currentPath: string): string[] {
         "/settings/billing": "billing",
         "/settings/email": "email",
         "/settings/notifications": "notifications",
-        "/settings/integrations": "integrations",
     };
 
     // Find matching section
@@ -124,13 +134,13 @@ const SettingsPreview = ({ selectedId }: SettingsPreviewProps) => {
     const sectionTitle = sectionTitles[item.section];
 
     return (
-        <div className="relative hidden w-90 flex-col border-l border-secondary bg-secondary/50 px-5 py-6 sm:flex">
+        <div className="w-90 border-secondary bg-secondary/50 relative hidden flex-col border-l px-5 py-6 sm:flex">
             <div className="mb-3">
                 <FeaturedIcon icon={item.icon} size="lg" color="gray" theme="modern" />
             </div>
             <div className="flex flex-col gap-0.5">
-                <p className="text-md font-semibold text-primary">{item.label}</p>
-                <p className="text-sm text-tertiary">{item.description}</p>
+                <p className="text-md text-primary font-semibold">{item.label}</p>
+                <p className="text-tertiary text-sm">{item.description}</p>
             </div>
             <div className="mt-6 flex flex-col gap-3">
                 <Button size="md" className="w-full">
@@ -193,16 +203,14 @@ export function SettingsCommandMenu({ currentPath }: SettingsCommandMenuProps) {
                 type="button"
                 onClick={() => setIsOpen(true)}
                 className={cx(
-                    "flex h-9 w-full items-center gap-2 rounded-lg border border-primary bg-primary px-3 text-sm text-quaternary shadow-xs transition duration-100 ease-linear lg:w-80",
+                    "border-primary bg-primary text-quaternary shadow-xs flex h-9 w-full items-center gap-2 rounded-lg border px-3 text-sm transition duration-100 ease-linear lg:w-80",
                     "hover:border-primary_hover hover:bg-primary_hover",
-                    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                    "focus-visible:outline-focus-ring focus-visible:outline-2 focus-visible:outline-offset-2",
                 )}
             >
                 <SearchLg className="size-4 shrink-0" />
                 <span className="flex-1 text-left">Search settings...</span>
-                <kbd className="hidden rounded bg-secondary px-1.5 py-0.5 text-xs font-medium text-tertiary sm:inline-block">
-                    ⌘,
-                </kbd>
+                <kbd className="bg-secondary text-tertiary hidden rounded px-1.5 py-0.5 text-xs font-medium sm:inline-block">⌘,</kbd>
             </button>
 
             <CommandMenu
@@ -220,9 +228,7 @@ export function SettingsCommandMenu({ currentPath }: SettingsCommandMenuProps) {
                         </EmptyState.Header>
                         <EmptyState.Content className="mb-0">
                             <EmptyState.Title>No settings found</EmptyState.Title>
-                            <EmptyState.Description>
-                                Your search did not match any settings. Please try again.
-                            </EmptyState.Description>
+                            <EmptyState.Description>Your search did not match any settings. Please try again.</EmptyState.Description>
                         </EmptyState.Content>
                     </EmptyState>
                 }
@@ -230,17 +236,11 @@ export function SettingsCommandMenu({ currentPath }: SettingsCommandMenuProps) {
                 <AriaHeading slot="title" className="sr-only">
                     Settings
                 </AriaHeading>
-                <CommandMenu.Group className="flex max-h-88.5">
+                <CommandMenu.Group className="max-h-88.5 flex">
                     <CommandMenu.List>
-                        {(group) => (
-                            <CommandMenu.Section {...group}>
-                                {(item) => <CommandMenu.Item key={item.id} {...item} />}
-                            </CommandMenu.Section>
-                        )}
+                        {(group) => <CommandMenu.Section {...group}>{(item) => <CommandMenu.Item key={item.id} {...item} />}</CommandMenu.Section>}
                     </CommandMenu.List>
-                    <CommandMenu.Preview asChild>
-                        {({ selectedId }) => <SettingsPreview selectedId={selectedId} />}
-                    </CommandMenu.Preview>
+                    <CommandMenu.Preview asChild>{({ selectedId }) => <SettingsPreview selectedId={selectedId} />}</CommandMenu.Preview>
                 </CommandMenu.Group>
             </CommandMenu>
         </>
