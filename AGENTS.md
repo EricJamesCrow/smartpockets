@@ -37,3 +37,10 @@ Use `bun` (repo is pinned to `bun@1.1.42`), though npm/yarn/pnpm also work.
 - Or run `./scripts/bootstrap-env.sh` to create `.env.local` and symlink `apps/app`, `apps/web`, and `packages/backend` env files to the root.
 - If `apps/web` needs a separate env file, remove the symlink and create `apps/web/.env.local` manually.
 - After backend changes, regenerate Convex types with `npx convex dev`.
+
+## Convex Deployment Notes
+- Production deploys must be run from `packages/backend` (where `convex/` lives).
+- A 404 from Clerk on `/clerk-users-webhook` usually means the Convex prod deployment wasn’t updated.
+- The Clerk webhook handler expects `CLERK_WEBHOOK_SECRET` in Convex env vars.
+- Convex auth expects `CLERK_FRONTEND_API_URL` (preferred) or `NEXT_PUBLIC_CLERK_FRONTEND_API_URL`.
+- Components (e.g., `@crowdevelopment/convex-plaid`) only show up in the Convex dashboard after a successful deploy.
