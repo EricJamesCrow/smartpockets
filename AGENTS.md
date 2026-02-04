@@ -42,5 +42,5 @@ Use `bun` (repo is pinned to `bun@1.1.42`), though npm/yarn/pnpm also work.
 - Production deploys must be run from `packages/backend` (where `convex/` lives).
 - A 404 from Clerk on `/clerk-users-webhook` usually means the Convex prod deployment wasn’t updated.
 - The Clerk webhook handler expects `CLERK_WEBHOOK_SECRET` in Convex env vars.
-- Convex auth expects `CLERK_FRONTEND_API_URL` (preferred) or `NEXT_PUBLIC_CLERK_FRONTEND_API_URL`.
+- Convex auth expects `NEXT_PUBLIC_CLERK_FRONTEND_API_URL`.
 - Components (e.g., `@crowdevelopment/convex-plaid`) only show up in the Convex dashboard after a successful deploy.

@@ -1,6 +1,7 @@
 {
-  "buildCommand": "turbo build --filter=@repo/web",
-  "installCommand": "bun install",
-  "framework": "nextjs",
-  "outputDirectory": ".next"
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "installCommand": "cd ../.. && bun install",
+    "buildCommand": "cd ../../apps/web && bun run build",
+    "outputDirectory": ".next",
+    "framework": "nextjs"
 }
