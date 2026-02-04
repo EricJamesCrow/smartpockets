@@ -1,12 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SearchLg } from "@untitledui/icons";
 import { AnimatePresence, motion } from "motion/react";
+import { cx } from "../../../../../utils/cx";
 import { Input } from "../../../base/input/input";
 import { UntitledLogo } from "../../../foundations/logo/untitledui-logo";
-import { cx } from "../../../../../utils/cx";
 import { MobileNavigationHeader } from "../base-components/mobile-header";
 import { NavAccountCard } from "../base-components/nav-account-card";
 import { NavItemBase } from "../base-components/nav-item";
@@ -31,13 +31,18 @@ export const SidebarNavigationDualTier = ({ activeUrl, hideBorder, items, footer
     const [currentItem, setCurrentItem] = useState(activeItem || items[1]);
     const [isHovering, setIsHovering] = useState(false);
 
+    useEffect(() => {
+        if (!activeItem) return;
+        setCurrentItem((prev) => (prev?.href === activeItem.href ? prev : activeItem));
+    }, [activeItem?.href]);
+
     const isSecondarySidebarVisible = isHovering && Boolean(currentItem.items?.length);
 
     const MAIN_SIDEBAR_WIDTH = 296;
     const SECONDARY_SIDEBAR_WIDTH = 256;
 
     const mainSidebar = (
-        <aside className="group flex h-full max-h-full max-w-full overflow-y-auto bg-primary">
+        <aside className="bg-primary group flex h-full max-h-full max-w-full overflow-y-auto">
             <div
                 style={
                     {
@@ -45,7 +50,7 @@ export const SidebarNavigationDualTier = ({ activeUrl, hideBorder, items, footer
                     } as React.CSSProperties
                 }
                 className={cx(
-                    "relative flex w-full flex-col border-r border-secondary pt-4 transition duration-300 lg:w-(--width) lg:pt-6",
+                    "border-secondary lg:w-(--width) relative flex w-full flex-col border-r pt-4 transition duration-300 lg:pt-6",
                     hideBorder && !isSecondarySidebarVisible && "border-transparent",
                 )}
             >
@@ -108,12 +113,18 @@ export const SidebarNavigationDualTier = ({ activeUrl, hideBorder, items, footer
                     animate={{ width: SECONDARY_SIDEBAR_WIDTH, borderColor: "var(--color-border-secondary)" }}
                     exit={{ width: 0, borderColor: "rgba(0,0,0,0)", transition: { borderColor: { type: "tween", delay: 0.05 } } }}
                     transition={{ type: "spring", damping: 26, stiffness: 220, bounce: 0 }}
-                    className={cx("relative h-full overflow-x-hidden overflow-y-auto bg-primary", !hideBorder && "box-content border-r-[1.5px]")}
+                    className={cx("bg-primary relative h-full overflow-y-auto overflow-x-hidden", !hideBorder && "box-content border-r-[1.5px]")}
                 >
                     <ul style={{ width: SECONDARY_SIDEBAR_WIDTH }} className="flex h-full flex-col p-4 py-6">
                         {currentItem.items?.map((item) => (
                             <li key={(item.label ?? "") + (item.href ?? "")} className="py-0.5">
-                                <NavItemBase current={activeUrl === item.href} href={item.href} icon={"icon" in item ? item.icon : undefined} badge={item.badge} type="link">
+                                <NavItemBase
+                                    current={activeUrl === item.href}
+                                    href={item.href}
+                                    icon={"icon" in item ? item.icon : undefined}
+                                    badge={item.badge}
+                                    type="link"
+                                >
                                     {item.label}
                                 </NavItemBase>
                             </li>
@@ -144,7 +155,7 @@ export const SidebarNavigationDualTier = ({ activeUrl, hideBorder, items, footer
                 style={{
                     paddingLeft: MAIN_SIDEBAR_WIDTH,
                 }}
-                className="invisible hidden lg:sticky lg:top-0 lg:bottom-0 lg:left-0 lg:block"
+                className="invisible hidden lg:sticky lg:bottom-0 lg:left-0 lg:top-0 lg:block"
             />
         </>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cx } from "../../../../../utils/cx";
 import type { NavItemDividerType, NavItemType } from "../config";
 import { NavItemBase } from "./nav-item";
@@ -19,6 +19,11 @@ export const NavList = ({ activeUrl, items, className }: NavListProps) => {
     const activeItem = items.find((item) => item.href === activeUrl || item.items?.some((subItem) => subItem.href === activeUrl));
     const [currentItem, setCurrentItem] = useState(activeItem);
 
+    useEffect(() => {
+        if (!activeItem) return;
+        setCurrentItem((prev) => (prev?.href === activeItem.href ? prev : activeItem));
+    }, [activeItem?.href]);
+
     return (
         <ul className={cx("mt-4 flex flex-col px-2 lg:px-4", className)}>
             {items.map((item, index) => {
@@ -26,11 +31,9 @@ export const NavList = ({ activeUrl, items, className }: NavListProps) => {
                     return (
                         <li key={index} className="w-full px-0.5 py-2">
                             {item.label && (
-                                <span className="px-2 mb-1 text-xs font-medium text-fg-quaternary uppercase tracking-wider block">
-                                    {item.label}
-                                </span>
+                                <span className="text-fg-quaternary mb-1 block px-2 text-xs font-medium uppercase tracking-wider">{item.label}</span>
                             )}
-                            {!item.label && <hr className="h-px w-full border-none bg-border-secondary" />}
+                            {!item.label && <hr className="bg-border-secondary h-px w-full border-none" />}
                         </li>
                     );
                 }
@@ -57,11 +60,11 @@ export const NavList = ({ activeUrl, items, className }: NavListProps) => {
                                             return (
                                                 <li key={childIndex} className="w-full px-0.5 py-2">
                                                     {childItem.label && (
-                                                        <span className="px-2 mb-1 text-xs font-medium text-fg-quaternary uppercase tracking-wider block">
+                                                        <span className="text-fg-quaternary mb-1 block px-2 text-xs font-medium uppercase tracking-wider">
                                                             {childItem.label}
                                                         </span>
                                                     )}
-                                                    {!childItem.label && <hr className="h-px w-full border-none bg-border-secondary" />}
+                                                    {!childItem.label && <hr className="bg-border-secondary h-px w-full border-none" />}
                                                 </li>
                                             );
                                         }

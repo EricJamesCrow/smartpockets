@@ -1,17 +1,17 @@
 "use client";
 
 import type { FC } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { LifeBuoy01, LogOut01, Settings01 } from "@untitledui/icons";
 import { AnimatePresence, motion } from "motion/react";
 import { Button as AriaButton, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover } from "react-aria-components";
+import { cx } from "../../../../../utils/cx";
 import { Avatar } from "../../../base/avatar/avatar";
 import { AvatarLabelGroup } from "../../../base/avatar/avatar-label-group";
 import { Button } from "../../../base/buttons/button";
 import { ButtonUtility } from "../../../base/buttons/button-utility";
 import { SmartPocketsLogo, SmartPocketsLogoWithBadge } from "../../../foundations/logo";
-import { cx } from "../../../../../utils/cx";
 import { MobileNavigationHeader } from "../base-components/mobile-header";
 import { NavAccountMenu } from "../base-components/nav-account-card";
 import { NavItemBase } from "../base-components/nav-item";
@@ -32,18 +32,16 @@ interface SidebarNavigationSlimProps {
     hideRightBorder?: boolean;
 }
 
-
-export const SidebarSlimDesktop = ({
-    activeUrl,
-    items,
-    footerItems = [],
-    hideBorder,
-    hideRightBorder,
-}: SidebarNavigationSlimProps) => {
+export const SidebarSlimDesktop = ({ activeUrl, items, footerItems = [], hideBorder, hideRightBorder }: SidebarNavigationSlimProps) => {
     const activeItem = [...items, ...footerItems].find((item) => item.href === activeUrl || item.items?.some((subItem) => subItem.href === activeUrl));
     const { user } = useUser();
     const [currentItem, setCurrentItem] = useState(activeItem || items[1]);
     const [isOpen, setIsOpen] = useState(false);
+
+    useEffect(() => {
+        if (!activeItem) return;
+        setCurrentItem((prev) => (prev?.href === activeItem.href ? prev : activeItem));
+    }, [activeItem?.href]);
 
     const isSecondarySidebarVisible = isOpen && Boolean(currentItem?.items?.length);
 
@@ -69,11 +67,11 @@ export const SidebarSlimDesktop = ({
                 style={{
                     width: MAIN_SIDEBAR_WIDTH,
                 }}
-                className="group flex h-full max-h-full max-w-full overflow-y-auto bg-primary py-1 pl-1"
+                className="bg-primary group flex h-full max-h-full max-w-full overflow-y-auto py-1 pl-1"
             >
                 <div
                     className={cx(
-                        "flex w-auto flex-col justify-between rounded-xl pt-5 ring-1 ring-secondary transition duration-300 ring-inset",
+                        "ring-secondary flex w-auto flex-col justify-between rounded-xl pt-5 ring-1 ring-inset transition duration-300",
                         hideBorder && !isSecondarySidebarVisible && "ring-transparent",
                     )}
                 >
@@ -116,16 +114,13 @@ export const SidebarSlimDesktop = ({
                         <AriaDialogTrigger>
                             <AriaButton
                                 className={({ isPressed, isFocused }) =>
-                                    cx(
-                                        "group relative inline-flex rounded-full",
-                                        (isPressed || isFocused) && "outline-2 outline-offset-2 outline-focus-ring",
-                                    )
+                                    cx("group relative inline-flex rounded-full", (isPressed || isFocused) && "outline-focus-ring outline-2 outline-offset-2")
                                 }
                             >
                                 {user ? (
                                     <Avatar status="online" src={user.imageUrl} size="md" alt={user.fullName ?? "User"} />
                                 ) : (
-                                    <div className="h-10 w-10 animate-pulse rounded-full bg-secondary" />
+                                    <div className="bg-secondary h-10 w-10 animate-pulse rounded-full" />
                                 )}
                             </AriaButton>
                             <AriaPopover
@@ -136,9 +131,9 @@ export const SidebarSlimDesktop = ({
                                     cx(
                                         "will-change-transform",
                                         isEntering &&
-                                            "duration-300 ease-out animate-in fade-in placement-right:slide-in-from-left-2 placement-top:slide-in-from-bottom-2 placement-bottom:slide-in-from-top-2",
+                                            "animate-in fade-in placement-right:slide-in-from-left-2 placement-top:slide-in-from-bottom-2 placement-bottom:slide-in-from-top-2 duration-300 ease-out",
                                         isExiting &&
-                                            "duration-150 ease-in animate-out fade-out placement-right:slide-out-to-left-2 placement-top:slide-out-to-bottom-2 placement-bottom:slide-out-to-top-2",
+                                            "animate-out fade-out placement-right:slide-out-to-left-2 placement-top:slide-out-to-bottom-2 placement-bottom:slide-out-to-top-2 duration-150 ease-in",
                                     )
                                 }
                             >
@@ -162,12 +157,12 @@ export const SidebarSlimDesktop = ({
                         }}
                         transition={{ type: "spring", damping: 26, stiffness: 220, bounce: 0 }}
                         className={cx(
-                            "relative h-full overflow-x-hidden overflow-y-auto bg-primary",
+                            "bg-primary relative h-full overflow-y-auto overflow-x-hidden",
                             !(hideBorder || hideRightBorder) && "box-content border-r-[1.5px]",
                         )}
                     >
                         <div style={{ width: SECONDARY_SIDEBAR_WIDTH }} className="flex h-full flex-col px-4 pt-6">
-                            <h3 className="text-sm font-semibold text-brand-secondary">{currentItem?.label}</h3>
+                            <h3 className="text-brand-secondary text-sm font-semibold">{currentItem?.label}</h3>
                             <ul className="py-2">
                                 {currentItem?.items?.map((item, index) => (
                                     <li key={String(item.label ?? "") + (item.href ?? index)} className="py-0.5">
@@ -183,12 +178,12 @@ export const SidebarSlimDesktop = ({
                                     </li>
                                 ))}
                             </ul>
-                            <div className="sticky bottom-0 mt-auto flex justify-between border-t border-secondary bg-primary px-2 py-5">
+                            <div className="border-secondary bg-primary sticky bottom-0 mt-auto flex justify-between border-t px-2 py-5">
                                 <div>
-                                    <p className="text-sm font-semibold text-primary">Olivia Rhye</p>
-                                    <p className="text-sm text-tertiary">olivia@untitledui.com</p>
+                                    <p className="text-primary text-sm font-semibold">Olivia Rhye</p>
+                                    <p className="text-tertiary text-sm">olivia@untitledui.com</p>
                                 </div>
-                                <div className="absolute top-2.5 right-0">
+                                <div className="absolute right-0 top-2.5">
                                     <ButtonUtility size="sm" color="tertiary" tooltip="Log out" icon={LogOut01} />
                                 </div>
                             </div>
@@ -215,12 +210,12 @@ export const SidebarNavigationSlim = (props: SidebarNavigationSlimProps) => {
                 style={{
                     paddingLeft: MAIN_SIDEBAR_WIDTH,
                 }}
-                className="invisible hidden lg:sticky lg:top-0 lg:bottom-0 lg:left-0 lg:block"
+                className="invisible hidden lg:sticky lg:bottom-0 lg:left-0 lg:top-0 lg:block"
             />
 
             {/* Mobile header navigation */}
             <MobileNavigationHeader>
-                <aside className="group flex h-full max-h-full w-full max-w-full flex-col justify-between overflow-y-auto bg-primary pt-4">
+                <aside className="bg-primary group flex h-full max-h-full w-full max-w-full flex-col justify-between overflow-y-auto pt-4">
                     <div className="px-4">
                         <SmartPocketsLogoWithBadge size="md" />
                     </div>
@@ -237,7 +232,7 @@ export const SidebarNavigationSlim = (props: SidebarNavigationSlimProps) => {
                             </NavItemBase>
                         </div>
 
-                        <div className="relative flex items-center gap-3 border-t border-secondary pt-6 pr-8 pl-2">
+                        <div className="border-secondary relative flex items-center gap-3 border-t pl-2 pr-8 pt-6">
                             <AvatarLabelGroup
                                 status="online"
                                 size="md"
@@ -246,11 +241,11 @@ export const SidebarNavigationSlim = (props: SidebarNavigationSlimProps) => {
                                 subtitle="olivia@untitledui.com"
                             />
 
-                            <div className="absolute top-1/2 right-0 -translate-y-1/2">
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2">
                                 <Button
                                     size="sm"
                                     color="tertiary"
-                                    iconLeading={<LogOut01 className="size-5 text-fg-quaternary transition-inherit-all group-hover:text-fg-quaternary_hover" />}
+                                    iconLeading={<LogOut01 className="text-fg-quaternary transition-inherit-all group-hover:text-fg-quaternary_hover size-5" />}
                                     className="p-1.5!"
                                 />
                             </div>
