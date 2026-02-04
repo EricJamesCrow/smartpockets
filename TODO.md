@@ -101,3 +101,69 @@ Ensure our transaction exports and statement downloads contain all of the inform
 - Payment due date
 - Minimum payment
 - Interest charges
+
+---
+
+## UI/UX Fixes & Cleanup
+
+### Sidebar Logo
+- [ ] Fix logo to minimize and change to "SP" when sidebar is collapsed
+  - Reference: Currently shows full "Smart" text even when collapsed (see attached screenshot)
+
+### Dashboard Aesthetic
+- [ ] Cleanup SmartPockets dashboard to look more aesthetic
+  - Run brainstorming session to identify specific improvements
+
+### Settings Cleanup
+- [ ] Thoroughly cleanup settings page - remove all non-functional items
+- [ ] Remove dead links and unnecessary options
+- [ ] Decide on search settings functionality:
+  - **Option A**: Remove "search settings" entirely
+  - **Option B**: Improve aesthetics/UX in a superpowers session
+  - **Option C**: Integrate settings search as a subtab/subsearch within main search
+  - Research: Is unified search with settings subsection better UX than separate settings search?
+
+---
+
+## Technical Debt
+
+### UntitledUI Migration
+- [ ] Remove and replace all references to untitledui
+  - Audit all component imports
+  - Identify replacement components/patterns
+
+### Plaid Production Fix
+- [ ] Fix Plaid Convex component not working in production
+  - Debug production-specific issues
+  - Verify environment variables and webhook configuration
+
+---
+
+## Multi-Profile / Organizations Architecture
+
+> **Requires Deep Research Session**
+
+### Problem Statement
+Need to figure out the best way to implement multiple profiles (personal vs. business) and how organizations fit in.
+
+### Research Questions
+- [ ] Should organizations be optional or required?
+- [ ] Use Clerk Organizations vs. Convex Ents for multi-profile?
+- [ ] How to structure profiles so users can have:
+  - Personal profile (default)
+  - Business profile (optional)
+  - Organization access (higher subscription tiers)
+- [ ] What pricing tiers make sense?
+  - Free tier capabilities
+  - Paid tier with multi-profile
+  - Premium tier with organizations
+
+### Implementation Options to Research
+1. **Clerk Organizations** - Built-in org management, roles, invitations
+2. **Convex Ents "profiles"** - Custom implementation, more flexibility
+3. **Hybrid** - Personal profiles in Convex, orgs via Clerk for collaboration
+
+### Session Plan
+- [ ] Deep research session with Claude on architecture
+- [ ] Consult on pricing tier structure
+- [ ] Document decision and rationale
