@@ -34,4 +34,6 @@ Use `bun` (repo is pinned to `bun@1.1.42`), though npm/yarn/pnpm also work.
 
 ## Configuration & Secrets
 - Copy `.env.example` to `.env.local` and set Convex, Clerk, and AI provider keys.
+- Or run `./scripts/bootstrap-env.sh` to create `.env.local` and symlink `apps/app`, `apps/web`, and `packages/backend` env files to the root.
+- If `apps/web` needs a separate env file, remove the symlink and create `apps/web/.env.local` manually.
 - After backend changes, regenerate Convex types with `npx convex dev`.

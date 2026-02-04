@@ -12,6 +12,14 @@ Built with React 19.1, Tailwind CSS v4.1, TypeScript 5.8, and React Aria, Untitl
 
 ## Getting started
 
+Run the bootstrap script to create `.env.local` from `.env.example` and symlink app env files:
+
+```bash
+./scripts/bootstrap-env.sh
+```
+
+If you want `apps/web` to use its own env file instead of a symlink, remove the symlink and create `apps/web/.env.local` manually.
+
 First, run the development server:
 
 ```bash
