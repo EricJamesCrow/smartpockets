@@ -1,44 +1,42 @@
 import { UserJSON } from "@clerk/backend";
-import { v, Validator } from "convex/values";
-import { query, internalMutation } from "./functions";
+import { Validator, v } from "convex/values";
+import { internalMutation, query } from "./functions";
 
 /**
  * Get the current authenticated user
  */
 export const current = query({
-  args: {},
-  returns: v.union(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      name: v.string(),
-      externalId: v.string(),
-      approved: v.boolean(),
-      connectedAccounts: v.optional(
-        v.array(
-          v.object({
-            provider: v.string(),
-            email: v.optional(v.string()),
+    args: {},
+    returns: v.union(
+        v.object({
+            _id: v.id("users"),
+            _creationTime: v.number(),
+            name: v.string(),
             externalId: v.string(),
-          })
-        )
-      ),
-    }),
-    v.null()
-  ),
-  async handler(ctx) {
-    const viewer = ctx.viewer;
-    if (!viewer) return null;
+            connectedAccounts: v.optional(
+                v.array(
+                    v.object({
+                        provider: v.string(),
+                        email: v.optional(v.string()),
+                        externalId: v.string(),
+                    }),
+                ),
+            ),
+        }),
+        v.null(),
+    ),
+    async handler(ctx) {
+        const viewer = ctx.viewer;
+        if (!viewer) return null;
 
-    return {
-      _id: viewer._id,
-      _creationTime: viewer._creationTime,
-      name: viewer.name,
-      externalId: viewer.externalId,
-      approved: viewer.approved,
-      connectedAccounts: viewer.connectedAccounts,
-    };
-  },
+        return {
+            _id: viewer._id,
+            _creationTime: viewer._creationTime,
+            name: viewer.name,
+            externalId: viewer.externalId,
+            connectedAccounts: viewer.connectedAccounts,
+        };
+    },
 });
 
 /**
@@ -46,40 +44,33 @@ export const current = query({
  * Called by HTTP webhook handler when Clerk sends user.created or user.updated
  */
 export const upsertFromClerk = internalMutation({
-  args: { data: v.any() as Validator<UserJSON> },
-  returns: v.null(),
-  async handler(ctx, { data }) {
-    const connectedAccounts = (data.external_accounts || []).map(
-      (account: any) => ({
-        provider: account.provider || account.verification?.strategy || "unknown",
-        email: account.email_address,
-        externalId: account.id,
-      })
-    );
+    args: { data: v.any() as Validator<UserJSON> },
+    returns: v.null(),
+    async handler(ctx, { data }) {
+        const connectedAccounts = (data.external_accounts || []).map((account: any) => ({
+            provider: account.provider || account.verification?.strategy || "unknown",
+            email: account.email_address,
+            externalId: account.id,
+        }));
 
-    // Look up existing user by Clerk ID
-    const existingUser = await ctx.table("users").get("externalId", data.id);
+        // Look up existing user by Clerk ID
+        const existingUser = await ctx.table("users").get("externalId", data.id);
 
-    if (existingUser === null) {
-      // New users start unapproved (VIP-only access control)
-      await ctx.table("users").insert({
-        name:
-          `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || "User",
-        externalId: data.id,
-        approved: false,
-        connectedAccounts,
-      });
-    } else {
-      // Don't override approved status on updates
-      await existingUser.patch({
-        name:
-          `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || "User",
-        connectedAccounts,
-      });
-    }
+        if (existingUser === null) {
+            await ctx.table("users").insert({
+                name: `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || "User",
+                externalId: data.id,
+                connectedAccounts,
+            });
+        } else {
+            await existingUser.patch({
+                name: `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || "User",
+                connectedAccounts,
+            });
+        }
 
-    return null;
-  },
+        return null;
+    },
 });
 
 /**
@@ -87,83 +78,73 @@ export const upsertFromClerk = internalMutation({
  * Called by HTTP webhook handler when Clerk sends user.deleted
  */
 export const deleteFromClerk = internalMutation({
-  args: { clerkUserId: v.string() },
-  returns: v.null(),
-  async handler(ctx, { clerkUserId }) {
-    const user = await ctx.table("users").get("externalId", clerkUserId);
+    args: { clerkUserId: v.string() },
+    returns: v.null(),
+    async handler(ctx, { clerkUserId }) {
+        const user = await ctx.table("users").get("externalId", clerkUserId);
 
-    if (user !== null) {
-      // Delete all user's memberships
-      const members = await user.edge("members");
-      for (const member of members) {
-        const writable = await ctx.table("members").getX(member._id);
-        await writable.delete();
-      }
+        if (user !== null) {
+            // Delete all user's memberships
+            const members = await user.edge("members");
+            for (const member of members) {
+                const writable = await ctx.table("members").getX(member._id);
+                await writable.delete();
+            }
 
-      const writableUser = await ctx.table("users").getX(user._id);
-      await writableUser.delete();
-    } else {
-      console.warn(
-        `Can't delete user, there is none for Clerk user ID: ${clerkUserId}`
-      );
-    }
+            const writableUser = await ctx.table("users").getX(user._id);
+            await writableUser.delete();
+        } else {
+            console.warn(`Can't delete user, there is none for Clerk user ID: ${clerkUserId}`);
+        }
 
-    return null;
-  },
+        return null;
+    },
 });
 
 /**
  * Search users by name (for sharing UI)
  */
 export const search = query({
-  args: {
-    query: v.string(),
-    organizationId: v.optional(v.id("organizations")),
-  },
-  returns: v.array(
-    v.object({
-      _id: v.id("users"),
-      name: v.string(),
-    })
-  ),
-  async handler(ctx, { query: searchQuery, organizationId }) {
-    const viewer = ctx.viewer;
-    if (!viewer) return [];
+    args: {
+        query: v.string(),
+        organizationId: v.optional(v.id("organizations")),
+    },
+    returns: v.array(
+        v.object({
+            _id: v.id("users"),
+            name: v.string(),
+        }),
+    ),
+    async handler(ctx, { query: searchQuery, organizationId }) {
+        const viewer = ctx.viewer;
+        if (!viewer) return [];
 
-    // If org is specified, only search within org members
-    if (organizationId) {
-      const org = await ctx.table("organizations").get(organizationId);
-      if (!org) return [];
+        // If org is specified, only search within org members
+        if (organizationId) {
+            const org = await ctx.table("organizations").get(organizationId);
+            if (!org) return [];
 
-      const members = await org.edge("members");
-      const users = await Promise.all(members.map((m) => m.edge("user")));
+            const members = await org.edge("members");
+            const users = await Promise.all(members.map((m) => m.edge("user")));
 
-      return users
-        .filter(
-          (u) =>
-            u._id !== viewer._id &&
-            u.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        .slice(0, 10)
-        .map((u) => ({
-          _id: u._id,
-          name: u.name,
-        }));
-    }
+            return users
+                .filter((u) => u._id !== viewer._id && u.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                .slice(0, 10)
+                .map((u) => ({
+                    _id: u._id,
+                    name: u.name,
+                }));
+        }
 
-    // Otherwise search all users (limited for now)
-    // In production, you'd want a search index
-    const allUsers = await ctx.table("users");
-    return allUsers
-      .filter(
-        (u) =>
-          u._id !== viewer._id &&
-          u.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .slice(0, 10)
-      .map((u) => ({
-        _id: u._id,
-        name: u.name,
-      }));
-  },
+        // Otherwise search all users (limited for now)
+        // In production, you'd want a search index
+        const allUsers = await ctx.table("users");
+        return allUsers
+            .filter((u) => u._id !== viewer._id && u.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            .slice(0, 10)
+            .map((u) => ({
+                _id: u._id,
+                name: u.name,
+            }));
+    },
 });
