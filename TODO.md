@@ -7,13 +7,14 @@
 - [ ] Implement new landing page (LandingPage07 template) in `apps/web`
 - [ ] Customize copy and visuals for SmartPockets brand
 - [ ] Add alpha banner/badge making it clear the app is in early access
+- [ ] Add custom SmartPockets favicons to `apps/web` and `apps/app`
 
 ### 2. Marketing → App Architecture
 - [ ] Move landing page from `apps/app` to `apps/web`
 - [ ] Configure subdomain routing (www → marketing, app → authenticated app)
 - [ ] Set up Clerk auth handoff between domains
 - [ ] Remove marketing components from `apps/app`
-- [ ] Update Vercel deployment config for both apps
+- [x] Update Vercel deployment config for both apps (preview deployments now use consistent Convex deployment)
 
 ### 3. App UI Refresh
 - [ ] Apply SmartPockets aesthetic to authenticated app
@@ -35,6 +36,7 @@
 - [ ] Add pricing page to marketing site
 - [ ] Set up payment flow and subscription management
 - [ ] Add "Alpha" badge/disclaimer on pricing
+- [ ] Test billing end-to-end (signup → payment → subscription active)
 
 ---
 
@@ -167,3 +169,6 @@ Need to figure out the best way to implement multiple profiles (personal vs. bus
 - [ ] Deep research session with Claude on architecture
 - [ ] Consult on pricing tier structure
 - [ ] Document decision and rationale
+
+### Implementation
+- [ ] Implement optimal multi-profile setup based on research findings
