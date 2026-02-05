@@ -10,65 +10,33 @@ import { SectionHeader } from "@repo/ui/untitledui/application/section-headers/s
 import { SectionLabel } from "@repo/ui/untitledui/application/section-headers/section-label";
 import { Avatar } from "@repo/ui/untitledui/base/avatar/avatar";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
-import { Checkbox } from "@repo/ui/untitledui/base/checkbox/checkbox";
 import { Form } from "@repo/ui/untitledui/base/form/form";
-import { HintText } from "@repo/ui/untitledui/base/input/hint-text";
 import { InputBase, TextField } from "@repo/ui/untitledui/base/input/input";
 import { InputGroup } from "@repo/ui/untitledui/base/input/input-group";
 import { Label } from "@repo/ui/untitledui/base/input/label";
-import { Select } from "@repo/ui/untitledui/base/select/select";
-import { TextEditor } from "@repo/ui/untitledui/base/text-editor/text-editor";
-import { Mail01 } from "@untitledui/icons";
 import { toast } from "sonner";
-import { countriesOptions } from "@/utils/countries";
-import { timezonesOptionsWithLongName } from "@/utils/timezones";
-
-interface UserMetadata {
-    website?: string;
-    bio?: string;
-    jobTitle?: string;
-    showJobTitle?: boolean;
-    alternativeEmail?: string;
-    country?: string;
-    timezone?: string;
-}
-
-/**
- * Detects the user's timezone from the browser and returns a matching timezone ID.
- * Uses the browser's timezone offset to find the closest match in our timezone list.
- */
-function detectTimezone(): string | null {
-    try {
-        const offsetMinutes = new Date().getTimezoneOffset();
-        // offsetMinutes is negative for east of UTC, positive for west
-        // e.g., UTC-8 (PST) = 480, UTC+5:30 (IST) = -330
-        const hours = Math.floor(Math.abs(offsetMinutes) / 60);
-        const minutes = Math.abs(offsetMinutes) % 60;
-        const sign = offsetMinutes <= 0 ? "+" : "−"; // Note: using − (U+2212) to match our data
-
-        // Format: "UTC+05:30" or "UTC−08:00"
-        const formatted = `UTC${sign}${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
-
-        // Check if this exact offset exists in our options
-        const match = timezonesOptionsWithLongName.find((tz) => tz.id === formatted);
-        return match ? formatted : null;
-    } catch {
-        return null;
-    }
-}
 
 function getClerkErrorMessage(error: unknown): { field?: string; message: string } {
+    console.error("Clerk update error:", error);
+
     if (error && typeof error === "object" && "errors" in error) {
-        const clerkError = error as { errors: Array<{ code: string; message: string; meta?: { paramName?: string } }> };
+        const clerkError = error as { errors: Array<{ code: string; message: string; longMessage?: string; meta?: { paramName?: string } }> };
         const firstError = clerkError.errors[0];
+
+        console.error("Clerk error details:", {
+            code: firstError?.code,
+            message: firstError?.message,
+            longMessage: firstError?.longMessage,
+            meta: firstError?.meta,
+        });
 
         switch (firstError?.code) {
             case "form_identifier_exists":
                 return { field: "username", message: "This username is already taken" };
             case "form_param_format_invalid":
-                return { field: firstError.meta?.paramName, message: "Invalid format" };
+                return { field: firstError.meta?.paramName, message: firstError.longMessage || firstError.message || "Invalid format" };
             default:
-                return { message: firstError?.message || "Something went wrong. Please try again." };
+                return { message: firstError?.longMessage || firstError?.message || "Something went wrong. Please try again." };
         }
     }
     return { message: "Something went wrong. Please try again." };
@@ -77,17 +45,10 @@ function getClerkErrorMessage(error: unknown): { field?: string; message: string
 export default function SettingsPage() {
     const { user, isLoaded } = useUser();
 
-    // Form state
+    // Form state - Clerk native fields only
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [username, setUsername] = useState("");
-    const [website, setWebsite] = useState("");
-    const [bio, setBio] = useState("");
-    const [jobTitle, setJobTitle] = useState("");
-    const [showJobTitle, setShowJobTitle] = useState(true);
-    const [alternativeEmail, setAlternativeEmail] = useState("");
-    const [country, setCountry] = useState("");
-    const [timezone, setTimezone] = useState("");
 
     // Avatar state
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -109,16 +70,6 @@ export default function SettingsPage() {
             setLastName(user.lastName || "");
             setUsername(user.username || "");
             setAvatarPreview(user.imageUrl || null);
-
-            const metadata = user.unsafeMetadata as UserMetadata;
-            setWebsite(metadata?.website || "");
-            setBio(metadata?.bio || "");
-            setJobTitle(metadata?.jobTitle || "");
-            setShowJobTitle(metadata?.showJobTitle !== false);
-            setAlternativeEmail(metadata?.alternativeEmail || "");
-            setCountry(metadata?.country || "");
-            // Auto-detect timezone if user hasn't saved one
-            setTimezone(metadata?.timezone || detectTimezone() || "");
         }
     }, [user]);
 
@@ -144,20 +95,11 @@ export default function SettingsPage() {
                 setAvatarFile(null);
             }
 
-            // Update profile
+            // Update profile - Clerk native fields only
             await user.update({
                 firstName,
                 lastName,
                 username: username || undefined,
-                unsafeMetadata: {
-                    website,
-                    bio,
-                    jobTitle,
-                    showJobTitle,
-                    alternativeEmail,
-                    country,
-                    timezone,
-                },
             });
 
             toast.custom((t) => (
@@ -188,15 +130,6 @@ export default function SettingsPage() {
             setUsername(user.username || "");
             setAvatarPreview(user.imageUrl || null);
             setAvatarFile(null);
-
-            const metadata = user.unsafeMetadata as UserMetadata;
-            setWebsite(metadata?.website || "");
-            setBio(metadata?.bio || "");
-            setJobTitle(metadata?.jobTitle || "");
-            setShowJobTitle(metadata?.showJobTitle !== false);
-            setAlternativeEmail(metadata?.alternativeEmail || "");
-            setCountry(metadata?.country || "");
-            setTimezone(metadata?.timezone || detectTimezone() || "");
         }
         setFieldErrors({});
     };
@@ -277,71 +210,6 @@ export default function SettingsPage() {
 
                     <hr className="bg-border-secondary h-px w-full border-none" />
 
-                    {/* Website */}
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
-                        <SectionLabel.Root size="sm" title="Website" className="max-lg:hidden" />
-
-                        <InputGroup
-                            size="md"
-                            label="Website"
-                            name="website"
-                            className="lg:[&_[data-label]]:hidden"
-                            leadingAddon={<InputGroup.Prefix>https://</InputGroup.Prefix>}
-                            value={website}
-                            onChange={setWebsite}
-                        >
-                            <InputBase />
-                        </InputGroup>
-                    </div>
-
-                    <hr className="bg-border-secondary h-px w-full border-none" />
-
-                    {/* Country */}
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
-                        <SectionLabel.Root size="sm" title="Country" className="max-lg:hidden" />
-
-                        <Select
-                            name="country"
-                            label="Country"
-                            size="md"
-                            selectedKey={country || undefined}
-                            onSelectionChange={(key) => setCountry(key as string)}
-                            className="lg:label:hidden"
-                            items={countriesOptions}
-                        >
-                            {(item) => (
-                                <Select.Item id={item.id} icon={item.icon}>
-                                    {item.label}
-                                </Select.Item>
-                            )}
-                        </Select>
-                    </div>
-
-                    <hr className="bg-border-secondary h-px w-full border-none" />
-
-                    {/* Timezone */}
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
-                        <SectionLabel.Root size="sm" title="Timezone" className="max-lg:hidden" />
-
-                        <Select
-                            name="timezone"
-                            label="Timezone"
-                            size="md"
-                            selectedKey={timezone || undefined}
-                            onSelectionChange={(key) => setTimezone(key as string)}
-                            className="lg:label:hidden"
-                            items={timezonesOptionsWithLongName}
-                        >
-                            {(item) => (
-                                <Select.Item id={item.id} supportingText={item.supportingText}>
-                                    {item.label}
-                                </Select.Item>
-                            )}
-                        </Select>
-                    </div>
-
-                    <hr className="bg-border-secondary h-px w-full border-none" />
-
                     {/* Your photo */}
                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
                         <SectionLabel.Root size="sm" title="Your photo" description="This will be displayed on your profile." />
@@ -354,65 +222,6 @@ export default function SettingsPage() {
                                 onDropFiles={(files) => handleAvatarUpload(files)}
                             />
                         </div>
-                    </div>
-
-                    <hr className="bg-border-secondary h-px w-full border-none" />
-
-                    {/* Your bio */}
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
-                        <SectionLabel.Root size="sm" title="Your bio" description="Write a short introduction." tooltip="This will be public" />
-
-                        <TextEditor.Root
-                            limit={400}
-                            className="gap-2"
-                            inputClassName="min-h-57 md:min-h-43 p-4 resize-y"
-                            content={bio}
-                            onUpdate={({ editor }) => setBio(editor.getHTML())}
-                        >
-                            <TextEditor.Toolbar />
-
-                            <div className="flex flex-col gap-1.5">
-                                <TextEditor.Content />
-                                <TextEditor.HintText />
-                            </div>
-                        </TextEditor.Root>
-                    </div>
-
-                    <hr className="bg-border-secondary h-px w-full border-none" />
-
-                    {/* Job title */}
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
-                        <SectionLabel.Root size="sm" title="Job title" className="max-lg:hidden" />
-
-                        <div className="flex flex-col gap-4">
-                            <TextField name="jobTitle" value={jobTitle} onChange={setJobTitle}>
-                                <Label className="lg:hidden">Job title</Label>
-                                <InputBase size="md" placeholder="e.g. Product Designer" />
-                            </TextField>
-
-                            <Checkbox label="Show my job title in my profile" isSelected={showJobTitle} onChange={setShowJobTitle} />
-                        </div>
-                    </div>
-
-                    <hr className="bg-border-secondary h-px w-full border-none" />
-
-                    {/* Alternative contact email */}
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
-                        <SectionLabel.Root
-                            size="sm"
-                            title="Alternative contact email"
-                            description="Enter an alternative email if you'd like to be contacted via a different email."
-                        />
-
-                        <TextField
-                            aria-label="Alternative contact email"
-                            name="alternativeEmail"
-                            type="email"
-                            value={alternativeEmail}
-                            onChange={setAlternativeEmail}
-                        >
-                            <InputBase size="md" placeholder="you@example.com" icon={Mail01} />
-                        </TextField>
                     </div>
                 </div>
 

@@ -1,24 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./functions";
 
-// Shared validators
-const notificationChannelValidator = v.optional(
-  v.object({
-    push: v.optional(v.boolean()),
-    email: v.optional(v.boolean()),
-    sms: v.optional(v.boolean()),
-  })
-);
-
-const notificationsValidator = v.optional(
-  v.object({
-    comments: notificationChannelValidator,
-    tags: notificationChannelValidator,
-    reminders: notificationChannelValidator,
-    moreActivity: notificationChannelValidator,
-  })
-);
-
 const appearanceValidator = v.optional(
   v.object({
     theme: v.optional(
@@ -46,7 +28,6 @@ export const get = query({
       _id: v.id("userPreferences"),
       _creationTime: v.number(),
       userId: v.id("users"),
-      notifications: notificationsValidator,
       appearance: appearanceValidator,
     })
   ),
@@ -58,59 +39,6 @@ export const get = query({
       .query("userPreferences")
       .withIndex("byUserId", (q) => q.eq("userId", viewer._id))
       .unique();
-  },
-});
-
-// Mutation: Update single notification toggle (for auto-save)
-export const updateNotification = mutation({
-  args: {
-    category: v.union(
-      v.literal("comments"),
-      v.literal("tags"),
-      v.literal("reminders"),
-      v.literal("moreActivity")
-    ),
-    channel: v.union(v.literal("push"), v.literal("email"), v.literal("sms")),
-    value: v.boolean(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const viewer = ctx.viewerX();
-
-    const prefs = await ctx.db
-      .query("userPreferences")
-      .withIndex("byUserId", (q) => q.eq("userId", viewer._id))
-      .unique();
-
-    if (!prefs) {
-      // Create new preferences
-      await ctx.db.insert("userPreferences", {
-        userId: viewer._id,
-        notifications: {
-          [args.category]: {
-            [args.channel]: args.value,
-          },
-        },
-      });
-    } else {
-      // Merge into existing
-      const currentNotifications = prefs.notifications ?? {};
-      const currentCategory =
-        (currentNotifications as Record<string, Record<string, boolean>>)[
-          args.category
-        ] ?? {};
-
-      await ctx.db.patch(prefs._id, {
-        notifications: {
-          ...currentNotifications,
-          [args.category]: {
-            ...currentCategory,
-            [args.channel]: args.value,
-          },
-        },
-      });
-    }
-    return null;
   },
 });
 

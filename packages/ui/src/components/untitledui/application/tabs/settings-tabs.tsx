@@ -12,7 +12,6 @@ const tabs = [
     { id: "team", label: "Team", href: "/settings/team" },
     { id: "billing", label: "Billing", href: "/settings/billing" },
     { id: "email", label: "Email", href: "/settings/email" },
-    { id: "notifications", label: "Notifications", href: "/settings/notifications" },
     { id: "institutions", label: "Institutions", href: "/settings/institutions" },
 ];
 
