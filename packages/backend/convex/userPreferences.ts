@@ -20,6 +20,7 @@ const appearanceValidator = v.optional(
 );
 
 // Query: Get user preferences
+// Note: notifications field kept in validator for legacy data compatibility
 export const get = query({
   args: {},
   returns: v.union(
@@ -29,6 +30,7 @@ export const get = query({
       _creationTime: v.number(),
       userId: v.id("users"),
       appearance: appearanceValidator,
+      notifications: v.optional(v.any()), // Legacy field - no longer used
     })
   ),
   handler: async (ctx) => {
