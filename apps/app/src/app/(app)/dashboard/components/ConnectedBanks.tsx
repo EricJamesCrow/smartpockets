@@ -1,7 +1,7 @@
 // apps/app/src/app/(app)/dashboard/components/ConnectedBanks.tsx
 "use client";
 
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { AlertTriangle, Building07, Settings01 } from "@untitledui/icons";
 import { cx } from "@repo/ui/utils";
@@ -29,7 +29,11 @@ function formatSyncTime(timestamp?: number): string {
 }
 
 export function ConnectedBanks() {
-  const banks = useQuery(api.dashboard.queries.getConnectedBanks);
+  const { isAuthenticated } = useConvexAuth();
+  const banks = useQuery(
+    api.dashboard.queries.getConnectedBanks,
+    isAuthenticated ? {} : "skip"
+  );
   const [expandedBanks, setExpandedBanks] = useState<Set<string>>(new Set());
 
   if (!banks) {

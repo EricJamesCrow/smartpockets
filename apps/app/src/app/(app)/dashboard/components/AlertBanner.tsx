@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { AlertCircle, XClose } from "@untitledui/icons";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
@@ -9,7 +9,11 @@ import { useState } from "react";
 import Link from "next/link";
 
 export function AlertBanner() {
-  const alerts = useQuery(api.dashboard.queries.getAlerts);
+  const { isAuthenticated } = useConvexAuth();
+  const alerts = useQuery(
+    api.dashboard.queries.getAlerts,
+    isAuthenticated ? {} : "skip"
+  );
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   if (!alerts || alerts.length === 0) return null;

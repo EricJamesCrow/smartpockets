@@ -1,7 +1,7 @@
 // apps/app/src/app/(app)/dashboard/components/RecentTransactions.tsx
 "use client";
 
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
 
@@ -51,9 +51,11 @@ function groupByDate<T extends { date: string }>(
 }
 
 export function RecentTransactions() {
-  const transactions = useQuery(api.dashboard.queries.getRecentTransactions, {
-    limit: 10,
-  });
+  const { isAuthenticated } = useConvexAuth();
+  const transactions = useQuery(
+    api.dashboard.queries.getRecentTransactions,
+    isAuthenticated ? { limit: 10 } : "skip"
+  );
 
   if (!transactions) {
     return (

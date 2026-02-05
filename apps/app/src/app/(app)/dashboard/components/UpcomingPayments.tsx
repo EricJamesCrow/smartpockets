@@ -1,7 +1,7 @@
 // apps/app/src/app/(app)/dashboard/components/UpcomingPayments.tsx
 "use client";
 
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Check } from "@untitledui/icons";
 import { cx } from "@repo/ui/utils";
@@ -40,7 +40,11 @@ function getDotColor(payment: {
 }
 
 export function UpcomingPayments() {
-  const payments = useQuery(api.dashboard.queries.getUpcomingPayments);
+  const { isAuthenticated } = useConvexAuth();
+  const payments = useQuery(
+    api.dashboard.queries.getUpcomingPayments,
+    isAuthenticated ? {} : "skip"
+  );
 
   if (!payments) {
     return (
