@@ -1,0 +1,26 @@
+{
+  "$comment": "MCP server configuration for SmartPockets. Required env vars: PLAID_CLIENT_ID, PLAID_SANDBOX_SECRET, CLERK_SECRET_KEY",
+  "mcpServers": {
+    "convex": {
+      "command": "npx",
+      "args": ["convex", "mcp", "start"],
+      "cwd": "packages/backend"
+    },
+    "clerk": {
+      "command": "npx",
+      "args": ["-y", "@clerk/agent-toolkit", "-p", "local-mcp"]
+    },
+    "plaid-sandbox": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-plaid",
+        "--client-id", "${PLAID_CLIENT_ID}",
+        "--secret", "${PLAID_SANDBOX_SECRET}"
+      ]
+    },
+    "plaid-dashboard": {
+      "type": "sse",
+      "url": "https://api.dashboard.plaid.com/mcp/sse"
+    }
+  }
+}
