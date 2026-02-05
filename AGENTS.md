@@ -28,8 +28,58 @@ Use `bun` (repo is pinned to `bun@1.1.42`), though npm/yarn/pnpm also work.
 ## Testing Guidelines
 - No test runner is configured yet. If adding tests, colocate with sources using `*.test.ts(x)` or `*.spec.ts(x)` and add a Turbo script for that package.
 
-## Commit & Pull Request Guidelines
-- Commit messages follow Conventional Commits (e.g. `fix(ui): add z-50 to modal overlay`).
+## Git Workflow (CRITICAL)
+
+### Atomic Commits - ALWAYS FOLLOW
+
+**Commit after EVERY logical unit of work.** Each commit should be:
+
+- ONE logical change (one component, one fix, one test)
+- In working state (tests pass, no type errors)
+- Describable in one sentence
+- Safely revertable without side effects
+
+### Commit Format
+
+```
+<type>(<scope>): <description under 50 chars>
+
+[optional body]
+
+Refs: #issue
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Commit Types
+
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation
+- `test`: Tests
+- `refactor`: Code restructuring
+- `style`: Formatting
+- `chore`: Maintenance
+
+### Commit Frequency (IMPORTANT)
+
+Commit immediately after each:
+
+- Single feature component added
+- Single bug fix completed
+- Test suite written for specific function
+- Refactoring of single concern
+
+### Workflow Pattern
+
+1. Implement ONE logical unit
+2. Verify changes work
+3. Stage relevant files: `git add <files>`
+4. Commit immediately with descriptive message
+5. Repeat for next unit
+6. Push when feature complete
+
+## Pull Request Guidelines
 - PRs should include a clear description, testing notes (or "not tested"), and screenshots or recordings for UI changes.
 
 ## Configuration & Secrets
