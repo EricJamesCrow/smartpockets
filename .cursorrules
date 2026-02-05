@@ -1,0 +1,26 @@
+# SmartPockets
+
+Read AGENTS.md for full project context including architecture, patterns, and security requirements.
+
+## Quick Rules
+
+- Package manager: bun (pinned to 1.1.42)
+- UI: UntitledUI components only (never create custom duplicates)
+- Backend: Convex-first (no Next.js API routes)
+- Imports: query/mutation from ./functions, NOT ./_generated/server
+- Auth: Always derive userId from ctx.viewerX(), never from args
+- Commits: Atomic, conventional format, one logical change each
+
+## File Paths
+
+- App code: apps/app/src/
+- Convex backend: packages/backend/convex/
+- UI components: packages/ui/src/
+- Email templates: packages/email/emails/
+
+## Do Not
+
+- Use export const dynamic = "force-dynamic"
+- Accept userId from function arguments
+- Create components that duplicate UntitledUI
+- Mutate edge-traversed entities (fetch writable via ctx.table().getX())

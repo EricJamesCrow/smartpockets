@@ -1,0 +1,26 @@
+# SmartPockets Cursor Rules
+
+@AGENTS.md
+
+## Context
+
+SmartPockets is a fintech app for credit card power users. It uses:
+- Next.js 16 + React 19
+- Convex with Ents ORM
+- Clerk authentication
+- Plaid for bank data
+- UntitledUI component library
+
+## Skills Available
+
+Clerk and Vercel skills are installed in .agents/skills/
+Convex skills are installed in .claude/skills/
+
+## Architecture
+
+See AGENTS.md for:
+- Full schema documentation
+- Convex Ents patterns
+- Plaid integration flow
+- Security requirements
+- Common pitfalls
