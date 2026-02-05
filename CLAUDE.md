@@ -12,6 +12,15 @@ At the start of each session:
 3. Review recent commits: `git log --oneline -10`
 4. Read `AGENTS.md` for full project context
 
+## Task Tracking
+
+**Always update `TODO.md` when completing tasks:**
+- Check off completed items: `- [ ]` → `- [x]`
+- Remove items that are no longer relevant
+- Add new tasks discovered during work
+
+When finishing a session or completing significant work, review TODO.md to ensure it reflects current state.
+
 ## Quick Reference
 
 | Command | Purpose |

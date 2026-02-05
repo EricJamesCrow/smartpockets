@@ -107,7 +107,7 @@ Ensure our transaction exports and statement downloads contain all of the inform
 ## UI/UX Fixes & Cleanup
 
 ### Sidebar Logo
-- [ ] Fix logo to minimize and change to "SP" when sidebar is collapsed
+- [x] Fix logo to minimize and change to "SP" when sidebar is collapsed
   - Reference: Currently shows full "Smart" text even when collapsed (see attached screenshot)
 
 ### Dashboard Aesthetic
@@ -115,10 +115,10 @@ Ensure our transaction exports and statement downloads contain all of the inform
   - Run brainstorming session to identify specific improvements
 
 ### Settings Cleanup
-- [ ] Thoroughly cleanup settings page - remove all non-functional items
-- [ ] Remove dead links and unnecessary options
-- [ ] Decide on search settings functionality:
-  - **Option A**: Remove "search settings" entirely
+- [x] Thoroughly cleanup settings page - remove all non-functional items
+- [x] Remove dead links and unnecessary options
+- [x] Decide on search settings functionality:
+  - **Option A**: Remove "search settings" entirely ✓ (implemented)
   - **Option B**: Improve aesthetics/UX in a superpowers session
   - **Option C**: Integrate settings search as a subtab/subsearch within main search
   - Research: Is unified search with settings subsection better UX than separate settings search?
