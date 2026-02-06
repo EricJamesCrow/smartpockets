@@ -4,8 +4,17 @@
 
 ### 1. Landing Page & Brand Identity
 - [x] Define SmartPockets aesthetic (clean & approachable, green brand, confident tone)
-- [ ] Finish customizing landing page (LandingPage07 template) in `apps/web`
-  - Services dropdown: Credit card management active, Transactions and Form 568 as "coming soon" (greyed out)
+- [x] Finish customizing landing page (LandingPage07 template) in `apps/web`
+  - [x] Products dropdown: Credit card management active, Transactions and Form 568 as "coming soon" (greyed out, non-interactive)
+  - [x] Remove Services dropdown
+  - [x] Remove Pricing from header/footer/landing page
+  - [x] Remove Careers, Help from footer
+  - [x] Remove "Get the app" section with Apple/Google badges
+  - [x] Remove 30-day free trial CTA
+  - [x] Replace placeholder names with "Eric Crow"
+  - [x] Extract Header + Footer into shared layout.tsx
+  - [x] Add Privacy Policy page (`/privacy`)
+  - [x] Add Terms & Conditions page (`/terms`)
 - [ ] Add alpha banner/badge making it clear the app is in early access
 - [x] Add custom SmartPockets favicons to `apps/web` and `apps/app`
 
