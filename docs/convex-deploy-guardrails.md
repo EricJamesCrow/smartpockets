@@ -45,3 +45,6 @@ If cards appear missing after a deploy:
   - `[items.deletePlaidItem] Deleted app-level credit cards`
   - `[items.deleteAppDataForPlaidItem] Deleted app-level credit cards`
 - Validate `plaidItemId`, `deletedCreditCards`, and `source`.
+- Ignore/omit `durationMs` for mutation-level timing in `items.deletePlaidItem` and
+  `items.deleteAppDataForPlaidItem`; `Date.now()` in Convex mutations does not
+  represent meaningful wall-clock elapsed time.
