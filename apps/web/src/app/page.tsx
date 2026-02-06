@@ -6,24 +6,11 @@ import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Form } from "@repo/ui/untitledui/base/form/form";
 import { Input } from "@repo/ui/untitledui/base/input/input";
 import { FeaturedIcon } from "@repo/ui/untitledui/foundations/featured-icon/featured-icon";
-import { SmartPocketsLogo } from "@repo/ui/untitledui/foundations/logo/smartpockets-logo";
-import { GitHub, LinkedIn, X } from "@repo/ui/untitledui/foundations/social-icons/index";
 import { CreditCard } from "@repo/ui/untitledui/shared-assets/credit-card/credit-card";
-import { cx } from "@repo/ui/utils";
 import { ArrowRight, ChartBreakoutSquare, MessageChatCircle, MessageSmileCircle, Zap } from "@untitledui/icons";
-import { Header } from "@/components/marketing/header-navigation/header";
-
-const footerSocials = [
-    { label: "X (formerly Twitter)", icon: X, href: "https://x.com/ericjamescrow" },
-    { label: "LinkedIn", icon: LinkedIn, href: "https://www.linkedin.com/in/ericcrow/" },
-    { label: "GitHub", icon: GitHub, href: "https://github.com/EricJamesCrow" },
-];
-
 const HeroCardMockup11 = () => {
     return (
         <div className="bg-primary relative overflow-hidden">
-            <Header />
-
             <section className="lg:min-h-180 relative overflow-hidden py-16 lg:flex lg:py-0">
                 <div className="max-w-container mx-auto w-full px-4 md:px-8">
                     <div className="flex flex-col items-start md:max-w-3xl lg:w-1/2 lg:pb-24 lg:pr-8 lg:pt-32">
@@ -416,53 +403,6 @@ const CTACardVerticalBrand = () => {
     );
 };
 
-const FooterLarge07 = () => {
-    return (
-        <footer className="dark-mode bg-primary py-12 md:pt-16">
-            <div className="max-w-container mx-auto px-4 md:px-8">
-                <div className="flex flex-col gap-8 md:items-start">
-                    <div className="flex w-full flex-col gap-6 md:max-w-xs md:gap-8">
-                        <SmartPocketsLogo size="lg" />
-                        <p className="text-md text-tertiary">Smart credit card management for everyone.</p>
-                    </div>
-                    <nav>
-                        <ul className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-[repeat(3,max-content)]">
-                            {[
-                                { title: "Overview", href: "/" },
-                                { title: "Features", href: "/features" },
-                                { title: "Privacy", href: "/privacy" },
-                            ].map((item) => (
-                                <li key={item.title}>
-                                    <Button color="link-gray" size="lg" href={item.href}>
-                                        {item.title}
-                                    </Button>
-                                </li>
-                            ))}
-                        </ul>
-                    </nav>
-                </div>
-                <div className="border-secondary mt-12 flex flex-col-reverse justify-between gap-6 border-t pt-8 md:mt-16 md:flex-row">
-                    <p className="text-md text-quaternary">© 2026 SmartPockets. All rights reserved.</p>
-                    <ul className="flex gap-6">
-                        {footerSocials.map(({ label, icon: Icon, href }) => (
-                            <li key={label}>
-                                <a
-                                    href={href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-fg-quaternary outline-focus-ring hover:text-fg-quaternary_hover transition duration-100 ease-linear focus-visible:outline-2 focus-visible:outline-offset-2"
-                                >
-                                    <Icon size={24} aria-label={label} />
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
-        </footer>
-    );
-};
-
 export default function HomePage() {
     return (
         <div className="bg-primary">
@@ -472,7 +412,6 @@ export default function HomePage() {
             <FeaturesIconCards01 />
             <NewsletterCardVertical />
             <CTACardVerticalBrand />
-            <FooterLarge07 />
         </div>
     );
 }
