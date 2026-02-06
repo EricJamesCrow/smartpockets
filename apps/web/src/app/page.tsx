@@ -2,13 +2,12 @@
 
 import type { FC, FormEvent, ReactNode } from "react";
 import { BadgeGroup } from "@repo/ui/untitledui/base/badges/badge-groups";
-import { AppStoreButton, GooglePlayButton } from "@repo/ui/untitledui/base/buttons/app-store-buttons";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Form } from "@repo/ui/untitledui/base/form/form";
 import { Input } from "@repo/ui/untitledui/base/input/input";
 import { FeaturedIcon } from "@repo/ui/untitledui/foundations/featured-icon/featured-icon";
 import { SmartPocketsLogo } from "@repo/ui/untitledui/foundations/logo/smartpockets-logo";
-import { AngelList, Dribbble, Facebook, GitHub, Layers, LinkedIn, X } from "@repo/ui/untitledui/foundations/social-icons/index";
+import { GitHub, LinkedIn, X } from "@repo/ui/untitledui/foundations/social-icons/index";
 import { CreditCard } from "@repo/ui/untitledui/shared-assets/credit-card/credit-card";
 import { cx } from "@repo/ui/utils";
 import { ArrowRight, ChartBreakoutSquare, MessageChatCircle, MessageSmileCircle, Zap } from "@untitledui/icons";
@@ -421,39 +420,26 @@ const FooterLarge07 = () => {
     return (
         <footer className="dark-mode bg-primary py-12 md:pt-16">
             <div className="max-w-container mx-auto px-4 md:px-8">
-                <div className="flex flex-col justify-between gap-x-8 gap-y-12 lg:flex-row">
-                    <div className="flex flex-col gap-8 md:items-start">
-                        <div className="flex w-full flex-col gap-6 md:max-w-xs md:gap-8">
-                            <SmartPocketsLogo size="lg" />
-                            <p className="text-md text-tertiary">Smart credit card management for everyone.</p>
-                        </div>
-                        <nav>
-                            <ul className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-[repeat(6,max-content)]">
-                                {[
-                                    { title: "Overview", href: "/" },
-                                    { title: "Features", href: "/features" },
-                                    { title: "Pricing", href: "/pricing" },
-                                    { title: "Careers", href: "/careers" },
-                                    { title: "Help", href: "/help" },
-                                    { title: "Privacy", href: "/privacy" },
-                                ].map((item) => (
-                                    <li key={item.title}>
-                                        <Button color="link-gray" size="lg" href={item.href}>
-                                            {item.title}
-                                        </Button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </nav>
+                <div className="flex flex-col gap-8 md:items-start">
+                    <div className="flex w-full flex-col gap-6 md:max-w-xs md:gap-8">
+                        <SmartPocketsLogo size="lg" />
+                        <p className="text-md text-tertiary">Smart credit card management for everyone.</p>
                     </div>
-
-                    <div>
-                        <h4 className="text-md text-brand-secondary font-medium">Get the app</h4>
-                        <div className="mt-4 flex w-max flex-row gap-4 lg:flex-col">
-                            <AppStoreButton href="#" className="w-[135px]" />
-                            <GooglePlayButton href="#" className="w-[135px]" />
-                        </div>
-                    </div>
+                    <nav>
+                        <ul className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-[repeat(3,max-content)]">
+                            {[
+                                { title: "Overview", href: "/" },
+                                { title: "Features", href: "/features" },
+                                { title: "Privacy", href: "/privacy" },
+                            ].map((item) => (
+                                <li key={item.title}>
+                                    <Button color="link-gray" size="lg" href={item.href}>
+                                        {item.title}
+                                    </Button>
+                                </li>
+                            ))}
+                        </ul>
+                    </nav>
                 </div>
                 <div className="border-secondary mt-12 flex flex-col-reverse justify-between gap-6 border-t pt-8 md:mt-16 md:flex-row">
                     <p className="text-md text-quaternary">© 2026 SmartPockets. All rights reserved.</p>
