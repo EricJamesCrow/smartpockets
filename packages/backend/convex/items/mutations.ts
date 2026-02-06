@@ -43,12 +43,17 @@ export const deletePlaidItem = mutation({
     }),
   }),
   handler: async (ctx, args) => {
+    const startedAt = Date.now();
+
     // Get the item from component to verify it exists and get userId
     const item = await ctx.runQuery(components.plaid.public.getItem, {
       plaidItemId: args.plaidItemId,
     });
 
     if (!item) {
+      console.warn("[items.deletePlaidItem] Plaid item not found", {
+        plaidItemId: args.plaidItemId,
+      });
       throw new Error("Plaid item not found");
     }
 
@@ -62,10 +67,23 @@ export const deletePlaidItem = mutation({
       await ctx.db.delete(card._id);
     }
 
+    console.warn("[items.deletePlaidItem] Deleted app-level credit cards", {
+      plaidItemId: args.plaidItemId,
+      deletedCreditCards: creditCards.length,
+      source: "user_disconnect",
+    });
+
     // Step 2: Delete component data via component mutation
     // This cascade deletes: plaidItem, accounts, transactions, liabilities
     await ctx.runMutation(components.plaid.public.deletePlaidItem, {
       plaidItemId: args.plaidItemId,
+    });
+
+    console.warn("[items.deletePlaidItem] Completed item delete", {
+      plaidItemId: args.plaidItemId,
+      deletedCreditCards: creditCards.length,
+      durationMs: Date.now() - startedAt,
+      source: "user_disconnect",
     });
 
     return {
@@ -89,6 +107,8 @@ export const deleteAppDataForPlaidItem = mutation({
   args: { plaidItemId: v.string() },
   returns: v.object({ deletedCreditCards: v.number() }),
   handler: async (ctx, args) => {
+    const startedAt = Date.now();
+
     // Delete creditCards
     const creditCards = await ctx.db
       .query("creditCards")
@@ -98,6 +118,13 @@ export const deleteAppDataForPlaidItem = mutation({
     for (const card of creditCards) {
       await ctx.db.delete(card._id);
     }
+
+    console.warn("[items.deleteAppDataForPlaidItem] Deleted app-level credit cards", {
+      plaidItemId: args.plaidItemId,
+      deletedCreditCards: creditCards.length,
+      durationMs: Date.now() - startedAt,
+      source: "component_cleanup",
+    });
 
     return { deletedCreditCards: creditCards.length };
   },
