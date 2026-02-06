@@ -144,9 +144,10 @@ function getBrandIcon(brand: CardBrand | undefined, useColoredVariant: boolean):
             // DiscoverIcon works for both variants
             return DiscoverIcon;
         case "mastercard":
-        default:
-            // Default to Mastercard (original behavior)
             return useColoredVariant ? MastercardIcon : MastercardIconWhite;
+        default:
+            // Default unknown brands to Visa.
+            return VisaIcon;
     }
 }
 

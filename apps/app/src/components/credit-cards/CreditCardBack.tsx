@@ -142,6 +142,6 @@ function getBrandIcon(brand: CardBrand): FC<SVGProps<SVGSVGElement>> | null {
     case "discover":
       return DiscoverIcon;
     default:
-      return null;
+      return VisaIcon;
   }
 }
