@@ -11,7 +11,7 @@ import { SmartPocketsLogo } from "@repo/ui/untitledui/foundations/logo/smartpock
 import { AngelList, Dribbble, Facebook, GitHub, Layers, LinkedIn, X } from "@repo/ui/untitledui/foundations/social-icons/index";
 import { CreditCard } from "@repo/ui/untitledui/shared-assets/credit-card/credit-card";
 import { cx } from "@repo/ui/utils";
-import { ArrowRight, ChartBreakoutSquare, CheckCircle, LayersTwo01, MessageChatCircle, MessageSmileCircle, Zap } from "@untitledui/icons";
+import { ArrowRight, ChartBreakoutSquare, MessageChatCircle, MessageSmileCircle, Zap } from "@untitledui/icons";
 import { Header } from "@/components/marketing/header-navigation/header";
 
 const footerSocials = [
@@ -88,21 +88,21 @@ const HeroCardMockup11 = () => {
                             }
                         >
                             <div className="flex gap-4 pl-40">
-                                <CreditCard type="brand-dark" cardHolder="Phoenix baker" width={316} />
-                                <CreditCard type="gray-dark" cardHolder="Phoenix baker" width={316} />
-                                <CreditCard type="brand-dark" cardHolder="Phoenix baker" width={316} />
+                                <CreditCard type="brand-dark" cardHolder="Eric Crow" width={316} />
+                                <CreditCard type="gray-dark" cardHolder="Eric Crow" width={316} />
+                                <CreditCard type="brand-dark" cardHolder="Eric Crow" width={316} />
                             </div>
                             <div className="flex gap-4">
-                                <CreditCard type="gradient-strip-vertical" cardHolder="Phoenix baker" width={316} />
-                                <CreditCard type="gradient-strip" cardHolder="Phoenix baker" width={316} />
-                                <CreditCard type="salmon-strip" cardHolder="Phoenix baker" width={316} />
+                                <CreditCard type="gradient-strip-vertical" cardHolder="Eric Crow" width={316} />
+                                <CreditCard type="gradient-strip" cardHolder="Eric Crow" width={316} />
+                                <CreditCard type="salmon-strip" cardHolder="Eric Crow" width={316} />
                             </div>
                             <div className="flex gap-4 pl-40">
-                                <CreditCard type="gray-dark" cardHolder="Phoenix baker" width={316} />
-                                <CreditCard type="brand-dark" cardHolder="Phoenix baker" width={316} />
+                                <CreditCard type="gray-dark" cardHolder="Eric Crow" width={316} />
+                                <CreditCard type="brand-dark" cardHolder="Eric Crow" width={316} />
                             </div>
                             <div className="flex gap-4">
-                                <CreditCard type="salmon-strip" cardHolder="Phoenix baker" width={316} />
+                                <CreditCard type="salmon-strip" cardHolder="Eric Crow" width={316} />
                             </div>
                         </div>
                     </div>
@@ -243,25 +243,25 @@ const IconsAndMockup07 = () => {
                                 className="z-4 relative [--scale:1.13] md:[--scale:1.641]"
                                 style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
                             >
-                                <CreditCard type="transparent-gradient" cardHolder="Demi Wilkinson" width={316} />
+                                <CreditCard type="transparent-gradient" cardHolder="Eric Crow" width={316} />
                             </div>
                             <div
                                 className="z-3 relative [--scale:1.13] md:[--scale:1.641]"
                                 style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
                             >
-                                <CreditCard type="brand-dark" cardHolder="Lana Steiner" width={316} />
+                                <CreditCard type="brand-dark" cardHolder="Eric Crow" width={316} />
                             </div>
                             <div
                                 className="z-2 relative [--scale:1.13] md:[--scale:1.641]"
                                 style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
                             >
-                                <CreditCard type="transparent" cardHolder="OLIVIA RHYE" width={316} />
+                                <CreditCard type="transparent" cardHolder="Eric Crow" width={316} />
                             </div>
                             <div
                                 className="z-1 relative [--scale:1.13] md:[--scale:1.641]"
                                 style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
                             >
-                                <CreditCard type="gray-dark" cardHolder="Phoenix Baker" width={316} />
+                                <CreditCard type="gray-dark" cardHolder="Eric Crow" width={316} />
                             </div>
                             <div
                                 className="relative z-0 [--scale:1.13] md:[--scale:1.641]"
@@ -271,61 +271,6 @@ const IconsAndMockup07 = () => {
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const CTAAbstractImages = () => {
-    return (
-        <section className="bg-secondary py-16 lg:py-24">
-            <div className="max-w-container mx-auto grid grid-cols-1 gap-16 overflow-hidden px-4 md:px-8 lg:grid-cols-2 lg:items-center">
-                <div className="flex max-w-3xl flex-col items-start">
-                    <h2 className="text-display-sm text-primary md:text-display-md lg:text-display-lg font-semibold">No long-term contracts. No catches.</h2>
-                    <p className="text-tertiary mt-4 text-lg md:mt-6 md:text-xl">Start your 30-day free trial today.</p>
-
-                    <div className="mt-8 flex w-full flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-start md:mt-12">
-                        <Button color="secondary" size="xl">
-                            Learn more
-                        </Button>
-                        <Button href="/sign-up" size="xl">
-                            Get started
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="h-122 sm:h-124 grid w-[150%] grid-cols-[repeat(12,1fr)] grid-rows-[repeat(12,1fr)] gap-2 justify-self-center sm:w-[120%] md:w-auto md:gap-4">
-                    <img
-                        src="https://www.untitledui.com/marketing/abstract-image-01.webp"
-                        className="size-full object-cover"
-                        alt="Abstract geometric pattern"
-                        style={{ gridArea: "3 / 3 / 7 / 7" }}
-                    />
-                    <img
-                        src="https://www.untitledui.com/marketing/abstract-image-02.webp"
-                        className="size-full object-cover"
-                        alt="Modern abstract design"
-                        style={{ gridArea: "1 / 7 / 7 / 11" }}
-                    />
-                    <img
-                        src="https://www.untitledui.com/marketing/abstract-image-03.webp"
-                        className="size-full object-cover"
-                        alt="Contemporary abstract artwork"
-                        style={{ gridArea: "7 / 5 / 13 / 9" }}
-                    />
-                    <img
-                        src="https://www.untitledui.com/marketing/abstract-image-04.webp"
-                        className="size-full object-cover"
-                        alt="Minimalist abstract composition"
-                        style={{ gridArea: "7 / 9 / 10 / 13" }}
-                    />
-                    <img
-                        src="https://www.untitledui.com/marketing/smiling-girl-2.webp"
-                        className="size-full object-cover"
-                        alt="Professional woman smiling"
-                        style={{ gridArea: "7 / 1 / 10 / 5" }}
-                    />
                 </div>
             </div>
         </section>
@@ -395,108 +340,6 @@ const FeaturesIconCards01 = () => {
                             </li>
                         ))}
                     </ul>
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const plans = [
-    {
-        title: "Free plan",
-        subtitle: "$0/mth",
-        description: "Forever free.",
-        features: ["Up to 5 credit cards", "Basic spending insights", "Payment reminders", "1 wallet", "Community support"],
-        icon: Zap,
-    },
-    {
-        title: "Pro plan",
-        subtitle: "$5/mth",
-        description: "Billed monthly.",
-        features: ["Unlimited credit cards", "Advanced analytics", "Unlimited wallets", "Priority support", "Early access to features"],
-        icon: LayersTwo01,
-    },
-];
-
-const CheckItemText = (props: { size?: "sm" | "md" | "lg" | "xl"; text?: string; color?: "primary" | "success" }) => {
-    const { text, color, size } = props;
-
-    return (
-        <li className="flex gap-3">
-            <div
-                className={cx(
-                    "flex shrink-0 items-center justify-center rounded-full",
-                    color === "success" ? "bg-success-secondary text-featured-icon-light-fg-success" : "bg-brand-primary text-featured-icon-light-fg-brand",
-                    size === "lg" ? "size-7 md:h-8 md:w-8" : size === "md" ? "size-7" : "size-6",
-                )}
-            >
-                <svg width={size === "lg" ? 16 : size === "md" ? 15 : 13} height={size === "lg" ? 14 : size === "md" ? 13 : 11} viewBox="0 0 13 11" fill="none">
-                    <path
-                        fillRule="evenodd"
-                        clipRule="evenodd"
-                        d="M11.0964 0.390037L3.93638 7.30004L2.03638 5.27004C1.68638 4.94004 1.13638 4.92004 0.736381 5.20004C0.346381 5.49004 0.236381 6.00004 0.476381 6.41004L2.72638 10.07C2.94638 10.41 3.32638 10.62 3.75638 10.62C4.16638 10.62 4.55638 10.41 4.77638 10.07C5.13638 9.60004 12.0064 1.41004 12.0064 1.41004C12.9064 0.490037 11.8164 -0.319963 11.0964 0.380037V0.390037Z"
-                        fill="currentColor"
-                    />
-                </svg>
-            </div>
-            <span className={cx("text-tertiary", size === "lg" ? "pt-0.5 text-lg md:pt-0" : size === "md" ? "text-md pt-0.5 md:pt-0 md:text-lg" : "text-md")}>
-                {text}
-            </span>
-        </li>
-    );
-};
-
-interface PricingTierCardProps {
-    icon: FC<{ className?: string }>;
-    title: string;
-    subtitle: string;
-    description?: string;
-    features: string[];
-}
-
-const PricingTierCardIcon = (props: PricingTierCardProps) => {
-    return (
-        <div className="bg-primary ring-secondary_alt flex flex-col overflow-hidden rounded-2xl shadow-lg ring-1">
-            <div className="flex flex-col items-center px-6 pt-6 text-center md:px-8 md:pt-8">
-                <FeaturedIcon icon={props.icon} color="brand" theme="light" size="lg" />
-
-                <h2 className="text-brand-secondary mt-4 text-xl font-semibold">{props.title}</h2>
-                <p className="text-display-md text-primary md:text-display-lg mt-2 font-semibold">{props.subtitle}</p>
-                <p className="text-md text-tertiary mt-2">{props.description}</p>
-            </div>
-
-            <ul className="flex flex-col gap-4 px-6 pb-6 pt-8 md:p-8 md:pb-10">
-                {props.features.map((feat) => (
-                    <CheckItemText key={feat} text={feat} />
-                ))}
-            </ul>
-
-            <div className="border-secondary bg-secondary mt-auto flex flex-col gap-3 rounded-b-2xl border-t px-6 pb-8 pt-6 md:p-8">
-                <Button href="/sign-up" size="xl">
-                    Get started
-                </Button>
-            </div>
-        </div>
-    );
-};
-
-const PricingSectionFeaturedCards01 = () => {
-    return (
-        <section className="bg-secondary py-16 md:py-24">
-            <div className="max-w-container mx-auto px-4 md:px-8">
-                <div className="flex flex-col gap-12 md:gap-16 xl:flex-row">
-                    <div className="w-full max-w-3xl xl:max-w-md">
-                        <span className="text-brand-secondary md:text-md block text-sm font-semibold">Pricing</span>
-                        <h2 className="text-display-sm text-primary md:text-display-md mt-3 hidden font-semibold md:flex">Simple, affordable pricing</h2>
-                        <h2 className="text-display-sm text-primary md:text-display-md mt-3 flex font-semibold md:hidden">Simple pricing</h2>
-                        <p className="text-tertiary mt-4 text-lg md:mt-5">Start free, upgrade when you need more. No hidden fees.</p>
-                    </div>
-
-                    <div className="grid w-full grid-cols-1 items-start gap-4 md:-ml-2 md:grid-cols-2 md:gap-8">
-                        {plans.map((plan) => (
-                            <PricingTierCardIcon key={plan.title} {...plan} />
-                        ))}
-                    </div>
                 </div>
             </div>
         </section>
@@ -640,9 +483,7 @@ export default function HomePage() {
             <HeroCardMockup11 />
             <SocialProofFullWidth />
             <IconsAndMockup07 />
-            <CTAAbstractImages />
             <FeaturesIconCards01 />
-            <PricingSectionFeaturedCards01 />
             <NewsletterCardVertical />
             <CTACardVerticalBrand />
             <FooterLarge07 />
