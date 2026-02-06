@@ -20,8 +20,8 @@ export interface MagicLinkProps {
     magicLinkUrl: string;
     /** Link expiry time in minutes (Clerk default: 10) */
     expiryMinutes?: number;
-    /** Text for sign-in button */
-    signInButtonText?: string;
+    /** Text for the action button (e.g. "Sign in", "Sign up", "Verify email") */
+    actionButtonText?: string;
     /** Brand configuration overrides */
     brandConfig?: Partial<EmailBrandConfig>;
 }
@@ -31,7 +31,7 @@ export const MagicLink = ({
     recipientName,
     magicLinkUrl,
     expiryMinutes = 10,
-    signInButtonText = "Sign in",
+    actionButtonText = "Sign in",
     brandConfig,
 }: MagicLinkProps) => {
     const config = { ...defaultEmailConfig, ...brandConfig };
@@ -56,7 +56,7 @@ export const MagicLink = ({
                             </Row>
                             <Row className="mb-6">
                                 <Button href={magicLinkUrl} className="mb-6">
-                                    <Text className="text-md font-semibold">{signInButtonText}</Text>
+                                    <Text className="text-md font-semibold">{actionButtonText}</Text>
                                 </Button>
                             </Row>
                             <Row className="mb-6">
