@@ -12,7 +12,6 @@ import { Avatar } from "@repo/ui/untitledui/base/avatar/avatar";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Form } from "@repo/ui/untitledui/base/form/form";
 import { InputBase, TextField } from "@repo/ui/untitledui/base/input/input";
-import { InputGroup } from "@repo/ui/untitledui/base/input/input-group";
 import { Label } from "@repo/ui/untitledui/base/input/label";
 import { toast } from "sonner";
 
@@ -31,8 +30,6 @@ function getClerkErrorMessage(error: unknown): { field?: string; message: string
         });
 
         switch (firstError?.code) {
-            case "form_identifier_exists":
-                return { field: "username", message: "This username is already taken" };
             case "form_param_format_invalid":
                 return { field: firstError.meta?.paramName, message: firstError.longMessage || firstError.message || "Invalid format" };
             default:
@@ -48,7 +45,6 @@ export default function SettingsPage() {
     // Form state - Clerk native fields only
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
-    const [username, setUsername] = useState("");
 
     // Avatar state
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -68,7 +64,6 @@ export default function SettingsPage() {
         if (user) {
             setFirstName(user.firstName || "");
             setLastName(user.lastName || "");
-            setUsername(user.username || "");
             setAvatarPreview(user.imageUrl || null);
         }
     }, [user]);
@@ -99,7 +94,6 @@ export default function SettingsPage() {
             await user.update({
                 firstName,
                 lastName,
-                username: username || undefined,
             });
 
             toast.custom((t) => (
@@ -127,7 +121,6 @@ export default function SettingsPage() {
         if (user) {
             setFirstName(user.firstName || "");
             setLastName(user.lastName || "");
-            setUsername(user.username || "");
             setAvatarPreview(user.imageUrl || null);
             setAvatarFile(null);
         }
@@ -186,26 +179,6 @@ export default function SettingsPage() {
                                 <InputBase size="md" placeholder="Last name" />
                             </TextField>
                         </div>
-                    </div>
-
-                    <hr className="bg-border-secondary h-px w-full border-none" />
-
-                    {/* Username */}
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
-                        <SectionLabel.Root size="sm" title="Username" className="max-lg:hidden" />
-
-                        <InputGroup
-                            size="md"
-                            label="Username"
-                            name="username"
-                            className="lg:[&_[data-label]]:hidden"
-                            leadingAddon={<InputGroup.Prefix>@</InputGroup.Prefix>}
-                            isInvalid={!!fieldErrors.username}
-                            value={username}
-                            onChange={setUsername}
-                        >
-                            <InputBase />
-                        </InputGroup>
                     </div>
 
                     <hr className="bg-border-secondary h-px w-full border-none" />
