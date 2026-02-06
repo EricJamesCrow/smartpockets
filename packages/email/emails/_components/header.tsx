@@ -8,7 +8,7 @@ import { defaultEmailConfig, type EmailBrandConfig } from "../_config/email-conf
  */
 const Logo = ({ logoUrl, logoAlt, className }: { logoUrl: string; logoAlt: string; className?: string }) => {
     if (logoUrl) {
-        return <Img aria-hidden src={logoUrl} alt={logoAlt} className={className || "h-7 md:h-8"} />;
+        return <Img src={logoUrl} alt={logoAlt} className={className || "h-7 md:h-8"} />;
     }
     return (
         <EmailText style={{ fontSize: "20px", fontWeight: 700, lineHeight: "28px", margin: 0 }}>
@@ -106,17 +106,17 @@ export const LeftAlignedSocials = ({
                     </EmailButton>
                     {socialLinks?.twitter && (
                         <EmailButton aria-label="X (formerly Twitter)" href={socialLinks.twitter} className="ml-6 align-middle">
-                            <Img aria-hidden src="https://www.untitledui.com/images/email/x-black.webp" alt="X logo" className="size-5" />
+                            <Img src="https://www.untitledui.com/images/email/x-black.webp" alt="" className="size-5" />
                         </EmailButton>
                     )}
                     {socialLinks?.facebook && (
                         <EmailButton aria-label="Facebook" href={socialLinks.facebook} className="mx-4 align-middle">
-                            <Img aria-hidden src="https://www.untitledui.com/images/email/facebook-black.webp" alt="Facebook logo" className="size-5" />
+                            <Img src="https://www.untitledui.com/images/email/facebook-black.webp" alt="" className="size-5" />
                         </EmailButton>
                     )}
                     {socialLinks?.instagram && (
                         <EmailButton aria-label="Instagram" href={socialLinks.instagram} className="align-middle">
-                            <Img aria-hidden src="https://www.untitledui.com/images/email/instagram-black.webp" alt="Instagram logo" className="size-5" />
+                            <Img src="https://www.untitledui.com/images/email/instagram-black.webp" alt="" className="size-5" />
                         </EmailButton>
                     )}
                 </div>
@@ -186,17 +186,17 @@ export const CenterAlignedSocials = ({
                 <Column align="center">
                     {socialLinks?.twitter && (
                         <EmailButton aria-label="X (formerly Twitter)" href={socialLinks.twitter}>
-                            <Img aria-hidden src="https://www.untitledui.com/images/email/x-black.webp" alt="X logo" className="size-5" />
+                            <Img src="https://www.untitledui.com/images/email/x-black.webp" alt="" className="size-5" />
                         </EmailButton>
                     )}
                     {socialLinks?.facebook && (
                         <EmailButton aria-label="Facebook" href={socialLinks.facebook} className="mx-4">
-                            <Img aria-hidden src="https://www.untitledui.com/images/email/facebook-black.webp" alt="Facebook logo" className="size-5" />
+                            <Img src="https://www.untitledui.com/images/email/facebook-black.webp" alt="" className="size-5" />
                         </EmailButton>
                     )}
                     {socialLinks?.instagram && (
                         <EmailButton aria-label="Instagram" href={socialLinks.instagram}>
-                            <Img aria-hidden src="https://www.untitledui.com/images/email/instagram-black.webp" alt="Instagram logo" className="size-5" />
+                            <Img src="https://www.untitledui.com/images/email/instagram-black.webp" alt="" className="size-5" />
                         </EmailButton>
                     )}
                 </Column>
