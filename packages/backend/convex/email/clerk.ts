@@ -130,12 +130,12 @@ function getEmailConfig(
     case "magic_link_sign_up":
       return {
         template: "magic-link",
-        subject: "Sign up to your account",
+        subject: "Complete your sign-up",
         props: {
           recipientName: firstName,
           magicLinkUrl: data.magic_link || "",
           expiryMinutes: 10,
-          signInButtonText: "Sign up",
+          actionButtonText: "Sign up",
         },
       };
 
@@ -147,7 +147,7 @@ function getEmailConfig(
           recipientName: firstName,
           magicLinkUrl: data.magic_link || "",
           expiryMinutes: 10,
-          signInButtonText: "Verify email",
+          actionButtonText: "Verify email",
         },
       };
 

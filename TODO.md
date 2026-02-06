@@ -3,11 +3,11 @@
 ## Alpha Launch Checklist
 
 ### 1. Landing Page & Brand Identity
-- [ ] Run brainstorming session to define SmartPockets aesthetic (colors, typography, tone)
-- [ ] Implement new landing page (LandingPage07 template) in `apps/web`
-- [ ] Customize copy and visuals for SmartPockets brand
+- [x] Define SmartPockets aesthetic (clean & approachable, green brand, confident tone)
+- [ ] Finish customizing landing page (LandingPage07 template) in `apps/web`
+  - Services dropdown: Credit card management active, Transactions and Form 568 as "coming soon" (greyed out)
 - [ ] Add alpha banner/badge making it clear the app is in early access
-- [ ] Add custom SmartPockets favicons to `apps/web` and `apps/app`
+- [x] Add custom SmartPockets favicons to `apps/web` and `apps/app`
 
 ### 2. Marketing → App Architecture
 - [ ] Move landing page from `apps/app` to `apps/web`
@@ -22,16 +22,39 @@
 - [ ] Ensure consistency between marketing and app styling
 
 ### 4. Transactional Emails
-- [ ] Test existing email templates (verification, password reset, etc.)
-- [ ] Apply SmartPockets branding to email templates
-- [ ] Verify Clerk → email routing works end-to-end
+- [x] Apply SmartPockets branding to email templates (green palette, company name, text logo fallback)
+- [x] Set up Resend domain (`mail.smartpockets.com`) — DNS pending verification
+- [x] Update Convex env vars (`EMAIL_DOMAIN`, `RESEND_API_KEY`) for dev
+- [x] Remove stale `INNGEST_EVENT_KEY` from Convex dev
+- [ ] Update Convex env vars for production once PR merges
+- [ ] Remove stale `INNGEST_EVENT_KEY` from Convex production
+- [ ] Host SP logo image and update `logoUrl` in email-config.ts
+- [ ] Test each email end-to-end (verification, password reset, magic link, invite)
+- [ ] Set up Resend webhook for delivery tracking (`RESEND_WEBHOOK_SECRET`)
 
-### 5. Newsletter Setup
-- [ ] Research midday repo newsletter pattern
-- [ ] Implement newsletter subscription (landing page + footer)
-- [ ] Set up email list management (Resend audience or similar)
+### 5. Clerk Pro Setup
+- [ ] Ensure all Clerk Pro features are utilized and wired up correctly
+- [ ] Apply SmartPockets branding to Clerk auth screens
+- [ ] Verify MFA configuration
 
-### 6. Pricing & Payments
+### 6. Newsletter Setup
+- [ ] Research midday repo newsletter pattern (identify which service they use)
+- [ ] Wire up landing page newsletter subscription form
+- [ ] Test newsletter signup and delivery end-to-end
+
+### 7. Blog (Optional)
+- [ ] Decide whether to include blog section for launch
+  - Post idea: Plaid Convex component — secure fintech via vibe coding, how it isolates security concerns so builders don't have to worry about common pitfalls
+  - Good for Hacker News / Convex community traction and doubles as a portfolio piece
+
+### 8. Alpha UX Polish
+- [ ] Audit Plaid connection flow error states and edge cases (2FA failures, timeouts, etc.)
+  - First-run bank connection experience is make-or-break for alpha testers
+- [ ] Integrate personal `analytics-sdk` package with PostHog
+  - Use PostHog's survey/feedback features for alpha user feedback collection
+  - This replaces the need for a separate feedback form/button
+
+### 9. Pricing & Payments
 - [ ] Configure Clerk billing for ~$5/month alpha pricing
 - [ ] Add pricing page to marketing site
 - [ ] Set up payment flow and subscription management
