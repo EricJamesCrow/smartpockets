@@ -43,8 +43,6 @@ export const deletePlaidItem = mutation({
     }),
   }),
   handler: async (ctx, args) => {
-    const startedAt = Date.now();
-
     // Get the item from component to verify it exists and get userId
     const item = await ctx.runQuery(components.plaid.public.getItem, {
       plaidItemId: args.plaidItemId,
@@ -82,7 +80,6 @@ export const deletePlaidItem = mutation({
     console.warn("[items.deletePlaidItem] Completed item delete", {
       plaidItemId: args.plaidItemId,
       deletedCreditCards: creditCards.length,
-      durationMs: Date.now() - startedAt,
       source: "user_disconnect",
     });
 
@@ -107,8 +104,6 @@ export const deleteAppDataForPlaidItem = mutation({
   args: { plaidItemId: v.string() },
   returns: v.object({ deletedCreditCards: v.number() }),
   handler: async (ctx, args) => {
-    const startedAt = Date.now();
-
     // Delete creditCards
     const creditCards = await ctx.db
       .query("creditCards")
@@ -122,7 +117,6 @@ export const deleteAppDataForPlaidItem = mutation({
     console.warn("[items.deleteAppDataForPlaidItem] Deleted app-level credit cards", {
       plaidItemId: args.plaidItemId,
       deletedCreditCards: creditCards.length,
-      durationMs: Date.now() - startedAt,
       source: "component_cleanup",
     });
 
