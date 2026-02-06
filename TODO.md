@@ -133,6 +133,10 @@ Ensure our transaction exports and statement downloads contain all of the inform
 - [ ] Remove and replace all references to untitledui
   - Audit all component imports
   - Identify replacement components/patterns
+- [ ] Convert to using `@untitledui/icons` package
+  - Replace any custom or third-party icon usage with UntitledUI icons
+  - Audit all icon imports across `apps/app` and `packages/ui`
+  - Ensure bunfig.toml registry auth is working (`$UNTITLEDUI_TOKEN`)
 
 ### Plaid Production Fix
 - [ ] Fix Plaid Convex component not working in production
