@@ -274,6 +274,7 @@ export declare const components: {
         "action",
         "internal",
         {
+          accountFilters?: any;
           clientName?: string;
           countryCodes?: Array<string>;
           language?: string;
