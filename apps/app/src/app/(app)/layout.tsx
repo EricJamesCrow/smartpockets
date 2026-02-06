@@ -5,6 +5,8 @@ import { api } from "@convex/_generated/api";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 
+const BOOTSTRAP_RETRY_DELAY_MS = 2_000;
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
     const viewer = useQuery(api.users.current, isAuthenticated ? {} : "skip");
@@ -16,10 +18,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
 
+        let isCancelled = false;
+        let retryTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
         setDidAttemptBootstrap(true);
         void ensureCurrentUser({}).catch((error) => {
+            if (isCancelled) {
+                return;
+            }
+
             console.error("[AppLayout] Failed to ensure current user", error);
+
+            retryTimeoutId = setTimeout(() => {
+                if (isCancelled) {
+                    return;
+                }
+                setDidAttemptBootstrap(false);
+            }, BOOTSTRAP_RETRY_DELAY_MS);
         });
+
+        return () => {
+            isCancelled = true;
+
+            if (retryTimeoutId !== null) {
+                clearTimeout(retryTimeoutId);
+            }
+        };
     }, [didAttemptBootstrap, ensureCurrentUser, isAuthenticated, viewer]);
 
     // Block app queries until Convex auth and viewer record are both ready.
