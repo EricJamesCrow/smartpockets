@@ -33,7 +33,10 @@ interface EmailConfig {
  * Supported Clerk email slugs:
  * - verification_code: OTP verification emails
  * - reset_password_link: Password reset emails
- * - magic_link: Passwordless login emails
+ * - magic_link: Passwordless login emails (generic)
+ * - magic_link_sign_in: Magic link for sign-in
+ * - magic_link_sign_up: Magic link for sign-up
+ * - magic_link_verify_email: Magic link for email verification
  * - organization_invitation: Team/org invitation emails
  *
  * @example
@@ -113,6 +116,7 @@ function getEmailConfig(
       };
 
     case "magic_link":
+    case "magic_link_sign_in":
       return {
         template: "magic-link",
         subject: "Sign in to your account",
@@ -120,6 +124,30 @@ function getEmailConfig(
           recipientName: firstName,
           magicLinkUrl: data.magic_link || "",
           expiryMinutes: 10,
+        },
+      };
+
+    case "magic_link_sign_up":
+      return {
+        template: "magic-link",
+        subject: "Sign up to your account",
+        props: {
+          recipientName: firstName,
+          magicLinkUrl: data.magic_link || "",
+          expiryMinutes: 10,
+          signInButtonText: "Sign up",
+        },
+      };
+
+    case "magic_link_verify_email":
+      return {
+        template: "magic-link",
+        subject: "Verify your email address",
+        props: {
+          recipientName: firstName,
+          magicLinkUrl: data.magic_link || "",
+          expiryMinutes: 10,
+          signInButtonText: "Verify email",
         },
       };
 
@@ -152,6 +180,9 @@ export const SUPPORTED_CLERK_SLUGS = [
   "verification_code",
   "reset_password_link",
   "magic_link",
+  "magic_link_sign_in",
+  "magic_link_sign_up",
+  "magic_link_verify_email",
   "organization_invitation",
 ] as const;
 
