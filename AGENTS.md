@@ -499,6 +499,14 @@ Provides: diagnose live Plaid items, Link analytics, API usage metrics
 
 > **Note:** Uses OAuth authentication via Plaid Dashboard. Use for troubleshooting real bank connection issues.
 
+### Graphite MCP (Stacked PRs)
+
+```bash
+claude mcp add graphite -- gt mcp
+```
+
+Provides: stacked PR creation, branch management, stack submission and navigation
+
 ## References
 
 | Document | Purpose |

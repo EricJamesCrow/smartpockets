@@ -100,6 +100,25 @@ Commit immediately after:
 - Single bug fixed
 - Single refactor completed
 
+### Stacked PRs with Graphite
+
+Use Graphite (`gt`) for ALL branch and PR management on multi-change tasks. Never use raw `git branch`/`git push` for feature work.
+
+When given a task with multiple logical changes:
+1. Break the work into independent, atomic changes that each pass CI on their own
+2. Create a Graphite stack where each PR builds on the previous one
+3. Each PR in the stack should be a single logical unit (one schema change, one component, one API route, etc.)
+4. Every PR in the stack must compile and pass tests independently
+5. Use `gt create <branch-name> -m "description"` for each new layer
+6. Use `gt submit --stack` to push the entire stack
+
+| Rule | Why |
+|------|-----|
+| Never put unrelated changes in the same PR | Reviewability and revertability |
+| Dependencies come before the code that uses them | Each PR must pass CI alone |
+| Tests go in the same PR as the code they test | Atomic logical units |
+| Max ~200-400 lines changed per PR in the stack | Keep reviews fast |
+
 ### Never Do
 
 | Action | Why |
@@ -165,3 +184,4 @@ Configured servers (see `AGENTS.md` for setup):
 - **Clerk MCP** — User management operations
 - **Plaid Sandbox MCP** — Development testing
 - **Plaid Dashboard MCP** — Production debugging
+- **Graphite MCP** — Stacked PR management (`gt mcp`)
