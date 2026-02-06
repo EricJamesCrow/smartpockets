@@ -6,7 +6,7 @@ import { ChevronDown } from "@untitledui/icons";
 import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover } from "react-aria-components";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { SmartPocketsLogoWithBadge } from "@repo/ui/untitledui/foundations/logo/alpha-badge";
-import { DropdownMenuSimple } from "./dropdown-header-navigation";
+import { ProductsDropdown, ResourcesDropdown } from "./dropdown-header-navigation";
 import { cx } from "@repo/ui/utils";
 
 type HeaderNavItem = {
@@ -16,22 +16,19 @@ type HeaderNavItem = {
 };
 
 const headerNavItems: HeaderNavItem[] = [
-    { label: "Products", href: "/products", menu: <DropdownMenuSimple /> },
-    { label: "Services", href: "/Services", menu: <DropdownMenuSimple /> },
-    { label: "Pricing", href: "/pricing" },
-    { label: "Resources", href: "/resources", menu: <DropdownMenuSimple /> },
+    { label: "Products", href: "/products", menu: <ProductsDropdown /> },
+    { label: "Resources", href: "/resources", menu: <ResourcesDropdown /> },
     { label: "About", href: "/about" },
 ];
 
 const footerNavItems = [
     { label: "About us", href: "/" },
     { label: "Press", href: "/products" },
-    { label: "Careers", href: "/resources" },
-    { label: "Legal", href: "/pricing" },
-    { label: "Support", href: "/pricing" },
-    { label: "Contact", href: "/pricing" },
-    { label: "Sitemap", href: "/pricing" },
-    { label: "Cookie settings", href: "/pricing" },
+    { label: "Legal", href: "/legal" },
+    { label: "Support", href: "/support" },
+    { label: "Contact", href: "/contact" },
+    { label: "Sitemap", href: "/sitemap" },
+    { label: "Cookie settings", href: "/cookies" },
 ];
 
 const MobileNavItem = (props: { className?: string; label: string; href?: string; children?: ReactNode }) => {
