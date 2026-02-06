@@ -95,3 +95,5 @@ export const SimpleVerification = ({
         </Html>
     );
 };
+
+export default SimpleVerification;

@@ -1,6 +1,22 @@
-import { Column, Container, Button as EmailButton, Hr, Img, Row } from "@react-email/components";
+import { Column, Container, Button as EmailButton, Hr, Img, Row, Text as EmailText } from "@react-email/components";
 import { Text } from "./text";
 import { defaultEmailConfig, type EmailBrandConfig } from "../_config/email-config";
+
+/**
+ * Renders the logo as an image if a URL is provided, otherwise falls back to
+ * a styled text wordmark: "Smart" in dark + "Pockets" in brand green.
+ */
+const Logo = ({ logoUrl, logoAlt, className }: { logoUrl: string; logoAlt: string; className?: string }) => {
+    if (logoUrl) {
+        return <Img aria-hidden src={logoUrl} alt={logoAlt} className={className || "h-6"} />;
+    }
+    return (
+        <EmailText style={{ fontSize: "16px", fontWeight: 700, lineHeight: "24px", margin: 0 }}>
+            <span style={{ color: "#181d27" }}>Smart</span>
+            <span style={{ color: "#099250" }}>Pockets</span>
+        </EmailText>
+    );
+};
 
 /**
  * Props interface for configurable footer components
@@ -46,7 +62,7 @@ export const LeftAligned = ({
     companyName = defaultEmailConfig.companyName,
     recipientEmail,
     logoUrl = defaultEmailConfig.logoUrl,
-    logoAlt = defaultEmailConfig.logoAlt || "Logo",
+    logoAlt = defaultEmailConfig.logoAlt || "SmartPockets",
     copyrightYear = defaultEmailConfig.copyrightYear,
     address = defaultEmailConfig.address,
     socialLinks = defaultEmailConfig.socialLinks,
@@ -78,7 +94,7 @@ export const LeftAligned = ({
 
             <Row className="mt-12">
                 <Column>
-                    <Img aria-hidden src={logoUrl} alt={logoAlt} className="h-6" />
+                    <Logo logoUrl={logoUrl} logoAlt={logoAlt} />
                 </Column>
                 {socialLinks?.twitter && (
                     <Column className="ml-auto w-9">
@@ -137,7 +153,7 @@ export const CenterAligned = ({
             </Row>
             <Row>
                 <Text className="text-center text-sm text-tertiary">
-                    {customMessage || `${companyName} is committed to sustainable building. This email was sent with 200% carbon offset.`}{" "}
+                    {customMessage || ""}{customMessage ? " " : ""}
                     If you'd prefer to not receive these emails, please{" "}
                     <EmailButton href={legalLinks?.unsubscribe || "#"} className="text-brand-secondary">
                         <span className="underline">unsubscribe</span>
@@ -215,7 +231,7 @@ export const LeftAlignedActions = ({
     companyName = defaultEmailConfig.companyName,
     recipientEmail,
     logoUrl = defaultEmailConfig.logoUrl,
-    logoAlt = defaultEmailConfig.logoAlt || "Logo",
+    logoAlt = defaultEmailConfig.logoAlt || "SmartPockets",
     copyrightYear = defaultEmailConfig.copyrightYear,
     address = defaultEmailConfig.address,
     socialLinks = defaultEmailConfig.socialLinks,
@@ -267,7 +283,7 @@ export const LeftAlignedActions = ({
             </Row>
             <Row>
                 <Column>
-                    <Img aria-hidden src={logoUrl} alt={logoAlt} className="h-6" />
+                    <Logo logoUrl={logoUrl} logoAlt={logoAlt} />
                 </Column>
                 {socialLinks?.twitter && (
                     <Column className="ml-auto w-9">
@@ -345,7 +361,7 @@ export const CenterAlignedActions = ({
             </Row>
             <Row>
                 <Text className="text-center text-sm text-tertiary">
-                    {customMessage || `${companyName} is committed to sustainable building. This email was sent with 200% carbon offset.`}{" "}
+                    {customMessage || ""}{customMessage ? " " : ""}
                     If you'd prefer to not receive these emails, please{" "}
                     <EmailButton href={legalLinks?.unsubscribe || "#"} className="text-brand-secondary">
                         <span className="underline">unsubscribe</span>

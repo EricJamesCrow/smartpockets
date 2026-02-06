@@ -46,24 +46,23 @@ export interface EmailBrandConfig {
 }
 
 /**
- * Default email configuration.
- * Update these values with your actual branding.
+ * Default email configuration for SmartPockets.
  */
 export const defaultEmailConfig: EmailBrandConfig = {
-    companyName: "Your App",
-    logoUrl: "https://yourdomain.com/images/logo.png",
-    logoAlt: "Your App Logo",
-    supportEmail: "support@yourdomain.com",
-    websiteUrl: "https://yourdomain.com",
-    appUrl: "https://app.yourdomain.com",
+    companyName: "SmartPockets",
+    // TODO: Host the SP logo image and update this URL
+    logoUrl: "",
+    logoAlt: "SmartPockets",
+    supportEmail: "support@smartpockets.com",
+    websiteUrl: "https://smartpockets.com",
+    appUrl: "https://app.smartpockets.com",
     copyrightYear: new Date().getFullYear(),
     socialLinks: {
-        twitter: "https://twitter.com/yourapp",
-        // Add other social links as needed
+        twitter: "https://x.com/smartpockets",
     },
     legalLinks: {
-        terms: "https://yourdomain.com/terms",
-        privacy: "https://yourdomain.com/privacy",
+        terms: "https://smartpockets.com/terms",
+        privacy: "https://smartpockets.com/privacy",
     },
 };
 

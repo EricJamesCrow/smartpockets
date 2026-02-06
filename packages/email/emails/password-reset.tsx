@@ -83,3 +83,5 @@ export const PasswordReset = ({
         </Html>
     );
 };
+
+export default PasswordReset;
