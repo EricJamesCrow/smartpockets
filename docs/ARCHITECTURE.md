@@ -169,6 +169,7 @@ import { action, internalAction } from "./_generated/server";
 ## Related Documentation
 
 - `CLAUDE.md` - Development guidelines and detailed patterns
+- `docs/convex-deploy-guardrails.md` - Vercel + Convex deploy safety checks
 - `docs/email-infrastructure-roadmap.md` - Email migration roadmap
 - `docs/SETTINGS_ROADMAP.md` - Settings feature roadmap
 - `docs/plans/` - Active implementation plans

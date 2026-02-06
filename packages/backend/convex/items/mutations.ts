@@ -49,6 +49,9 @@ export const deletePlaidItem = mutation({
     });
 
     if (!item) {
+      console.warn("[items.deletePlaidItem] Plaid item not found", {
+        plaidItemId: args.plaidItemId,
+      });
       throw new Error("Plaid item not found");
     }
 
@@ -62,10 +65,22 @@ export const deletePlaidItem = mutation({
       await ctx.db.delete(card._id);
     }
 
+    console.warn("[items.deletePlaidItem] Deleted app-level credit cards", {
+      plaidItemId: args.plaidItemId,
+      deletedCreditCards: creditCards.length,
+      source: "user_disconnect",
+    });
+
     // Step 2: Delete component data via component mutation
     // This cascade deletes: plaidItem, accounts, transactions, liabilities
     await ctx.runMutation(components.plaid.public.deletePlaidItem, {
       plaidItemId: args.plaidItemId,
+    });
+
+    console.warn("[items.deletePlaidItem] Completed item delete", {
+      plaidItemId: args.plaidItemId,
+      deletedCreditCards: creditCards.length,
+      source: "user_disconnect",
     });
 
     return {
@@ -98,6 +113,12 @@ export const deleteAppDataForPlaidItem = mutation({
     for (const card of creditCards) {
       await ctx.db.delete(card._id);
     }
+
+    console.warn("[items.deleteAppDataForPlaidItem] Deleted app-level credit cards", {
+      plaidItemId: args.plaidItemId,
+      deletedCreditCards: creditCards.length,
+      source: "component_cleanup",
+    });
 
     return { deletedCreditCards: creditCards.length };
   },
