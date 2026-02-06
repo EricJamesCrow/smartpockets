@@ -39,6 +39,7 @@ export const createLinkToken = action({
     args: {
         userId: v.string(),
         products: v.optional(v.array(v.string())),
+        accountFilters: v.optional(v.any()),
         countryCodes: v.optional(v.array(v.string())),
         language: v.optional(v.string()),
         clientName: v.optional(v.string()),
@@ -59,6 +60,7 @@ export const createLinkToken = action({
             },
             client_name: args.clientName ?? "App",
             products: (args.products ?? ["transactions", "liabilities"]),
+            account_filters: args.accountFilters,
             country_codes: (args.countryCodes ?? ["US"]),
             language: args.language ?? "en",
             transactions: {

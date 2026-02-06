@@ -140,38 +140,6 @@ const schema = defineEntSchema(
         // === USER PREFERENCES ===
         userPreferences: defineEnt({
             userId: v.id("users"),
-            notifications: v.optional(
-                v.object({
-                    comments: v.optional(
-                        v.object({
-                            push: v.optional(v.boolean()),
-                            email: v.optional(v.boolean()),
-                            sms: v.optional(v.boolean()),
-                        }),
-                    ),
-                    tags: v.optional(
-                        v.object({
-                            push: v.optional(v.boolean()),
-                            email: v.optional(v.boolean()),
-                            sms: v.optional(v.boolean()),
-                        }),
-                    ),
-                    reminders: v.optional(
-                        v.object({
-                            push: v.optional(v.boolean()),
-                            email: v.optional(v.boolean()),
-                            sms: v.optional(v.boolean()),
-                        }),
-                    ),
-                    moreActivity: v.optional(
-                        v.object({
-                            push: v.optional(v.boolean()),
-                            email: v.optional(v.boolean()),
-                            sms: v.optional(v.boolean()),
-                        }),
-                    ),
-                }),
-            ),
             appearance: v.optional(
                 v.object({
                     theme: v.optional(v.union(v.literal("system"), v.literal("light"), v.literal("dark"))),

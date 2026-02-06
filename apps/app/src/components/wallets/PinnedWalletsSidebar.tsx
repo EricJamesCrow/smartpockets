@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import {
@@ -80,7 +80,11 @@ const colorClasses: Record<string, string> = {
  * Supports drag-and-drop reordering of pinned wallets.
  */
 export function PinnedWalletsSidebar() {
-  const pinnedWallets = useQuery(api.wallets.queries.listPinned, {});
+  const { isAuthenticated } = useConvexAuth();
+  const pinnedWallets = useQuery(
+    api.wallets.queries.listPinned,
+    isAuthenticated ? {} : "skip"
+  );
   const updatePinnedSortOrder = useMutation(api.wallets.mutations.updatePinnedSortOrder);
 
   // DnD sensors with activation constraints

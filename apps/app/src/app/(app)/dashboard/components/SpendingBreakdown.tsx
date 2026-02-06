@@ -1,7 +1,7 @@
 // apps/app/src/app/(app)/dashboard/components/SpendingBreakdown.tsx
 "use client";
 
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -38,9 +38,11 @@ type Period = "this_month" | "last_month" | "last_90_days";
 
 export function SpendingBreakdown() {
   const [period, setPeriod] = useState<Period>("this_month");
-  const spending = useQuery(api.dashboard.queries.getSpendingBreakdown, {
-    period,
-  });
+  const { isAuthenticated } = useConvexAuth();
+  const spending = useQuery(
+    api.dashboard.queries.getSpendingBreakdown,
+    isAuthenticated ? { period } : "skip"
+  );
 
   if (!spending) {
     return (

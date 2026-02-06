@@ -415,7 +415,7 @@ function getBrandConfig(brand: CardBrand, company?: string): BrandConfig {
       return {
         bgClass: "bg-gradient-to-br from-gray-600 to-gray-800",
         textClass: "text-white",
-        icon: null,
+        icon: VisaIcon,
       };
   }
 }
@@ -434,6 +434,6 @@ function getBrandIcon(brand: CardBrand): FC<SVGProps<SVGSVGElement>> | null {
     case "discover":
       return DiscoverIcon;
     default:
-      return null;
+      return VisaIcon;
   }
 }

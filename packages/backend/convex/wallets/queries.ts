@@ -190,7 +190,8 @@ export const listPinned = query({
     })
   ),
   async handler(ctx) {
-    const viewer = ctx.viewerX();
+    const viewer = ctx.viewer;
+    if (!viewer) return [];
 
     // Get pinned wallets for user
     const allWallets = await ctx.table("wallets", "by_user_pinned", (q) =>

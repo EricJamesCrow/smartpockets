@@ -56,6 +56,7 @@ export const createLinkTokenAction = action({
   args: {
     userId: v.string(),
     products: v.optional(v.array(v.string())),
+    accountFilters: v.optional(v.any()),
   },
   returns: v.object({
     linkToken: v.string(),
@@ -65,6 +66,7 @@ export const createLinkTokenAction = action({
       userId: args.userId,
       // Default to both products for credit card functionality
       products: args.products ?? ["transactions", "liabilities"],
+      accountFilters: args.accountFilters,
       webhookUrl: process.env.CONVEX_SITE_URL
         ? `${process.env.CONVEX_SITE_URL}/webhooks-plaid`
         : undefined,

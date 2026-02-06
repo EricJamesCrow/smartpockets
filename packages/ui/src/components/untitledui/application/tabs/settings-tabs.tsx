@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cx } from "../../../../utils/cx";
 import { NativeSelect } from "../../base/select/select-native";
-import { SettingsCommandMenu } from "../command-menus/settings-command-menu";
 
 const tabs = [
     { id: "profile", label: "Profile", href: "/settings" },
@@ -13,7 +12,6 @@ const tabs = [
     { id: "team", label: "Team", href: "/settings/team" },
     { id: "billing", label: "Billing", href: "/settings/billing" },
     { id: "email", label: "Email", href: "/settings/email" },
-    { id: "notifications", label: "Notifications", href: "/settings/notifications" },
     { id: "institutions", label: "Institutions", href: "/settings/institutions" },
 ];
 
@@ -32,13 +30,12 @@ export function SettingsTabs() {
 
     return (
         <div className="flex flex-col gap-5 px-4 lg:px-8">
-            {/* Page header with search */}
+            {/* Page header */}
             <div className="relative flex flex-col gap-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
+                <div className="flex flex-col gap-0.5 lg:gap-1">
                     <div className="flex flex-col gap-0.5 lg:gap-1">
                         <h1 className="text-primary lg:text-display-xs text-xl font-semibold">Settings</h1>
                     </div>
-                    <SettingsCommandMenu currentPath={pathname} />
                 </div>
             </div>
 

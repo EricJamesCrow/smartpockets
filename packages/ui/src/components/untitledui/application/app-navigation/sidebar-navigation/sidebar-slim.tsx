@@ -76,7 +76,7 @@ export const SidebarSlimDesktop = ({ activeUrl, items, footerItems = [], hideBor
                     )}
                 >
                     <div className="flex justify-center px-3">
-                        <SmartPocketsLogo size="sm" />
+                        <SmartPocketsLogo size="sm" collapsed />
                     </div>
 
                     <ul className="mt-4 flex flex-col gap-0.5 px-3">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { cx } from "@repo/ui/utils";
 
@@ -15,7 +15,11 @@ function formatCurrency(amount: number): string {
 }
 
 export function HeroMetrics() {
-  const metrics = useQuery(api.dashboard.queries.getHeroMetrics);
+  const { isAuthenticated } = useConvexAuth();
+  const metrics = useQuery(
+    api.dashboard.queries.getHeroMetrics,
+    isAuthenticated ? {} : "skip"
+  );
 
   if (!metrics) {
     return (

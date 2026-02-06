@@ -7,13 +7,14 @@
 - [ ] Implement new landing page (LandingPage07 template) in `apps/web`
 - [ ] Customize copy and visuals for SmartPockets brand
 - [ ] Add alpha banner/badge making it clear the app is in early access
+- [ ] Add custom SmartPockets favicons to `apps/web` and `apps/app`
 
 ### 2. Marketing → App Architecture
 - [ ] Move landing page from `apps/app` to `apps/web`
 - [ ] Configure subdomain routing (www → marketing, app → authenticated app)
 - [ ] Set up Clerk auth handoff between domains
 - [ ] Remove marketing components from `apps/app`
-- [ ] Update Vercel deployment config for both apps
+- [x] Update Vercel deployment config for both apps (preview deployments now use consistent Convex deployment)
 
 ### 3. App UI Refresh
 - [ ] Apply SmartPockets aesthetic to authenticated app
@@ -35,6 +36,7 @@
 - [ ] Add pricing page to marketing site
 - [ ] Set up payment flow and subscription management
 - [ ] Add "Alpha" badge/disclaimer on pricing
+- [ ] Test billing end-to-end (signup → payment → subscription active)
 
 ---
 
@@ -107,7 +109,7 @@ Ensure our transaction exports and statement downloads contain all of the inform
 ## UI/UX Fixes & Cleanup
 
 ### Sidebar Logo
-- [ ] Fix logo to minimize and change to "SP" when sidebar is collapsed
+- [x] Fix logo to minimize and change to "SP" when sidebar is collapsed
   - Reference: Currently shows full "Smart" text even when collapsed (see attached screenshot)
 
 ### Dashboard Aesthetic
@@ -115,10 +117,10 @@ Ensure our transaction exports and statement downloads contain all of the inform
   - Run brainstorming session to identify specific improvements
 
 ### Settings Cleanup
-- [ ] Thoroughly cleanup settings page - remove all non-functional items
-- [ ] Remove dead links and unnecessary options
-- [ ] Decide on search settings functionality:
-  - **Option A**: Remove "search settings" entirely
+- [x] Thoroughly cleanup settings page - remove all non-functional items
+- [x] Remove dead links and unnecessary options
+- [x] Decide on search settings functionality:
+  - **Option A**: Remove "search settings" entirely ✓ (implemented)
   - **Option B**: Improve aesthetics/UX in a superpowers session
   - **Option C**: Integrate settings search as a subtab/subsearch within main search
   - Research: Is unified search with settings subsection better UX than separate settings search?
@@ -131,6 +133,10 @@ Ensure our transaction exports and statement downloads contain all of the inform
 - [ ] Remove and replace all references to untitledui
   - Audit all component imports
   - Identify replacement components/patterns
+- [ ] Convert to using `@untitledui/icons` package
+  - Replace any custom or third-party icon usage with UntitledUI icons
+  - Audit all icon imports across `apps/app` and `packages/ui`
+  - Ensure bunfig.toml registry auth is working (`$UNTITLEDUI_TOKEN`)
 
 ### Plaid Production Fix
 - [ ] Fix Plaid Convex component not working in production
@@ -167,3 +173,6 @@ Need to figure out the best way to implement multiple profiles (personal vs. bus
 - [ ] Deep research session with Claude on architecture
 - [ ] Consult on pricing tier structure
 - [ ] Document decision and rationale
+
+### Implementation
+- [ ] Implement optimal multi-profile setup based on research findings

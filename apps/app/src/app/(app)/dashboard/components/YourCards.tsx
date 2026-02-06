@@ -1,7 +1,7 @@
 // apps/app/src/app/(app)/dashboard/components/YourCards.tsx
 "use client";
 
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Lock01 } from "@untitledui/icons";
 import { cx } from "@repo/ui/utils";
@@ -38,7 +38,11 @@ function CardLogo({ brand }: { brand?: string }) {
 }
 
 export function YourCards() {
-  const cards = useQuery(api.creditCards.queries.list, {});
+  const { isAuthenticated } = useConvexAuth();
+  const cards = useQuery(
+    api.creditCards.queries.list,
+    isAuthenticated ? {} : "skip"
+  );
 
   if (!cards) {
     return (

@@ -1,6 +1,6 @@
 import { UserJSON } from "@clerk/backend";
 import { Validator, v } from "convex/values";
-import { internalMutation, query } from "./functions";
+import { internalMutation, mutation, query } from "./functions";
 
 /**
  * Get the current authenticated user
@@ -36,6 +36,42 @@ export const current = query({
             externalId: viewer.externalId,
             connectedAccounts: viewer.connectedAccounts,
         };
+    },
+});
+
+/**
+ * Ensure the authenticated Clerk user has a corresponding Convex user record.
+ *
+ * This is a safety net for environments where webhook delivery is delayed
+ * during initial login.
+ */
+export const ensureCurrentUser = mutation({
+    args: {},
+    returns: v.id("users"),
+    async handler(ctx) {
+        if (ctx.viewer) {
+            return ctx.viewer._id;
+        }
+
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Authentication required");
+        }
+
+        const existingUser = await ctx.table("users").get("externalId", identity.subject);
+        if (existingUser) {
+            return existingUser._id;
+        }
+
+        const name = identity.name?.trim() || identity.email?.trim() || "User";
+
+        const userId = await ctx.table("users").insert({
+            name,
+            externalId: identity.subject,
+            connectedAccounts: [],
+        });
+
+        return userId;
     },
 });
 

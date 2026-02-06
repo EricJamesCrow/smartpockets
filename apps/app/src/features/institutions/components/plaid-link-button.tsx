@@ -14,10 +14,16 @@ interface PlaidLinkButtonProps {
   children?: ReactNode;
   /** Callback fired after successful bank connection */
   onSuccess?: () => void;
+  /** Button label text for default rendering */
+  buttonLabel?: string;
   /** Button size - sm, md, lg, xl */
   size?: "sm" | "md" | "lg" | "xl";
   /** Button color variant */
   color?: "primary" | "secondary" | "tertiary";
+  /** Plaid products for link token creation */
+  products?: string[];
+  /** Plaid account filters for link token creation */
+  accountFilters?: unknown;
   /** Custom className for the button */
   className?: string;
 }
@@ -46,8 +52,11 @@ interface PlaidLinkButtonProps {
 export function PlaidLinkButton({
   children,
   onSuccess: onSuccessCallback,
+  buttonLabel = "Link Bank Account",
   size = "md",
   color = "primary",
+  products,
+  accountFilters,
   className,
 }: PlaidLinkButtonProps) {
   const [linkToken, setLinkToken] = useState<string | null>(null);
@@ -65,7 +74,20 @@ export function PlaidLinkButton({
       if (!user?.id) return;
 
       try {
-        const result = await createLinkToken({ userId: user.id });
+        const linkTokenArgs: {
+          userId: string;
+          products?: string[];
+          accountFilters?: unknown;
+        } = { userId: user.id };
+
+        if (products) {
+          linkTokenArgs.products = products;
+        }
+        if (accountFilters !== undefined) {
+          linkTokenArgs.accountFilters = accountFilters;
+        }
+
+        const result = await createLinkToken(linkTokenArgs);
         setLinkToken(result.linkToken);
       } catch (error) {
         console.error("Error creating link token:", error);
@@ -76,7 +98,7 @@ export function PlaidLinkButton({
     };
 
     initializePlaidLink();
-  }, [user?.id, createLinkToken]);
+  }, [user?.id, createLinkToken, products, accountFilters]);
 
   // Handle successful account connection
   const onSuccess = useCallback(
@@ -170,7 +192,7 @@ export function PlaidLinkButton({
       iconLeading={Plus}
       className={className}
     >
-      {isConnecting ? "Connecting..." : "Link Bank Account"}
+      {isConnecting ? "Connecting..." : buttonLabel}
     </Button>
   );
 }

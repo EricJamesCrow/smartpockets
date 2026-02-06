@@ -1,0 +1,4 @@
+# bunfig.toml
+
+[install.scopes]
+"untitledui-pro" = { url = "https://pkg.untitledui.com", token = "$UNTITLEDUI_TOKEN" }
