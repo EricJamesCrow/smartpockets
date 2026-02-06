@@ -3,8 +3,7 @@
 import type { FC, SVGProps } from "react";
 import { useMemo } from "react";
 import { cx, sortCx } from "../../../../utils/cx";
-import { MastercardIcon, MastercardIconWhite, PaypassIcon } from "./icons";
-import VisaIcon from "../../foundations/payment-icons/visa-icon";
+import { MastercardIcon, MastercardIconWhite, PaypassIcon, VisaWordmarkIcon } from "./icons";
 import AmexIcon from "../../foundations/payment-icons/amex-icon";
 import DiscoverIcon from "../../foundations/payment-icons/discover-icon";
 
@@ -135,8 +134,7 @@ export interface CreditCardProps {
 function getBrandIcon(brand: CardBrand | undefined, useColoredVariant: boolean): FC<SVGProps<SVGSVGElement>> {
     switch (brand) {
         case "visa":
-            // VisaIcon already has a white background with blue text, works for both variants
-            return VisaIcon;
+            return VisaWordmarkIcon;
         case "amex":
             // AmexIcon has blue background with white text, works for both variants
             return AmexIcon;
@@ -147,7 +145,7 @@ function getBrandIcon(brand: CardBrand | undefined, useColoredVariant: boolean):
             return useColoredVariant ? MastercardIcon : MastercardIconWhite;
         default:
             // Default unknown brands to Visa.
-            return VisaIcon;
+            return VisaWordmarkIcon;
     }
 }
 
@@ -167,7 +165,7 @@ const calculateScale = (desiredWidth: number, originalWidth: number, originalHei
 };
 
 export const CreditCard = ({
-    company = "Untitled.",
+    company = "SmartPockets",
     cardNumber = "1234 1234 1234 1234",
     cardHolder = "OLIVIA RHYE",
     cardExpiration = "06/28",
