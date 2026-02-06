@@ -11,6 +11,7 @@ import { CreditCardsHeader } from "./CreditCardsHeader";
 import { CreditCardsFilterBar } from "./CreditCardsFilterBar";
 import { UntitledCardGridItem } from "./UntitledCardGridItem";
 import { AddCardsSlideout } from "@/components/wallets/AddCardsSlideout";
+import { PlaidLinkButton } from "@/features/institutions";
 import { ExtendedViewProvider, useExtendedView } from "@/hooks/useExtendedView";
 import { useCardFiltering } from "@/hooks/useCardFiltering";
 import { useSharedLayoutAnimation } from "@/lib/context/shared-layout-animation-context";
@@ -92,10 +93,33 @@ function CreditCardsContentInner() {
     setIsAddCardsOpen(true);
   }, []);
 
+  const handlePlaidLinkSuccess = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  const creditCardProducts = useMemo(() => ["transactions", "liabilities"], []);
+  const creditCardAccountFilters = useMemo(
+    () => ({
+      credit: {
+        account_subtypes: ["credit card"],
+      },
+    }),
+    []
+  );
+
   return (
     <div className="flex h-full flex-col">
       <CreditCardsHeader
         walletName={walletInfo?.name}
+        addCreditCardAction={
+          <PlaidLinkButton
+            size="sm"
+            buttonLabel="Add Credit Card"
+            products={creditCardProducts}
+            accountFilters={creditCardAccountFilters}
+            onSuccess={handlePlaidLinkSuccess}
+          />
+        }
         onAddCardsToWallet={walletId ? handleOpenAddCards : undefined}
       />
 
@@ -126,6 +150,15 @@ function CreditCardsContentInner() {
                   : "Connect a bank account to see your credit cards"
                 : "Try adjusting your filters"}
             </p>
+            {cards.length === 0 && !walletId && (
+              <PlaidLinkButton
+                className="mt-4"
+                buttonLabel="Add Credit Card"
+                products={creditCardProducts}
+                accountFilters={creditCardAccountFilters}
+                onSuccess={handlePlaidLinkSuccess}
+              />
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2 lg:grid-cols-3">

@@ -7,7 +7,7 @@
  * IMPORTANT: Components cannot access process.env.
  * All configuration must be provided via PlaidConfig.
  */
-import type { ActionCtx, PlaidConfig, HttpRouter, RegisterRoutesConfig, CreateLinkTokenResult, ExchangePublicTokenResult, FetchAccountsResult, SyncTransactionsResult, SyncTransactionsOptions, FetchLiabilitiesResult, OnboardItemResult, FetchRecurringStreamsResult, CreateUpdateLinkTokenResult, CompleteReauthResult, TriggerTransactionsRefreshResult, EnrichTransactionsResult, SyncType, SyncTrigger, SyncStatus, SyncResult, SyncStats, InstitutionMetadata, PlaidAccount, PlaidItem, PlaidItemStatus, CircuitState, UserIdentity, AuthenticatedContext, SecureWrapper } from "./types.js";
+import type { ActionCtx, PlaidConfig, HttpRouter, RegisterRoutesConfig, CreateLinkTokenResult, ExchangePublicTokenResult, FetchAccountsResult, SyncTransactionsResult, SyncTransactionsOptions, FetchLiabilitiesResult, OnboardItemResult, FetchRecurringStreamsResult, CreateUpdateLinkTokenResult, CompleteReauthResult, TriggerTransactionsRefreshResult, EnrichTransactionsResult, SyncType, SyncTrigger, SyncStatus, SyncResult, SyncStats, InstitutionMetadata, PlaidAccount, PlaidAccountFilters, PlaidItem, PlaidItemStatus, CircuitState, UserIdentity, AuthenticatedContext, SecureWrapper } from "./types.js";
 import type { ComponentApi } from "../component/_generated/component.js";
 /**
  * Error thrown when Plaid configuration is invalid.
@@ -29,7 +29,7 @@ export type PlaidComponent = Pick<ComponentApi, "actions" | "public">;
  * Re-exported for convenience.
  */
 export type { ComponentApi };
-export type { PlaidConfig, RegisterRoutesConfig, CreateLinkTokenResult, ExchangePublicTokenResult, FetchAccountsResult, SyncTransactionsResult, SyncTransactionsOptions, FetchLiabilitiesResult, OnboardItemResult, FetchRecurringStreamsResult, CreateUpdateLinkTokenResult, CompleteReauthResult, TriggerTransactionsRefreshResult, EnrichTransactionsResult, ActionCtx, SyncType, SyncTrigger, SyncStatus, SyncResult, SyncStats, InstitutionMetadata, PlaidAccount, PlaidItem, PlaidItemStatus, CircuitState, UserIdentity, AuthenticatedContext, SecureWrapper, };
+export type { PlaidConfig, RegisterRoutesConfig, CreateLinkTokenResult, ExchangePublicTokenResult, FetchAccountsResult, SyncTransactionsResult, SyncTransactionsOptions, FetchLiabilitiesResult, OnboardItemResult, FetchRecurringStreamsResult, CreateUpdateLinkTokenResult, CompleteReauthResult, TriggerTransactionsRefreshResult, EnrichTransactionsResult, ActionCtx, SyncType, SyncTrigger, SyncStatus, SyncResult, SyncStats, InstitutionMetadata, PlaidAccount, PlaidAccountFilters, PlaidItem, PlaidItemStatus, CircuitState, UserIdentity, AuthenticatedContext, SecureWrapper, };
 /**
  * Plaid Component Client
  *
@@ -70,6 +70,7 @@ export declare class Plaid {
     createLinkToken(ctx: ActionCtx, args: {
         userId: string;
         products?: string[];
+        accountFilters?: PlaidAccountFilters;
         countryCodes?: string[];
         language?: string;
         clientName?: string;

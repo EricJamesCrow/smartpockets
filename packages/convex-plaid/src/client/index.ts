@@ -33,6 +33,7 @@ import type {
   SyncStats,
   InstitutionMetadata,
   PlaidAccount,
+  PlaidAccountFilters,
   PlaidItem,
   PlaidItemStatus,
   CircuitState,
@@ -172,6 +173,7 @@ export type {
   InstitutionMetadata,
   // Account types
   PlaidAccount,
+  PlaidAccountFilters,
   // PlaidItem types
   PlaidItem,
   PlaidItemStatus,
@@ -239,15 +241,17 @@ export class Plaid {
     args: {
       userId: string;
       products?: string[];
+      accountFilters?: PlaidAccountFilters;
       countryCodes?: string[];
       language?: string;
       clientName?: string;
       webhookUrl?: string;
     }
   ): Promise<CreateLinkTokenResult> {
-    return await ctx.runAction(this.component.actions.createLinkToken, {
+    const createLinkTokenArgs = {
       userId: args.userId,
       products: args.products,
+      accountFilters: args.accountFilters,
       countryCodes: args.countryCodes,
       language: args.language,
       clientName: args.clientName,
@@ -255,7 +259,13 @@ export class Plaid {
       plaidClientId: this.config.PLAID_CLIENT_ID,
       plaidSecret: this.config.PLAID_SECRET,
       plaidEnv: this.config.PLAID_ENV,
-    });
+    };
+
+    // Cast preserves compatibility until component codegen is refreshed.
+    return await ctx.runAction(
+      this.component.actions.createLinkToken,
+      createLinkTokenArgs as any
+    );
   }
 
   /**

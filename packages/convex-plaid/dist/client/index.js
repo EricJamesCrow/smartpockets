@@ -119,9 +119,10 @@ export class Plaid {
      * Call this before opening the Plaid Link modal.
      */
     async createLinkToken(ctx, args) {
-        return await ctx.runAction(this.component.actions.createLinkToken, {
+        const createLinkTokenArgs = {
             userId: args.userId,
             products: args.products,
+            accountFilters: args.accountFilters,
             countryCodes: args.countryCodes,
             language: args.language,
             clientName: args.clientName,
@@ -129,7 +130,9 @@ export class Plaid {
             plaidClientId: this.config.PLAID_CLIENT_ID,
             plaidSecret: this.config.PLAID_SECRET,
             plaidEnv: this.config.PLAID_ENV,
-        });
+        };
+        // Cast preserves compatibility until component codegen is refreshed.
+        return await ctx.runAction(this.component.actions.createLinkToken, createLinkTokenArgs);
     }
     /**
      * Exchange Plaid public token for access token and create plaidItem.

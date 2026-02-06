@@ -40,6 +40,12 @@ export interface PlaidConfig {
     ENCRYPTION_KEY: string;
 }
 /**
+ * Account filters passed to Plaid Link token creation.
+ * Uses a loose shape to support Plaid's evolving filter schema without
+ * requiring frequent library updates.
+ */
+export type PlaidAccountFilters = Record<string, unknown>;
+/**
  * Plaid webhook event types we handle.
  * Phase 1: Basic stub only.
  */
