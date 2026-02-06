@@ -3,7 +3,7 @@ import { Button as EmailButton } from "@react-email/components";
 import { cx } from "../utils/cx";
 
 const variants = {
-    primary: "bg-button-primary-bg border border-solid text-button-primary-fg  border-violet-700",
+    primary: "bg-button-primary-bg border border-solid text-button-primary-fg border-button-primary-bg",
     secondary: "bg-button-secondary-bg text-button-secondary-fg border border-solid border-button-secondary-border",
 };
 

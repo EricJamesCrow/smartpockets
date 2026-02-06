@@ -74,3 +74,5 @@ export const SimpleInvite = ({
         </Html>
     );
 };
+
+export default SimpleInvite;

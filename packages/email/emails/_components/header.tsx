@@ -1,6 +1,22 @@
-import { Column, Container, Button as EmailButton, Img, Row } from "@react-email/components";
+import { Column, Container, Button as EmailButton, Img, Row, Text as EmailText } from "@react-email/components";
 import { Text } from "./text";
 import { defaultEmailConfig, type EmailBrandConfig } from "../_config/email-config";
+
+/**
+ * Renders the logo as an image if a URL is provided, otherwise falls back to
+ * a styled text wordmark: "Smart" in dark + "Pockets" in brand green.
+ */
+const Logo = ({ logoUrl, logoAlt, className }: { logoUrl: string; logoAlt: string; className?: string }) => {
+    if (logoUrl) {
+        return <Img aria-hidden src={logoUrl} alt={logoAlt} className={className || "h-7 md:h-8"} />;
+    }
+    return (
+        <EmailText style={{ fontSize: "20px", fontWeight: 700, lineHeight: "28px", margin: 0 }}>
+            <span style={{ color: "#181d27" }}>Smart</span>
+            <span style={{ color: "#099250" }}>Pockets</span>
+        </EmailText>
+    );
+};
 
 /**
  * Props interface for configurable header components
@@ -35,12 +51,12 @@ const defaultNavLinks = [
 
 export const LeftAligned = ({
     logoUrl = defaultEmailConfig.logoUrl,
-    logoAlt = defaultEmailConfig.logoAlt || "Logo",
+    logoAlt = defaultEmailConfig.logoAlt || "SmartPockets",
 }: HeaderProps = {}) => {
     return (
         <Container align="left" className="max-w-full bg-primary p-6">
             <Row>
-                <Img aria-hidden src={logoUrl} alt={logoAlt} className="h-7 md:h-8" />
+                <Logo logoUrl={logoUrl} logoAlt={logoAlt} />
             </Row>
         </Container>
     );
@@ -48,14 +64,14 @@ export const LeftAligned = ({
 
 export const LeftAlignedLinks = ({
     logoUrl = defaultEmailConfig.logoUrl,
-    logoAlt = defaultEmailConfig.logoAlt || "Logo",
+    logoAlt = defaultEmailConfig.logoAlt || "SmartPockets",
     homeUrl = defaultEmailConfig.websiteUrl,
     navLinks = defaultNavLinks,
 }: HeaderProps = {}) => {
     return (
         <Container align="left" className="max-w-full bg-primary p-6">
             <Row className="mb-8">
-                <Img aria-hidden src={logoUrl} alt={logoAlt} className="h-7 md:h-8" />
+                <Logo logoUrl={logoUrl} logoAlt={logoAlt} />
             </Row>
             <Row>
                 {navLinks.map((link, index) => (
@@ -74,7 +90,7 @@ export const LeftAlignedLinks = ({
 
 export const LeftAlignedSocials = ({
     logoUrl = defaultEmailConfig.logoUrl,
-    logoAlt = defaultEmailConfig.logoAlt || "Logo",
+    logoAlt = defaultEmailConfig.logoAlt || "SmartPockets",
     loginUrl = defaultEmailConfig.appUrl || defaultEmailConfig.websiteUrl,
     loginText = "Log in",
     socialLinks = defaultEmailConfig.socialLinks,
@@ -83,7 +99,7 @@ export const LeftAlignedSocials = ({
         <Container align="center" className="max-w-full min-w-[354px] bg-primary p-6">
             <Row align="left" className="align-middle">
                 <div className="flex w-full flex-1 items-center">
-                    <Img aria-hidden src={logoUrl} alt={logoAlt} className="inline h-7 align-middle md:h-8" />
+                    <Logo logoUrl={logoUrl} logoAlt={logoAlt} className="inline h-7 align-middle md:h-8" />
 
                     <EmailButton href={loginUrl} className="ml-auto align-middle">
                         <Text className="text-sm font-semibold text-primary md:text-md">{loginText}</Text>
@@ -111,13 +127,13 @@ export const LeftAlignedSocials = ({
 
 export const CenterAligned = ({
     logoUrl = defaultEmailConfig.logoUrl,
-    logoAlt = defaultEmailConfig.logoAlt || "Logo",
+    logoAlt = defaultEmailConfig.logoAlt || "SmartPockets",
 }: HeaderProps = {}) => {
     return (
         <Container align="center" className="max-w-full bg-primary p-6">
             <Row>
                 <Column align="center">
-                    <Img aria-hidden src={logoUrl} alt={logoAlt} className="h-7 md:h-8" />
+                    <Logo logoUrl={logoUrl} logoAlt={logoAlt} />
                 </Column>
             </Row>
         </Container>
@@ -126,7 +142,7 @@ export const CenterAligned = ({
 
 export const CenterAlignedLinks = ({
     logoUrl = defaultEmailConfig.logoUrl,
-    logoAlt = defaultEmailConfig.logoAlt || "Logo",
+    logoAlt = defaultEmailConfig.logoAlt || "SmartPockets",
     homeUrl = defaultEmailConfig.websiteUrl,
     navLinks = defaultNavLinks,
 }: HeaderProps = {}) => {
@@ -134,7 +150,7 @@ export const CenterAlignedLinks = ({
         <Container align="center" className="max-w-full bg-primary p-6">
             <Row>
                 <Column align="center">
-                    <Img aria-hidden src={logoUrl} alt={logoAlt} className="h-7 md:h-8" />
+                    <Logo logoUrl={logoUrl} logoAlt={logoAlt} />
                 </Column>
             </Row>
             <Row align="center">
@@ -156,14 +172,14 @@ export const CenterAlignedLinks = ({
 
 export const CenterAlignedSocials = ({
     logoUrl = defaultEmailConfig.logoUrl,
-    logoAlt = defaultEmailConfig.logoAlt || "Logo",
+    logoAlt = defaultEmailConfig.logoAlt || "SmartPockets",
     socialLinks = defaultEmailConfig.socialLinks,
 }: HeaderProps = {}) => {
     return (
         <Container align="center" className="max-w-full min-w-[354px] bg-primary p-6">
             <Row>
                 <Column align="center">
-                    <Img aria-hidden src={logoUrl} alt={logoAlt} className="h-7 md:h-8" />
+                    <Logo logoUrl={logoUrl} logoAlt={logoAlt} />
                 </Column>
             </Row>
             <Row align="center">

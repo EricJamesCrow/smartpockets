@@ -83,3 +83,5 @@ export const MagicLink = ({
         </Html>
     );
 };
+
+export default MagicLink;
