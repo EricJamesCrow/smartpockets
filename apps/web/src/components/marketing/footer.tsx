@@ -11,9 +11,6 @@ const footerSocials = [
 const footerLinks = [
     { title: "Overview", href: "/" },
     { title: "Features", href: "/features" },
-    { title: "Pricing", href: "/pricing" },
-    { title: "Careers", href: "/careers" },
-    { title: "Help", href: "/help" },
     { title: "Privacy", href: "/privacy" },
 ];
 
@@ -28,7 +25,7 @@ export const Footer = () => {
                             <p className="text-md text-tertiary">Smart credit card management for everyone.</p>
                         </div>
                         <nav>
-                            <ul className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-[repeat(6,max-content)]">
+                            <ul className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-[repeat(3,max-content)]">
                                 {footerLinks.map((item) => (
                                     <li key={item.title}>
                                         <Button color="link-gray" size="lg" href={item.href}>
