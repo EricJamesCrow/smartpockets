@@ -7,7 +7,7 @@
 - [ ] Finish customizing landing page (LandingPage07 template) in `apps/web`
   - Services dropdown: Credit card management active, Transactions and Form 568 as "coming soon" (greyed out)
 - [ ] Add alpha banner/badge making it clear the app is in early access
-- [ ] Add custom SmartPockets favicons to `apps/web` and `apps/app`
+- [x] Add custom SmartPockets favicons to `apps/web` and `apps/app`
 
 ### 2. Marketing → App Architecture
 - [ ] Move landing page from `apps/app` to `apps/web`
