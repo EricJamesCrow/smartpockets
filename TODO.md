@@ -19,7 +19,7 @@
 - [x] Add custom SmartPockets favicons to `apps/web` and `apps/app`
 
 ### 2. Marketing → App Architecture
-- [ ] Move landing page from `apps/app` to `apps/web`
+- [x] Move landing page from `apps/app` to `apps/web`
 - [ ] Configure subdomain routing (www → marketing, app → authenticated app)
 - [ ] Set up Clerk auth handoff between domains
 - [ ] Remove marketing components from `apps/app`
