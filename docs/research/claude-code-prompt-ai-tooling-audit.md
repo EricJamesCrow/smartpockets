@@ -50,7 +50,7 @@ Create or update `AGENTS.md` as the **single source of truth** that any AI codin
 [Convex-first, SRP, POLA, Consistency — distilled to essential rules]
 
 ## Development Commands
-[pnpm dev, npx convex dev, build, typecheck]
+[bun dev, npx convex dev, build, typecheck]
 
 ## File Structure
 [Actual current structure — verify against codebase]
@@ -195,7 +195,7 @@ After all changes, verify:
 
 ## My Preferences
 
-- I use pnpm as package manager
+- I use bun as package manager
 - I use Git with atomic commits and push immediately
 - I prefer tables over prose for reference material
 - I want AI agents to be opinionated about my architecture (Convex-first, no API routes)

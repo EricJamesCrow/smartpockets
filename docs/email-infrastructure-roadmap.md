@@ -295,13 +295,13 @@ This migration should be broken into **atomic sessions** - each session is a sel
 1. Verify `packages/email/package.json` has dev script
 2. Add root script for convenience:
    ```json
-   "email:dev": "npm run dev --workspace=packages/email"
+   "email:dev": "bun run dev --filter=packages/email"
    ```
 3. Document usage in CLAUDE.md
 
 **Commit:** `chore(email): configure development workflow`
 
-**Verification:** `npm run email:dev` starts preview server on port 3003
+**Verification:** `bun run email:dev` starts preview server on port 3003
 
 ---
 
@@ -445,7 +445,7 @@ If issues arise during migration:
 
 2. Re-add Inngest dependencies:
    ```bash
-   cd apps/app && npm install inngest
+   cd apps/app && bun add inngest
    ```
 
 3. Update `convex/http.ts` to forward to Inngest again
