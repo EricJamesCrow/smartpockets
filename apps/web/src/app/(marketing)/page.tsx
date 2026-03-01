@@ -24,9 +24,9 @@ const HeroCardMockup11 = () => {
                             </BadgeGroup>
                         </a>
 
-                        <h1 className="text-display-md text-primary md:text-display-lg lg:text-display-xl mt-4 font-semibold">Smart credit card management</h1>
+                        <h1 className="text-display-md text-primary md:text-display-lg lg:text-display-xl mt-4 font-semibold">Open source personal finance for people who care.</h1>
                         <p className="text-tertiary mt-4 text-lg md:mt-6 md:max-w-lg md:text-xl">
-                            Organize your credit cards into wallets, track spending, and never miss a payment. Take control of your finances.
+                            The open source alternative to YNAB and Monarch. Built by a power user for those who want complete data ownership and intelligent tracking, without the subscription traps.
                         </p>
 
                         <Form
@@ -153,10 +153,9 @@ const IconsAndMockup07 = () => {
                 <div className="flex w-full flex-col lg:max-w-3xl">
                     <span className="text-brand-secondary md:text-md text-sm font-semibold">Features</span>
 
-                    <h2 className="text-display-sm text-primary md:text-display-md mt-3 font-semibold">Stop losing track of your cards</h2>
+                    <h2 className="text-display-sm text-primary md:text-display-md mt-3 font-semibold">Credit card management for power users</h2>
                     <p className="text-tertiary mt-4 text-lg md:mt-5 md:text-xl">
-                        Organize cards into wallets, track balances, and get payment reminders. <br />
-                        All your credit cards in one place.
+                        The foundation is built for those juggling multiple cards, optimizing rewards, and tracking complex utilization across banks.
                     </p>
                 </div>
 
@@ -164,19 +163,19 @@ const IconsAndMockup07 = () => {
                     <ul className="grid grid-cols-1 gap-x-8 gap-y-10 md:gap-y-12">
                         {[
                             {
-                                title: "Unlimited wallets",
+                                title: "Real-time Plaid sync",
                                 subtitle:
-                                    "Organize your cards into wallets that make sense for you. Travel cards, daily spend, rewards maximizers - you decide.",
+                                    "Connect your banks to see every card's balance, APR, payment due date, and credit utilization — updated automatically.",
                                 icon: MessageChatCircle,
                             },
                             {
-                                title: "Payment tracking",
-                                subtitle: "Never miss a payment. Track due dates, minimum payments, and autopay status across all your cards.",
+                                title: "Wallet organization",
+                                subtitle: "Group cards into custom wallets like \"Daily Drivers\" or \"Business\". Pin favorites and organize with drag-and-drop.",
                                 icon: Zap,
                             },
                             {
-                                title: "Spending insights",
-                                subtitle: "See where your money goes with automatic transaction categorization and spending breakdowns.",
+                                title: "Card detail pages",
+                                subtitle: "Track lock and autopay status, view full transaction history, and monitor utilization progress for every individual card.",
                                 icon: ChartBreakoutSquare,
                             },
                         ].map((item) => (
@@ -236,16 +235,20 @@ const IconsAndMockup07 = () => {
 };
 
 const FeatureTextFeaturedIconCard = ({ icon, title, subtitle, footer }: FeatureTextIcon) => (
-    <div className="bg-secondary flex flex-col gap-12 p-5 md:inline-flex md:gap-16 md:p-6">
-        <FeaturedIcon icon={icon} size="lg" color="brand" theme="dark" />
+    <div className="bg-secondary flex h-full flex-col gap-12 p-5 md:gap-16 md:p-6">
+        <div className="flex-shrink-0">
+            <FeaturedIcon icon={icon} size="lg" color="brand" theme="dark" />
+        </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-1 flex-col gap-4">
             <div>
                 <h3 className="text-primary text-lg font-semibold">{title}</h3>
                 <p className="text-md text-tertiary mt-1">{subtitle}</p>
             </div>
 
-            {footer}
+            <div className="mt-auto">
+                {footer}
+            </div>
         </div>
     </div>
 );
@@ -256,31 +259,31 @@ const FeaturesIconCards01 = () => {
             <div className="max-w-container mx-auto w-full px-4 md:px-8">
                 <div className="flex w-full max-w-3xl flex-col">
                     <span className="text-brand-secondary md:text-md text-sm font-semibold">Why SmartPockets?</span>
-                    <h2 className="text-display-sm text-primary md:text-display-md mt-3 font-semibold">Get your finances organized</h2>
-                    <p className="text-tertiary mt-4 text-lg md:mt-5 md:text-xl">Finally, a simple way to track and organize all your credit cards.</p>
+                    <h2 className="text-display-sm text-primary md:text-display-md mt-3 font-semibold">Own your data. Track your wealth.</h2>
+                    <p className="text-tertiary mt-4 text-lg md:mt-5 md:text-xl">A fully open source platform designed as a power tool, not a lecture. No debt shaming, no data selling, no artificial feature gates.</p>
                 </div>
 
                 <div className="mt-12 md:mt-16">
                     <ul className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                         {[
                             {
-                                title: "Connect your banks",
-                                subtitle: "Securely connect your bank accounts with Plaid. Your cards sync automatically and stay up to date.",
+                                title: "Open Source & Self-Hostable",
+                                subtitle: "Not a subscription trap. Free to use, modify, and host yourself. The hosted version only covers real API costs—no artificial feature gates.",
                                 icon: MessageChatCircle,
                             },
                             {
-                                title: "Track due dates",
-                                subtitle: "Never miss a payment with automatic due date tracking and smart reminders before payments are due.",
+                                title: "Data Ownership",
+                                subtitle: "We are not a data broker. Your financial data stays yours. No selling to advertisers, and no opaque \"anonymized\" aggregation.",
                                 icon: Zap,
                             },
                             {
-                                title: "Spending breakdown",
-                                subtitle: "See exactly where your money goes with automatic categorization and visual spending reports.",
+                                title: "Modern Tech Stack",
+                                subtitle: "100% Convex-Native and Next.js. Zero API routes, real-time database subscriptions, and production-grade Plaid integration.",
                                 icon: ChartBreakoutSquare,
                             },
                             {
-                                title: "Organize into wallets",
-                                subtitle: "Group cards into custom wallets. Keep travel cards separate from daily drivers. Your cards, your way.",
+                                title: "Built by users, for users",
+                                subtitle: "Frustrated by expensive, unreliable alternatives, SmartPockets was built by a user managing 12+ cards who wanted something better.",
                                 icon: MessageSmileCircle,
                             },
                         ].map((item) => (
@@ -310,9 +313,9 @@ const NewsletterCardVertical = () => {
             <div className="max-w-container mx-auto px-4 md:px-8">
                 <div className="bg-secondary flex flex-col items-center rounded-2xl px-6 py-10 text-center lg:p-16">
                     <h2 className="text-display-sm text-primary xl:text-display-md font-semibold">
-                        Still thinking <br className="md:hidden" /> about it?
+                        Tired of paying a premium <br className="md:hidden" /> to track your own money?
                     </h2>
-                    <p className="text-tertiary mt-4 text-lg md:mt-5 lg:text-xl">Sign up for our newsletter and get early access to new features.</p>
+                    <p className="text-tertiary mt-4 text-lg md:mt-5 lg:text-xl">Join our early access alpha. We're building the open source personal finance platform the community actually deserves.</p>
                     <Form
                         onSubmit={(e: FormEvent<HTMLFormElement>) => {
                             e.preventDefault();
@@ -357,8 +360,8 @@ const CTACardVerticalBrand = () => {
             <div className="max-w-container mx-auto px-4 md:px-8">
                 <div className="bg-brand-section flex flex-col items-center rounded-2xl px-6 py-10 text-center lg:p-16">
                     <h2 className="text-display-sm text-primary_on-brand xl:text-display-md font-semibold">
-                        <span className="hidden md:inline">Start organizing your cards today</span>
-                        <span className="md:hidden">Start organizing today</span>
+                        <span className="hidden md:inline">Take control of your finances today</span>
+                        <span className="md:hidden">Take control today</span>
                     </h2>
                     <p className="text-tertiary_on-brand mt-4 text-lg md:mt-5 lg:text-xl">Join the alpha and help shape the future of SmartPockets.</p>
                     <div className="mt-8 flex flex-col-reverse gap-3 self-stretch sm:flex-row sm:self-center">
@@ -379,7 +382,6 @@ export default function HomePage() {
     return (
         <div className="bg-primary">
             <HeroCardMockup11 />
-            <SocialProofFullWidth />
             <IconsAndMockup07 />
             <FeaturesIconCards01 />
             <NewsletterCardVertical />
