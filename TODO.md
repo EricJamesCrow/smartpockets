@@ -70,6 +70,21 @@
 - [ ] Add "Alpha" badge/disclaimer on pricing
 - [ ] Test billing end-to-end (signup → payment → subscription active)
 
+### 10. Open Source Prep
+- [x] Add AGPLv3 LICENSE file
+- [x] Rewrite README.md (11-section design — hero, features, tech stack, roadmap, getting started, etc.)
+- [x] Create CONTRIBUTING.md (commit conventions, code style, PR guidelines)
+- [x] Clean up stale git branches (19 branches deleted — local + remote)
+- [x] Fix outdated doc references (shadcn → UntitledUI, pnpm/npm → bun)
+- [x] Design open source positioning (personal finance platform, not just churning tracker)
+- [ ] Verify wallet drag-and-drop, pin, lock/autopay toggles are fully functional
+- [ ] Add screenshots/video to README hero section
+- [ ] Landing page redesign — updated copy reflecting personal finance platform positioning
+- [ ] Figma UI Kit — full design system artifact
+- [ ] Self-hosting guide (Docker setup)
+- [ ] Set up GitHub Discussions
+- [ ] Hosted version — managed deployment with Plaid costs included
+
 ---
 
 ## Credit Cards Feature
