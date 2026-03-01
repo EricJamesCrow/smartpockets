@@ -8,6 +8,7 @@ import { Input } from "@repo/ui/untitledui/base/input/input";
 import { FeaturedIcon } from "@repo/ui/untitledui/foundations/featured-icon/featured-icon";
 import { CreditCard } from "@repo/ui/untitledui/shared-assets/credit-card/credit-card";
 import { ArrowRight, ChartBreakoutSquare, MessageChatCircle, MessageSmileCircle, Zap } from "@untitledui/icons";
+import { TextType } from "@/components/ui/text-type";
 const HeroCardMockup11 = () => {
     return (
         <div className="bg-primary relative overflow-hidden">
@@ -102,44 +103,15 @@ const SocialProofFullWidth = () => {
     return (
         <section className="bg-secondary py-16 md:py-24">
             <div className="max-w-container mx-auto px-4 md:px-8">
-                <div className="flex flex-col gap-8">
-                    <p className="text-md text-tertiary text-center font-medium">Join 4,000+ companies already growing</p>
-                    <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 xl:gap-x-6">
-                        <img alt="Odeaolabs" src="https://www.untitledui.com/logos/logotype/color/odeaolabs.svg" className="h-9 md:h-12 dark:hidden" />
-                        <img alt="Kintsugi" src="https://www.untitledui.com/logos/logotype/color/kintsugi.svg" className="h-9 md:h-12 dark:hidden" />
-                        <img alt="Stackedlab" src="https://www.untitledui.com/logos/logotype/color/stackedlab.svg" className="h-9 md:h-12 dark:hidden" />
-                        <img alt="Magnolia" src="https://www.untitledui.com/logos/logotype/color/magnolia.svg" className="h-9 md:h-12 dark:hidden" />
-                        <img alt="Warpspeed" src="https://www.untitledui.com/logos/logotype/color/warpspeed.svg" className="h-9 md:h-12 dark:hidden" />
-                        <img alt="Sisyphus" src="https://www.untitledui.com/logos/logotype/color/sisyphus.svg" className="h-9 md:h-12 dark:hidden" />
-                        <img
-                            alt="Odeaolabs"
-                            src="https://www.untitledui.com/logos/logotype/white/odeaolabs.svg"
-                            className="hidden h-9 opacity-85 md:h-12 dark:block"
-                        />
-                        <img
-                            alt="Kintsugi"
-                            src="https://www.untitledui.com/logos/logotype/white/kintsugi.svg"
-                            className="hidden h-9 opacity-85 md:h-12 dark:block"
-                        />
-                        <img
-                            alt="Stackedlab"
-                            src="https://www.untitledui.com/logos/logotype/white/stackedlab.svg"
-                            className="hidden h-9 opacity-85 md:h-12 dark:block"
-                        />
-                        <img
-                            alt="Magnolia"
-                            src="https://www.untitledui.com/logos/logotype/white/magnolia.svg"
-                            className="hidden h-9 opacity-85 md:h-12 dark:block"
-                        />
-                        <img
-                            alt="Warpspeed"
-                            src="https://www.untitledui.com/logos/logotype/white/warpspeed.svg"
-                            className="hidden h-9 opacity-85 md:h-12 dark:block"
-                        />
-                        <img
-                            alt="Sisyphus"
-                            src="https://www.untitledui.com/logos/logotype/white/sisyphus.svg"
-                            className="hidden h-9 opacity-85 md:h-12 dark:block"
+                <div className="flex flex-col items-center gap-6">
+                    <p className="text-md text-tertiary text-center font-medium tracking-wide uppercase">Currently in development by</p>
+                    <div className="flex flex-col items-center">
+                        <TextType
+                            text="CrowDevelopment"
+                            className="text-display-md md:text-display-xl font-semibold tracking-tight text-primary font-[family-name:var(--font-space-grotesk)]"
+                            delay={0.5}
+                            speed={0.06}
+                            keepCursor
                         />
                     </div>
                 </div>
