@@ -1,6 +1,7 @@
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { SmartPocketsLogo } from "@repo/ui/untitledui/foundations/logo/smartpockets-logo";
 import { GitHub, LinkedIn, X } from "@repo/ui/untitledui/foundations/social-icons/index";
+import { TextType } from "@/components/ui/text-type";
 
 const footerSocials = [
     { label: "X (formerly Twitter)", icon: X, href: "https://x.com/ericjamescrow" },
@@ -36,10 +37,25 @@ export const Footer = () => {
                             </ul>
                         </nav>
                     </div>
+
+                    <div className="flex flex-col items-start md:items-end justify-end">
+                        <p className="text-xs text-quaternary font-medium uppercase tracking-wider mb-0.5">Currently in development by</p>
+                        <TextType
+                            text="CrowDevelopment"
+                            className="text-lg font-semibold tracking-tight text-white font-[family-name:var(--font-space-grotesk)]"
+                            delay={2}
+                            speed={0.08}
+                            keepCursor
+                        />
+                    </div>
                 </div>
-                <div className="border-secondary mt-12 flex flex-col-reverse justify-between gap-6 border-t pt-8 md:mt-16 md:flex-row">
-                    <p className="text-md text-quaternary">&copy; 2026 SmartPockets. All rights reserved.</p>
-                    <ul className="flex gap-6">
+                
+                <div className="border-secondary mt-12 flex flex-col-reverse justify-between gap-6 border-t pt-8 md:mt-12 md:flex-row md:items-end">
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm text-quaternary">&copy; 2026 SmartPockets. All rights reserved.</p>
+                    </div>
+
+                    <ul className="flex gap-6 mt-2">
                         {footerSocials.map(({ label, icon: Icon, href }) => (
                             <li key={label}>
                                 <a
