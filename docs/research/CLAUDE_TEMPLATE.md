@@ -53,8 +53,8 @@ git stash list
 | Styling | Tailwind CSS | 4.x |
 | Database | Convex | latest |
 | Auth | Clerk | latest |
-| UI Components | shadcn/ui (New York) | latest |
-| Package Manager | pnpm | latest |
+| UI Components | UntitledUI | Paid library |
+| Package Manager | bun | 1.1.42 |
 
 ---
 
@@ -62,19 +62,19 @@ git stash list
 
 ```bash
 # Start development server
-pnpm dev
+bun dev
 
 # Type checking
-pnpm exec tsc --noEmit
+bun typecheck
 
 # Linting
-pnpm lint
+bun lint
 
 # Build for production
-pnpm build
+bun build
 
 # Run tests
-pnpm test
+bun test
 ```
 
 ---
@@ -227,7 +227,7 @@ Break into:
 ```bash
 # 1. Implement ONE logical unit
 # 2. Verify changes work
-pnpm exec tsc --noEmit  # Type check
+bun typecheck
 
 # 3. Stage relevant files
 git add <specific-files>
@@ -391,7 +391,7 @@ src/
 
 ### Key Files
 - `lib/` - Shared utilities and helpers
-- `components/ui/` - shadcn/ui primitives
+- `components/untitledui/` - UntitledUI components
 - `components/` - Application components
 - `app/` - Next.js App Router pages
 
@@ -415,10 +415,10 @@ NEXT_PUBLIC_CONVEX_URL=
 
 ```bash
 # Development
-pnpm dev                    # Start dev server
-pnpm build                  # Production build
-pnpm lint                   # Run linter
-pnpm exec tsc --noEmit     # Type check
+bun dev                     # Start dev server
+bun build                   # Production build
+bun lint                    # Run linter
+bun typecheck               # Type check
 
 # Git (daily workflow)
 git fetch origin           # Get latest
