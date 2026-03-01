@@ -17,7 +17,6 @@ type HeaderNavItem = {
 
 const headerNavItems: HeaderNavItem[] = [
     { label: "Products", href: "/products", menu: <ProductsDropdown /> },
-    { label: "Resources", href: "/resources", menu: <ResourcesDropdown /> },
     { label: "About", href: "/about" },
 ];
 

@@ -21,8 +21,9 @@ const productItems: DropdownItem[] = [
     {
         title: "Credit Card Management",
         subtitle: "Track your cards, compare benefits, and maximize rewards effortlessly.",
-        href: "/sign-up",
+        href: "#",
         Icon: CreditCard02,
+        disabled: true,
     },
     {
         title: "Transactions",
@@ -75,9 +76,9 @@ const DropdownMenu = ({ items }: { items: DropdownItem[] }) => {
             <nav className="overflow-hidden rounded-2xl bg-primary py-2 shadow-xs ring-1 ring-secondary_alt md:p-2 md:shadow-lg">
                 <ul className="flex flex-col gap-0.5">
                     {items.map(({ title, subtitle, href, Icon, badge, disabled }) => (
-                        <li key={title} className={disabled ? "opacity-50" : undefined}>
+                        <li key={title} className={disabled && badge ? "opacity-50" : undefined}>
                             {disabled ? (
-                                <div className="inline-flex w-full gap-3 px-4 py-3 sm:max-w-80 sm:p-3 md:rounded-lg" aria-disabled="true">
+                                <div className={`inline-flex w-full gap-3 px-4 py-3 sm:max-w-80 sm:p-3 md:rounded-lg ${badge ? "cursor-not-allowed" : "cursor-default"}`}>
                                     <Icon className="mt-0.5 size-4 shrink-0 stroke-[2.3px] text-fg-brand-primary" />
                                     <div className="flex flex-col gap-3">
                                         <div className="flex flex-col gap-0.5">

@@ -1,6 +1,6 @@
 "use client";
 
-import { type FC, type ReactNode, isValidElement } from "react";
+import { type FC, type ReactNode, type MouseEvent, isValidElement } from "react";
 import { cx } from "@repo/ui/utils";
 import { isReactComponent } from "@repo/ui/utils/is-react-component";
 
@@ -13,11 +13,13 @@ interface NavMenuItemLinkProps {
     subtitle?: string;
     badge?: ReactNode;
     actionsContent?: ReactNode;
+    onClick?: (e: MouseEvent<HTMLAnchorElement>) => void;
 }
 
-export const NavMenuItemLink = ({ href, icon: Icon, iconClassName, title, badge, subtitle, className, actionsContent }: NavMenuItemLinkProps) => (
+export const NavMenuItemLink = ({ href, icon: Icon, iconClassName, title, badge, subtitle, className, actionsContent, onClick }: NavMenuItemLinkProps) => (
     <a
         href={href}
+        onClick={onClick}
         className={cx(
             "inline-flex w-full gap-3 px-4 py-3 outline-focus-ring transition duration-100 ease-linear hover:bg-primary_hover focus-visible:outline-2 sm:max-w-80 sm:p-3 md:rounded-lg",
             className,
