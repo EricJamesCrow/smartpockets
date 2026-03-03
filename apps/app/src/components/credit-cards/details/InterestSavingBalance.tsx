@@ -1,0 +1,59 @@
+"use client";
+
+import { useQuery } from "convex/react";
+import { api } from "@repo/backend/convex/_generated/api";
+import type { Id } from "@repo/backend/convex/_generated/dataModel";
+
+function formatCurrency(amount: number): string {
+  return amount.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+interface InterestSavingBalanceProps {
+  creditCardId: Id<"creditCards">;
+}
+
+export function InterestSavingBalance({ creditCardId }: InterestSavingBalanceProps) {
+  const data = useQuery(api.creditCards.queries.computeInterestSavingBalance, { creditCardId });
+
+  if (!data) return null;
+
+  return (
+    <section>
+      <h3 className="mb-4 text-lg font-semibold text-primary">Interest Saving Balance</h3>
+      <div className="rounded-xl border border-secondary bg-primary p-4">
+        <div className="flex items-baseline justify-between">
+          <div>
+            <p className="text-2xl font-semibold tabular-nums text-primary">
+              ${formatCurrency(data.interestSavingBalance)}
+            </p>
+            <p className="mt-1 text-xs text-tertiary">
+              {data.hasPromos
+                ? "Pay this amount to avoid interest on next month\u2019s purchases while keeping promotional balances intact"
+                : "Pay in full to avoid interest charges"}
+            </p>
+          </div>
+        </div>
+
+        {data.hasPromos && (
+          <div className="mt-3 grid grid-cols-3 gap-2 border-t border-secondary pt-3 text-xs text-tertiary">
+            <div>
+              <p className="tabular-nums font-medium text-primary">${formatCurrency(data.currentBalance)}</p>
+              <p>Current Balance</p>
+            </div>
+            <div>
+              <p className="tabular-nums font-medium text-primary">${formatCurrency(data.totalProtectedBalances)}</p>
+              <p>Protected Balances</p>
+            </div>
+            <div>
+              <p className="tabular-nums font-medium text-primary">${formatCurrency(data.totalProtectedPayments)}</p>
+              <p>Required Payments</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
