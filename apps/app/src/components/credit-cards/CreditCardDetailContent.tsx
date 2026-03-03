@@ -172,14 +172,15 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
               type="button"
               onClick={() => toggleLock(cardId, card.isLocked)}
               disabled={isLocking}
-              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+              aria-label={card.isLocked ? "Unlock card" : "Lock card"}
+              className="disabled:cursor-not-allowed disabled:opacity-70"
             >
               <Badge
                 type="pill-color"
                 color={card.isLocked ? "warning" : "gray"}
                 size="sm"
               >
-                {card.isLocked ? "Lock: On" : "Lock: Off"}
+                {isLocking ? "Updating..." : card.isLocked ? "Lock: On" : "Lock: Off"}
               </Badge>
             </button>
             <CreditCardStatusBadge
