@@ -10,17 +10,23 @@ import {
   getUtilizationColor,
 } from "@/types/credit-cards";
 import type { ExtendedCreditCardData, Transaction } from "@/types/credit-cards";
+import { AutoPayToggle } from "./AutoPayToggle";
 
 interface KeyMetricsProps {
   card: ExtendedCreditCardData;
   transactions?: Transaction[];
+  autoPay?: {
+    enabled: boolean;
+    isLoading: boolean;
+    toggle: (enabled: boolean) => void;
+  };
 }
 
 /**
  * Key Metrics Row - 4-column horizontal layout with vertical dividers
  * Matches SmartPockets design pattern
  */
-export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
+export function KeyMetrics({ card, transactions = [], autoPay }: KeyMetricsProps) {
   // Calculate pending charges total
   const pendingTotal = useMemo(() => {
     return transactions
@@ -87,6 +93,15 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
             <p className="text-xs text-tertiary">
               Recommended: {formatDisplayCurrency(recommendedPayment)}
             </p>
+            {autoPay && (
+              <div className="mt-1">
+                <AutoPayToggle
+                  enabled={autoPay.enabled}
+                  onToggle={autoPay.toggle}
+                  isLoading={autoPay.isLoading}
+                />
+              </div>
+            )}
           </div>
 
           {/* Vertical Divider */}

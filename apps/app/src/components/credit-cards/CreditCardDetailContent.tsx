@@ -16,7 +16,7 @@ import { UntitledCardVisual } from "./UntitledCardVisual";
 import { CreditCardStatusBadge } from "./CreditCardStatusBadge";
 import { PaymentDueBadge } from "./PaymentDueBadge";
 import { KeyMetrics } from "./KeyMetrics";
-import { AutoPayToggle, useAutoPay } from "./AutoPayToggle";
+import { useAutoPay } from "./AutoPayToggle";
 import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { TransactionsSection } from "./TransactionsSection";
 import { CardDetailsTab } from "./CardDetailsTab";
@@ -202,25 +202,18 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
             </p>
           </div>
 
-          {/* Payment Due Info & AutoPay */}
-          <div className="flex items-end gap-6">
-            <AutoPayToggle
-              enabled={autoPay.enabled}
-              onToggle={autoPay.toggle}
-              isLoading={autoPay.isLoading}
+          {/* Payment Due Info */}
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-tertiary">
+              Payment Due
+            </span>
+            <span className="text-base font-semibold text-primary">
+              {card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--"}
+            </span>
+            <PaymentDueBadge
+              nextPaymentDueDate={card.nextPaymentDueDate}
+              isOverdue={card.isOverdue}
             />
-            <div className="flex flex-col items-end gap-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-tertiary">
-                Payment Due
-              </span>
-              <span className="text-base font-semibold text-primary">
-                {card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--"}
-              </span>
-              <PaymentDueBadge
-                nextPaymentDueDate={card.nextPaymentDueDate}
-                isOverdue={card.isOverdue}
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -261,7 +254,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         {selectedTab === "overview" && (
           <>
             {/* Key Metrics Row */}
-            <KeyMetrics card={card} />
+            <KeyMetrics card={card} autoPay={autoPay} />
 
             {/* Transactions Section */}
             <div className="px-4 py-6 lg:px-6">
