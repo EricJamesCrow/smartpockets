@@ -7,9 +7,10 @@ import { formatDisplayCurrency } from "@/types/credit-cards";
 
 interface InterestSavingBalanceProps {
   creditCardId: Id<"creditCards">;
+  purchaseAprPercentage?: number | null;
 }
 
-export function InterestSavingBalance({ creditCardId }: InterestSavingBalanceProps) {
+export function InterestSavingBalance({ creditCardId, purchaseAprPercentage }: InterestSavingBalanceProps) {
   const data = useQuery(api.creditCards.queries.computeInterestSavingBalance, { creditCardId });
 
   if (!data) return null;
@@ -24,9 +25,11 @@ export function InterestSavingBalance({ creditCardId }: InterestSavingBalancePro
               {formatDisplayCurrency(data.interestSavingBalance)}
             </p>
             <p className="mt-1 text-xs text-tertiary">
-              {data.hasPromos
-                ? "Pay this amount to avoid interest on next month\u2019s purchases while keeping promotional balances intact"
-                : "Pay in full to avoid interest charges"}
+              {purchaseAprPercentage === 0
+                ? "Your purchases are at 0% APR \u2014 no interest accruing on new purchases"
+                : data.hasPromos
+                  ? "Pay this amount to avoid interest on next month\u2019s purchases while keeping promotional balances intact"
+                  : "Pay in full to avoid interest charges"}
             </p>
           </div>
         </div>

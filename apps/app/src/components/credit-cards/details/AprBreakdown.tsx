@@ -4,13 +4,24 @@ import { formatDisplayCurrency } from "@/types/credit-cards";
 import { cx } from "@repo/ui/utils";
 
 type Apr = {
-  aprPercentage: number;
+  aprPercentage: number | null;
   aprType: string;
   balanceSubjectToApr?: number | null;
   interestChargeAmount?: number | null;
 };
 
+const APR_DISPLAY_NAMES: Record<string, string> = {
+  purchase_apr: "Purchase",
+  cash_apr: "Cash Advance",
+  balance_transfer_apr: "Balance Transfer",
+};
+
+const STANDARD_APR_TYPES = ["purchase_apr", "cash_apr", "balance_transfer_apr"];
+
 function getAprColor(apr: Apr) {
+  if (apr.aprPercentage == null) {
+    return { border: "border-l-secondary", text: "text-tertiary" };
+  }
   if (apr.aprPercentage === 0) {
     return { border: "border-l-utility-success-500", text: "text-utility-success-700" };
   }
@@ -39,7 +50,7 @@ function computeWeightedAverageApr(aprs: Apr[]): number | null {
   );
   if (totalBalance === 0) return null;
   const weightedSum = withBalance.reduce(
-    (sum, a) => sum + a.aprPercentage * (a.balanceSubjectToApr ?? 0),
+    (sum, a) => sum + (a.aprPercentage ?? 0) * (a.balanceSubjectToApr ?? 0),
     0,
   );
   return Math.round((weightedSum / totalBalance) * 100) / 100;
@@ -63,6 +74,19 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
     );
   }
 
+  // Ensure all 3 standard APR types always appear
+  const normalizedAprs = STANDARD_APR_TYPES.map((standardType) => {
+    const existing = aprs.find((a) => a.aprType === standardType);
+    return existing ?? {
+      aprType: standardType,
+      aprPercentage: null,
+      balanceSubjectToApr: 0,
+      interestChargeAmount: 0,
+    };
+  });
+  const extraAprs = aprs.filter((a) => !STANDARD_APR_TYPES.includes(a.aprType));
+  const allAprs = [...normalizedAprs, ...extraAprs];
+
   const weightedAvg = computeWeightedAverageApr(aprs);
 
   return (
@@ -71,7 +95,7 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
         <h3 className="text-lg font-semibold text-primary">APR Breakdown</h3>
         {weightedAvg !== null && (
           <p className="text-sm text-tertiary">
-            Weighted Avg:{" "}
+            Effective APR:{" "}
             <span className="font-semibold tabular-nums text-primary">
               {weightedAvg.toFixed(2)}%
             </span>
@@ -88,7 +112,7 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
         </div>
         {/* Data rows */}
         <div className="divide-y divide-secondary">
-          {aprs.map((apr, i) => {
+          {allAprs.map((apr, i) => {
             const color = getAprColor(apr);
             return (
               <div
@@ -99,11 +123,11 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
                 )}
               >
                 <span className="text-sm text-primary">
-                  {formatAprType(apr.aprType)}
+                  {APR_DISPLAY_NAMES[apr.aprType] ?? formatAprType(apr.aprType)}
                 </span>
                 <span className={cx("text-right text-sm font-medium tabular-nums", color.text)}>
-                  {apr.aprPercentage.toFixed(2)}%
-                  {apr.aprPercentage > 0 && (apr.aprType?.includes("purchase") || apr.aprType?.includes("cash")) && (
+                  {apr.aprPercentage != null ? `${apr.aprPercentage.toFixed(2)}%` : "—"}
+                  {apr.aprPercentage != null && apr.aprPercentage > 0 && (apr.aprType?.includes("purchase") || apr.aprType?.includes("cash") || apr.aprType?.includes("balance_transfer")) && (
                     <span
                       className="ml-1 cursor-help text-xs text-tertiary"
                       title="Variable rate — tracks the Prime Rate"

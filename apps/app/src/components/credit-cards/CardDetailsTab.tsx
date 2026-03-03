@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import type { Id } from "@convex/_generated/dataModel";
 import { cx } from "@repo/ui/utils";
-import { formatDisplayCurrency } from "@/types/credit-cards";
+import { formatDisplayCurrency, getPurchaseApr } from "@/types/credit-cards";
 
 // Section components
 import { StatementClosingBanner } from "./details/StatementClosingBanner";
@@ -95,7 +95,10 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[7fr_5fr]">
         {/* Left: Actionable financial insights */}
         <div className="flex flex-col gap-6">
-          <InterestSavingBalance creditCardId={cardId} />
+          <InterestSavingBalance
+            creditCardId={cardId}
+            purchaseAprPercentage={getPurchaseApr(cardData.aprs ?? undefined)}
+          />
           <FeesInterestYtd creditCardId={cardId} />
           <PromoTracker creditCardId={cardId} />
           <PayOverTimeSection
