@@ -2,35 +2,49 @@
 
 import { motion } from "motion/react";
 import type { Id } from "@convex/_generated/dataModel";
-import { Badge } from "@repo/ui/untitledui/base/badges/badges";
+import { cx } from "@repo/ui/utils";
 import { formatDisplayCurrency } from "@/types/credit-cards";
 
-interface AprInfo {
-  aprPercentage: number;
-  aprType: string;
-  balanceSubjectToApr?: number;
-  interestChargeAmount?: number;
-}
+// Section components
+import { StatementClosingBanner } from "./details/StatementClosingBanner";
+import { BalanceReconciliation } from "./details/BalanceReconciliation";
+import { AprBreakdown } from "./details/AprBreakdown";
+import { PromoTracker } from "./details/PromoTracker";
+import { InterestSavingBalance } from "./details/InterestSavingBalance";
+import { FeesInterestYtd } from "./details/FeesInterestYtd";
+import { PayOverTimeSection } from "./details/PayOverTimeSection";
 
+// Keep the existing CardData interface — this is the raw Convex query result shape
 interface CardData {
   _id: Id<"creditCards">;
   _creationTime: number;
-  officialName?: string;
   accountName: string;
-  accountType?: string;
-  accountSubtype?: string;
-  aprs?: AprInfo[];
-  lastPaymentAmount?: number;
-  lastPaymentDate?: string;
-  lastStatementBalance?: number;
-  lastStatementIssueDate?: string;
-  syncStatus?: "synced" | "syncing" | "error" | "stale";
-  lastSyncedAt?: number;
-  lastSyncError?: string;
-  company?: string;
-  brand?: string;
-  lastFour?: string;
-  isoCurrencyCode?: string;
+  officialName?: string | null;
+  company?: string | null;
+  brand?: string | null;
+  lastFour?: string | null;
+  accountType?: string | null;
+  accountSubtype?: string | null;
+  isoCurrencyCode?: string | null;
+  aprs?: Array<{
+    aprPercentage: number;
+    aprType: string;
+    balanceSubjectToApr?: number | null;
+    interestChargeAmount?: number | null;
+  }> | null;
+  lastPaymentAmount?: number | null;
+  lastPaymentDate?: string | null;
+  lastStatementBalance?: number | null;
+  lastStatementIssueDate?: string | null;
+  syncStatus?: string | null;
+  lastSyncedAt?: number | null;
+  lastSyncError?: string | null;
+  // New fields
+  statementClosingDay?: number | null;
+  payOverTimeEnabled?: boolean | null;
+  payOverTimeLimit?: number | null;
+  payOverTimeApr?: number | null;
+  availableCredit?: number | null;
 }
 
 interface CardDetailsTabProps {
@@ -39,13 +53,18 @@ interface CardDetailsTabProps {
 }
 
 /**
- * Card Details Tab - Shows APR breakdown, account info, and payment history
+ * Card Details Tab — Statement-styled orchestrator
+ *
+ * Composes section components into a full details view:
+ * StatementClosingBanner, BalanceReconciliation, AprBreakdown,
+ * PromoTracker, InterestSavingBalance, FeesInterestYtd,
+ * PayOverTimeSection, Account Details, Payment History, Sync Status
  */
 export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
   if (!cardData) {
     return (
-      <div className="py-12 text-center text-tertiary">
-        Card details not available
+      <div className="p-6 text-center text-sm text-tertiary">
+        Loading card details...
       </div>
     );
   }
@@ -57,61 +76,37 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
       transition={{ duration: 0.2 }}
       className="space-y-6"
     >
-      {/* APR Breakdown */}
-      <section>
-        <h3 className="mb-4 text-lg font-semibold text-primary">APR Information</h3>
-        <div className="rounded-xl border border-secondary bg-primary">
-          {cardData.aprs && cardData.aprs.length > 0 ? (
-            <div className="divide-y divide-secondary">
-              {cardData.aprs.map((apr, index) => (
-                <AprRow key={index} apr={apr} />
-              ))}
-            </div>
-          ) : (
-            <div className="px-4 py-6 text-center text-tertiary">
-              No APR information available
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Statement closing date banner */}
+      <StatementClosingBanner
+        creditCardId={cardId}
+        statementClosingDay={cardData.statementClosingDay}
+      />
 
-      {/* Payment History */}
-      <section>
-        <h3 className="mb-4 text-lg font-semibold text-primary">Payment History</h3>
-        <div className="rounded-xl border border-secondary bg-primary">
-          <div className="grid grid-cols-1 divide-y divide-secondary sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-            {/* Last Payment */}
-            <div className="p-4">
-              <p className="text-sm font-medium text-tertiary">Last Payment</p>
-              <p className="mt-1 text-xl font-semibold text-primary tabular-nums">
-                {cardData.lastPaymentAmount != null
-                  ? formatDisplayCurrency(cardData.lastPaymentAmount)
-                  : "--"}
-              </p>
-              <p className="mt-1 text-xs text-tertiary">
-                {cardData.lastPaymentDate
-                  ? formatDate(cardData.lastPaymentDate)
-                  : "No payment on record"}
-              </p>
-            </div>
+      {/* Section 1: Balance Reconciliation */}
+      <BalanceReconciliation
+        creditCardId={cardId}
+        statementClosingDay={cardData.statementClosingDay}
+      />
 
-            {/* Last Statement */}
-            <div className="p-4">
-              <p className="text-sm font-medium text-tertiary">Last Statement Balance</p>
-              <p className="mt-1 text-xl font-semibold text-primary tabular-nums">
-                {cardData.lastStatementBalance != null
-                  ? formatDisplayCurrency(cardData.lastStatementBalance)
-                  : "--"}
-              </p>
-              <p className="mt-1 text-xs text-tertiary">
-                {cardData.lastStatementIssueDate
-                  ? `Issued ${formatDate(cardData.lastStatementIssueDate)}`
-                  : "No statement on record"}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Section 2: APR Breakdown */}
+      <AprBreakdown aprs={cardData.aprs ?? undefined} />
+
+      {/* Section 3: Promotional Financing */}
+      <PromoTracker creditCardId={cardId} />
+
+      {/* Section 4: Interest Saving Balance */}
+      <InterestSavingBalance creditCardId={cardId} />
+
+      {/* Section 5: YTD Fees & Interest */}
+      <FeesInterestYtd creditCardId={cardId} />
+
+      {/* Section 6: Pay Over Time (Amex-specific) */}
+      <PayOverTimeSection
+        payOverTimeEnabled={cardData.payOverTimeEnabled ?? undefined}
+        payOverTimeLimit={cardData.payOverTimeLimit ?? undefined}
+        payOverTimeApr={cardData.payOverTimeApr ?? undefined}
+        availableCredit={cardData.availableCredit ?? undefined}
+      />
 
       {/* Account Details */}
       <section>
@@ -144,69 +139,82 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
               <DetailRow label="Currency" value={cardData.isoCurrencyCode} />
             )}
             <DetailRow
-              label="Added"
-              value={formatDateTime(cardData._creationTime)}
+              label="Date Added"
+              value={new Date(cardData._creationTime).toLocaleDateString("en-US", {
+                year: "numeric", month: "long", day: "numeric",
+              })}
             />
+            {cardData.statementClosingDay != null && (
+              <DetailRow label="Statement Closing Day" value={`Day ${cardData.statementClosingDay}`} />
+            )}
           </dl>
         </div>
       </section>
 
-      {/* Sync Status */}
+      {/* Payment History */}
       <section>
-        <h3 className="mb-4 text-lg font-semibold text-primary">Sync Status</h3>
-        <div className="rounded-xl border border-secondary bg-primary p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-tertiary">Status</p>
-              <div className="mt-1 flex items-center gap-2">
-                <SyncStatusBadge status={cardData.syncStatus} />
-                {cardData.lastSyncedAt && (
-                  <span className="text-xs text-tertiary">
-                    Last synced {formatRelativeTime(cardData.lastSyncedAt)}
-                  </span>
-                )}
-              </div>
+        <h3 className="mb-4 text-lg font-semibold text-primary">Payment History</h3>
+        <div className="rounded-xl border border-secondary bg-primary">
+          <div className="grid grid-cols-1 divide-y divide-secondary sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+            <div className="p-4">
+              <p className="text-xs text-tertiary">Last Payment</p>
+              <p className="text-lg font-semibold tabular-nums text-primary">
+                {cardData.lastPaymentAmount != null
+                  ? formatDisplayCurrency(cardData.lastPaymentAmount)
+                  : "\u2014"}
+              </p>
+              {cardData.lastPaymentDate && (
+                <p className="text-xs text-tertiary">{cardData.lastPaymentDate}</p>
+              )}
+            </div>
+            <div className="p-4">
+              <p className="text-xs text-tertiary">Last Statement Balance</p>
+              <p className="text-lg font-semibold tabular-nums text-primary">
+                {cardData.lastStatementBalance != null
+                  ? formatDisplayCurrency(cardData.lastStatementBalance)
+                  : "\u2014"}
+              </p>
+              {cardData.lastStatementIssueDate && (
+                <p className="text-xs text-tertiary">Issued {cardData.lastStatementIssueDate}</p>
+              )}
             </div>
           </div>
-          {cardData.lastSyncError && (
-            <p className="mt-3 rounded-lg bg-utility-error-50 p-3 text-sm text-utility-error-700">
-              {cardData.lastSyncError}
-            </p>
-          )}
         </div>
       </section>
+
+      {/* Sync Status */}
+      {cardData.syncStatus && (
+        <section>
+          <h3 className="mb-4 text-lg font-semibold text-primary">Sync Status</h3>
+          <div className="rounded-xl border border-secondary bg-primary px-4 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-tertiary">Status</span>
+              <span
+                className={cx(
+                  "text-sm font-medium",
+                  cardData.syncStatus === "synced" && "text-utility-success-700",
+                  cardData.syncStatus === "syncing" && "text-utility-brand-600",
+                  cardData.syncStatus === "error" && "text-utility-error-700",
+                  cardData.syncStatus === "stale" && "text-utility-warning-700",
+                )}
+              >
+                {cardData.syncStatus.charAt(0).toUpperCase() + cardData.syncStatus.slice(1)}
+              </span>
+            </div>
+            {cardData.lastSyncedAt && (
+              <p className="mt-1 text-xs text-tertiary">
+                Last synced: {new Date(cardData.lastSyncedAt).toLocaleString("en-US")}
+              </p>
+            )}
+            {cardData.lastSyncError && (
+              <div className="mt-2 rounded-lg bg-utility-error-50 px-3 py-2 text-xs text-utility-error-700">
+                {cardData.lastSyncError}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
     </motion.div>
-  );
-}
-
-// =============================================================================
-// HELPER COMPONENTS
-// =============================================================================
-
-function AprRow({ apr }: { apr: AprInfo }) {
-  const aprLabel = formatAprType(apr.aprType);
-
-  return (
-    <div className="flex items-center justify-between px-4 py-3">
-      <div>
-        <p className="text-sm font-medium text-primary">{aprLabel}</p>
-        {apr.balanceSubjectToApr !== undefined && apr.balanceSubjectToApr > 0 && (
-          <p className="text-xs text-tertiary">
-            Balance: {formatDisplayCurrency(apr.balanceSubjectToApr)}
-          </p>
-        )}
-      </div>
-      <div className="text-right">
-        <p className="text-lg font-semibold text-primary tabular-nums">
-          {apr.aprPercentage.toFixed(2)}%
-        </p>
-        {apr.interestChargeAmount !== undefined && apr.interestChargeAmount > 0 && (
-          <p className="text-xs text-utility-error-600">
-            Interest: {formatDisplayCurrency(apr.interestChargeAmount)}
-          </p>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -217,71 +225,4 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <dd className="text-sm font-medium text-primary">{value}</dd>
     </div>
   );
-}
-
-function SyncStatusBadge({ status }: { status?: string }) {
-  switch (status) {
-    case "synced":
-      return <Badge color="success" size="sm">Synced</Badge>;
-    case "syncing":
-      return <Badge color="blue" size="sm">Syncing</Badge>;
-    case "error":
-      return <Badge color="error" size="sm">Error</Badge>;
-    case "stale":
-      return <Badge color="warning" size="sm">Stale</Badge>;
-    default:
-      return <Badge color="gray" size="sm">Unknown</Badge>;
-  }
-}
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-function formatAprType(aprType: string): string {
-  const typeMap: Record<string, string> = {
-    purchase_apr: "Purchase APR",
-    balance_transfer_apr: "Balance Transfer APR",
-    cash_advance_apr: "Cash Advance APR",
-    penalty_apr: "Penalty APR",
-    prime_rate: "Prime Rate",
-    special: "Special APR",
-  };
-
-  return typeMap[aprType.toLowerCase()] || aprType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(timestamp: number): string {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatRelativeTime(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days === 1) return "yesterday";
-  if (days < 7) return `${days}d ago`;
-
-  return formatDateTime(timestamp);
 }
