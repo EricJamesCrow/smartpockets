@@ -20,7 +20,10 @@ const schema = defineEntSchema(
             .field("externalId", v.string(), { unique: true }) // Clerk ID
             .edges("members", { ref: true })
             .edges("creditCards", { ref: true })
-            .edges("wallets", { ref: true }),
+            .edges("wallets", { ref: true })
+            .edges("statementSnapshots", { ref: true })
+            .edges("promoRates", { ref: true })
+            .edges("installmentPlans", { ref: true }),
 
         // === ORG LAYER ===
         organizations: defineEnt({
