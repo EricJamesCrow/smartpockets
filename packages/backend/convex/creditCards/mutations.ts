@@ -210,6 +210,10 @@ export const update = mutation({
     nextPaymentDueDate: v.optional(v.string()),
     minimumPaymentAmount: v.optional(v.number()),
     isOverdue: v.optional(v.boolean()),
+    statementClosingDay: v.optional(v.number()),
+    payOverTimeEnabled: v.optional(v.boolean()),
+    payOverTimeLimit: v.optional(v.number()),
+    payOverTimeApr: v.optional(v.number()),
   },
   returns: v.null(),
   async handler(ctx, { cardId, ...data }) {
