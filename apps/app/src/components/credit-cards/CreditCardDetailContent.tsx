@@ -7,12 +7,10 @@ import { useUser } from "@clerk/nextjs";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { motion } from "motion/react";
-import type { Selection } from "react-aria-components";
 import { CreditCard02 } from "@untitledui/icons";
+import { cx } from "@repo/ui/utils";
 import { Breadcrumbs } from "@repo/ui/untitledui/application/breadcrumbs/breadcrumbs";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
-import { ContentDivider } from "@repo/ui/untitledui/application/content-divider/content-divider";
-import { ButtonGroup, ButtonGroupItem } from "@repo/ui/untitledui/base/button-group/button-group";
 import { useToggleCardLocked } from "@/hooks/useToggleCardLocked";
 import { UntitledCardVisual } from "./UntitledCardVisual";
 import { CreditCardStatusBadge } from "./CreditCardStatusBadge";
@@ -52,12 +50,12 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
   // Tab state
   const [selectedTab, setSelectedTab] = useState<TabId>("overview");
 
-  const handleTabChange = (keys: Selection) => {
-    if (keys !== "all" && keys.size > 0) {
-      const selected = Array.from(keys)[0] as TabId;
-      setSelectedTab(selected);
-    }
-  };
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "details", label: "Details" },
+    { id: "transactions", label: "Transactions" },
+    { id: "subscriptions", label: "Subscriptions" },
+  ];
 
   const { toggle: toggleLock, isLoading: isLocking } = useToggleCardLocked();
 
@@ -226,18 +224,27 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         </div>
 
         {/* Tab Navigation - Below card */}
-        <div className="px-4 pb-4 lg:px-6">
-          <ContentDivider type="background-fill">
-            <ButtonGroup
-              selectedKeys={new Set([selectedTab])}
-              onSelectionChange={handleTabChange}
-            >
-              <ButtonGroupItem id="overview">Overview</ButtonGroupItem>
-              <ButtonGroupItem id="details">Details</ButtonGroupItem>
-              <ButtonGroupItem id="transactions">Transactions</ButtonGroupItem>
-              <ButtonGroupItem id="subscriptions">Subscriptions</ButtonGroupItem>
-            </ButtonGroup>
-          </ContentDivider>
+        <div className="border-b border-secondary px-4 lg:px-6">
+          <nav className="flex gap-6" aria-label="Card detail tabs">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSelectedTab(tab.id)}
+                className={cx(
+                  "relative pb-3 text-sm font-semibold transition-colors",
+                  selectedTab === tab.id
+                    ? "text-utility-brand-600"
+                    : "text-tertiary hover:text-secondary"
+                )}
+              >
+                {tab.label}
+                {selectedTab === tab.id && (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-utility-brand-600" />
+                )}
+              </button>
+            ))}
+          </nav>
         </div>
 
         {/* Tab Content */}
