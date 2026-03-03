@@ -170,24 +170,32 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => autoPay.toggle(!autoPay.enabled)}
+              disabled={autoPay.isLoading}
+              aria-label={autoPay.enabled ? "Disable AutoPay" : "Enable AutoPay"}
+              className="disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <Badge
+                type="pill-color"
+                color={autoPay.enabled ? "success" : "gray"}
+                size="sm"
+              >
+                {autoPay.isLoading ? "Updating..." : autoPay.enabled ? "AutoPay: On" : "AutoPay: Off"}
+              </Badge>
+            </button>
+            <button
+              type="button"
               onClick={() => toggleLock(cardId, card.isLocked)}
               disabled={isLocking}
               aria-label={card.isLocked ? "Unlock card" : "Lock card"}
               className="disabled:cursor-not-allowed disabled:opacity-70"
             >
-              <Badge
-                type="pill-color"
-                color={card.isLocked ? "warning" : "gray"}
-                size="sm"
-              >
-                {isLocking ? "Updating..." : card.isLocked ? "Lock: On" : "Lock: Off"}
-              </Badge>
+              <CreditCardStatusBadge
+                isLocked={card.isLocked}
+                isActive={card.isActive}
+                isOverdue={card.isOverdue}
+              />
             </button>
-            <CreditCardStatusBadge
-              isLocked={card.isLocked}
-              isActive={card.isActive}
-              isOverdue={card.isOverdue}
-            />
           </div>
         </div>
 
@@ -227,7 +235,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
 
         {/* Tab Navigation - Below card */}
         <div className="border-b border-secondary px-4 lg:px-6">
-          <nav className="flex gap-6" aria-label="Card detail tabs">
+          <nav className="flex justify-center gap-6" aria-label="Card detail tabs">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -254,7 +262,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         {selectedTab === "overview" && (
           <>
             {/* Key Metrics Row */}
-            <KeyMetrics card={card} autoPay={autoPay} />
+            <KeyMetrics card={card} />
 
             {/* Transactions Section */}
             <div className="px-4 py-6 lg:px-6">
