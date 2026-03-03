@@ -70,7 +70,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch bg-secondary lg:block" />
+          <div className="hidden w-px self-stretch bg-tertiary/40 lg:block" />
 
           {/* Minimum Payment */}
           <div className="flex flex-1 flex-col gap-1 lg:px-6">
@@ -89,7 +89,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch bg-secondary lg:block" />
+          <div className="hidden w-px self-stretch bg-tertiary/40 lg:block" />
 
           {/* APR (Purchase) */}
           <div className="flex flex-1 flex-col gap-1 lg:px-6">
@@ -101,7 +101,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch bg-secondary lg:block" />
+          <div className="hidden w-px self-stretch bg-tertiary/40 lg:block" />
 
           {/* Available Credit */}
           <div className="flex flex-1 flex-col gap-1 lg:pl-6">
