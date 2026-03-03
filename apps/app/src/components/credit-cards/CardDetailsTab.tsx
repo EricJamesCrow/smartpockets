@@ -14,7 +14,17 @@ import { InterestSavingBalance } from "./details/InterestSavingBalance";
 import { FeesInterestYtd } from "./details/FeesInterestYtd";
 import { PayOverTimeSection } from "./details/PayOverTimeSection";
 
-// Keep the existing CardData interface — this is the raw Convex query result shape
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+const SYNC_STATUS_COLORS: Record<string, string> = {
+  synced: "text-utility-success-700",
+  syncing: "text-utility-brand-600",
+  error: "text-utility-error-700",
+  stale: "text-utility-warning-700",
+};
+
 interface CardData {
   _id: Id<"creditCards">;
   _creationTime: number;
@@ -39,7 +49,6 @@ interface CardData {
   syncStatus?: string | null;
   lastSyncedAt?: number | null;
   lastSyncError?: string | null;
-  // New fields
   statementClosingDay?: number | null;
   payOverTimeEnabled?: boolean | null;
   payOverTimeLimit?: number | null;
@@ -52,14 +61,6 @@ interface CardDetailsTabProps {
   cardData: CardData | null | undefined;
 }
 
-/**
- * Card Details Tab — Statement-styled orchestrator
- *
- * Composes section components into a full details view:
- * StatementClosingBanner, BalanceReconciliation, AprBreakdown,
- * PromoTracker, InterestSavingBalance, FeesInterestYtd,
- * PayOverTimeSection, Account Details, Payment History, Sync Status
- */
 export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
   if (!cardData) {
     return (
@@ -76,19 +77,16 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
       transition={{ duration: 0.2 }}
       className="space-y-6"
     >
-      {/* Statement closing date banner */}
       <StatementClosingBanner
         creditCardId={cardId}
         statementClosingDay={cardData.statementClosingDay}
       />
 
-      {/* Section 1: Balance Reconciliation */}
       <BalanceReconciliation
         creditCardId={cardId}
         statementClosingDay={cardData.statementClosingDay}
       />
 
-      {/* Section 2: APR Breakdown */}
       <AprBreakdown aprs={cardData.aprs ?? undefined} />
 
       {/* Two-column grid on desktop: financial insights left, reference right */}
@@ -111,7 +109,6 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
 
         {/* Right: Reference & status */}
         <div className="flex flex-col gap-6">
-          {/* Account Details */}
           <section>
             <h3 className="mb-4 text-lg font-semibold text-primary">Account Details</h3>
             <div className="rounded-xl border border-secondary bg-primary">
@@ -126,7 +123,7 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
                 {cardData.brand && (
                   <DetailRow
                     label="Network"
-                    value={cardData.brand.charAt(0).toUpperCase() + cardData.brand.slice(1)}
+                    value={capitalize(cardData.brand)}
                   />
                 )}
                 {cardData.lastFour && (
@@ -154,7 +151,6 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
             </div>
           </section>
 
-          {/* Payment History — stacked vertically for narrower column */}
           <section>
             <h3 className="mb-4 text-lg font-semibold text-primary">Payment History</h3>
             <div className="rounded-xl border border-secondary bg-primary">
@@ -185,7 +181,6 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
             </div>
           </section>
 
-          {/* Sync Status */}
           {cardData.syncStatus && (
             <section>
               <h3 className="mb-4 text-lg font-semibold text-primary">Sync Status</h3>
@@ -195,13 +190,10 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
                   <span
                     className={cx(
                       "text-sm font-medium",
-                      cardData.syncStatus === "synced" && "text-utility-success-700",
-                      cardData.syncStatus === "syncing" && "text-utility-brand-600",
-                      cardData.syncStatus === "error" && "text-utility-error-700",
-                      cardData.syncStatus === "stale" && "text-utility-warning-700",
+                      SYNC_STATUS_COLORS[cardData.syncStatus],
                     )}
                   >
-                    {cardData.syncStatus.charAt(0).toUpperCase() + cardData.syncStatus.slice(1)}
+                    {capitalize(cardData.syncStatus)}
                   </span>
                 </div>
                 {cardData.lastSyncedAt && (

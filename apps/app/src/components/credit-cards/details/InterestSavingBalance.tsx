@@ -10,6 +10,16 @@ interface InterestSavingBalanceProps {
   purchaseAprPercentage?: number | null;
 }
 
+function getDescription(purchaseAprPercentage: number | null | undefined, hasPromos: boolean): string {
+  if (purchaseAprPercentage === 0) {
+    return "Your purchases are at 0% APR \u2014 no interest accruing on new purchases";
+  }
+  if (hasPromos) {
+    return "Pay this amount to avoid interest on next month\u2019s purchases while keeping promotional balances intact";
+  }
+  return "Pay in full to avoid interest charges";
+}
+
 export function InterestSavingBalance({ creditCardId, purchaseAprPercentage }: InterestSavingBalanceProps) {
   const data = useQuery(api.creditCards.queries.computeInterestSavingBalance, { creditCardId });
 
@@ -25,11 +35,7 @@ export function InterestSavingBalance({ creditCardId, purchaseAprPercentage }: I
               {formatDisplayCurrency(data.interestSavingBalance)}
             </p>
             <p className="mt-1 text-xs text-tertiary">
-              {purchaseAprPercentage === 0
-                ? "Your purchases are at 0% APR \u2014 no interest accruing on new purchases"
-                : data.hasPromos
-                  ? "Pay this amount to avoid interest on next month\u2019s purchases while keeping promotional balances intact"
-                  : "Pay in full to avoid interest charges"}
+              {getDescription(purchaseAprPercentage, data.hasPromos)}
             </p>
           </div>
         </div>

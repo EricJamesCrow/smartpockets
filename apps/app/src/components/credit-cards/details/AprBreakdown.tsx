@@ -18,14 +18,16 @@ const APR_DISPLAY_NAMES: Record<string, string> = {
 
 const STANDARD_APR_TYPES = ["purchase_apr", "cash_apr", "balance_transfer_apr"];
 
-function getAprColor(apr: Apr) {
+type AprColor = { border: string; text: string };
+
+function getAprColor(apr: Apr): AprColor {
   if (apr.aprPercentage == null) {
     return { border: "border-l-secondary", text: "text-tertiary" };
   }
   if (apr.aprPercentage === 0) {
     return { border: "border-l-utility-success-500", text: "text-utility-success-700" };
   }
-  if (apr.aprType?.includes("cash")) {
+  if (apr.aprType.includes("cash")) {
     return { border: "border-l-utility-error-500", text: "text-utility-error-700" };
   }
   return { border: "border-l-utility-warning-500", text: "text-utility-warning-700" };
@@ -127,7 +129,7 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
                 </span>
                 <span className={cx("text-right text-sm font-medium tabular-nums", color.text)}>
                   {apr.aprPercentage != null ? `${apr.aprPercentage.toFixed(2)}%` : "—"}
-                  {apr.aprPercentage != null && apr.aprPercentage > 0 && (apr.aprType?.includes("purchase") || apr.aprType?.includes("cash") || apr.aprType?.includes("balance_transfer")) && (
+                  {apr.aprPercentage != null && apr.aprPercentage > 0 && STANDARD_APR_TYPES.includes(apr.aprType) && (
                     <span
                       className="ml-1 cursor-help text-xs text-tertiary"
                       title="Variable rate — tracks the Prime Rate"
