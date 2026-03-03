@@ -105,15 +105,74 @@ const schema = defineEntSchema(
             isAutoPay: v.boolean(),
             autoPayEnabledAt: v.optional(v.number()),
 
+            // Statement & issuer config
+            statementClosingDay: v.optional(v.number()),
+            payOverTimeEnabled: v.optional(v.boolean()),
+            payOverTimeLimit: v.optional(v.number()),
+            payOverTimeApr: v.optional(v.number()),
+
             // State
             isActive: v.boolean(),
         })
             .edge("user")
             .edges("walletCards", { ref: true })
+            .edges("statementSnapshots", { ref: true })
+            .edges("promoRates", { ref: true })
+            .edges("installmentPlans", { ref: true })
             .index("by_accountId", ["accountId"])
             .index("by_plaidItemId", ["plaidItemId"])
             .index("by_user_active", ["userId", "isActive"])
             .index("by_user_overdue", ["userId", "isOverdue"]),
+
+        // === CREDIT CARD DETAILS ===
+        statementSnapshots: defineEnt({
+            statementDate: v.string(),
+            previousBalance: v.number(),
+            paymentsAndCredits: v.number(),
+            newPurchases: v.number(),
+            fees: v.number(),
+            interestCharged: v.number(),
+            newBalance: v.number(),
+            minimumPaymentDue: v.number(),
+            dueDate: v.string(),
+            source: v.union(v.literal("manual"), v.literal("inferred")),
+        })
+            .edge("user")
+            .edge("creditCard")
+            .index("by_card", ["creditCardId"])
+            .index("by_card_date", ["creditCardId", "statementDate"]),
+
+        promoRates: defineEnt({
+            description: v.string(),
+            aprPercentage: v.number(),
+            originalBalance: v.number(),
+            remainingBalance: v.number(),
+            startDate: v.string(),
+            expirationDate: v.string(),
+            isDeferredInterest: v.boolean(),
+            accruedDeferredInterest: v.optional(v.number()),
+            monthlyMinimumPayment: v.optional(v.number()),
+            isActive: v.boolean(),
+        })
+            .edge("user")
+            .edge("creditCard")
+            .index("by_card", ["creditCardId"]),
+
+        installmentPlans: defineEnt({
+            description: v.string(),
+            startDate: v.string(),
+            originalPrincipal: v.number(),
+            remainingPrincipal: v.number(),
+            totalPayments: v.number(),
+            remainingPayments: v.number(),
+            monthlyPrincipal: v.number(),
+            monthlyFee: v.number(),
+            aprPercentage: v.number(),
+            isActive: v.boolean(),
+        })
+            .edge("user")
+            .edge("creditCard")
+            .index("by_card", ["creditCardId"]),
 
         // === WALLETS ===
         wallets: defineEnt({
