@@ -143,7 +143,6 @@ const schema = defineEntSchema(
         })
             .edge("user")
             .edge("creditCard")
-            .index("by_card", ["creditCardId"])
             .index("by_card_date", ["creditCardId", "statementDate"]),
 
         promoRates: defineEnt({
@@ -159,8 +158,7 @@ const schema = defineEntSchema(
             isActive: v.boolean(),
         })
             .edge("user")
-            .edge("creditCard")
-            .index("by_card", ["creditCardId"]),
+            .edge("creditCard"),
 
         installmentPlans: defineEnt({
             description: v.string(),
@@ -175,8 +173,7 @@ const schema = defineEntSchema(
             isActive: v.boolean(),
         })
             .edge("user")
-            .edge("creditCard")
-            .index("by_card", ["creditCardId"]),
+            .edge("creditCard"),
 
         // === WALLETS ===
         wallets: defineEnt({

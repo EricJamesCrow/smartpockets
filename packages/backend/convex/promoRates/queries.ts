@@ -49,7 +49,7 @@ export const listByCard = query({
     }
 
     const promos = await ctx
-      .table("promoRates", "by_card", (q) => q.eq("creditCardId", creditCardId))
+      .table("promoRates", "creditCardId", (q) => q.eq("creditCardId", creditCardId))
       .filter((q) => q.eq(q.field("isActive"), true))
       .map((promo) => promo.doc());
 

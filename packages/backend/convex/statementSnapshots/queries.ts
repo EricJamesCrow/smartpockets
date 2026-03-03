@@ -48,7 +48,7 @@ export const listByCard = query({
     }
 
     const snapshots = await ctx
-      .table("statementSnapshots", "by_card", (q) =>
+      .table("statementSnapshots", "creditCardId", (q) =>
         q.eq("creditCardId", creditCardId)
       )
       .order("desc")
@@ -120,7 +120,7 @@ export const getLatest = query({
     }
 
     const snapshots = await ctx
-      .table("statementSnapshots", "by_card", (q) =>
+      .table("statementSnapshots", "creditCardId", (q) =>
         q.eq("creditCardId", creditCardId)
       )
       .order("desc")

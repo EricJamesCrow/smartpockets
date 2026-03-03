@@ -376,13 +376,13 @@ export const computeInterestSavingBalance = query({
 
     // Sum all active promo balances and their minimum payments
     const promos = await ctx
-      .table("promoRates", "by_card", (q) => q.eq("creditCardId", creditCardId))
+      .table("promoRates", "creditCardId", (q) => q.eq("creditCardId", creditCardId))
       .filter((q) => q.eq(q.field("isActive"), true))
       .map((promo) => promo.doc());
 
     // Sum all active installment balances and their payments
     const installments = await ctx
-      .table("installmentPlans", "by_card", (q) => q.eq("creditCardId", creditCardId))
+      .table("installmentPlans", "creditCardId", (q) => q.eq("creditCardId", creditCardId))
       .filter((q) => q.eq(q.field("isActive"), true))
       .map((plan) => plan.doc());
 

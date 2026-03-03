@@ -49,7 +49,7 @@ export const listByCard = query({
     }
 
     const plans = await ctx
-      .table("installmentPlans", "by_card", (q) => q.eq("creditCardId", creditCardId))
+      .table("installmentPlans", "creditCardId", (q) => q.eq("creditCardId", creditCardId))
       .filter((q) => q.eq(q.field("isActive"), true))
       .map((plan) => plan.doc());
 
