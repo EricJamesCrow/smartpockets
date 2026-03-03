@@ -17,7 +17,7 @@ import { CreditCardStatusBadge } from "./CreditCardStatusBadge";
 import { PaymentDueBadge } from "./PaymentDueBadge";
 import { KeyMetrics } from "./KeyMetrics";
 import { AutoPayToggle, useAutoPay } from "./AutoPayToggle";
-import { LockCardButton } from "./LockCardButton";
+import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { TransactionsSection } from "./TransactionsSection";
 import { CardDetailsTab } from "./CardDetailsTab";
 import { useSharedLayoutAnimation } from "@/lib/context/shared-layout-animation-context";
@@ -167,13 +167,21 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
           </Breadcrumbs>
 
           {/* Right: Status Badges */}
-          <div className="flex items-center gap-3">
-            <LockCardButton
-              isLocked={card.isLocked}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
               onClick={() => toggleLock(cardId, card.isLocked)}
-              isLoading={isLocking}
-              size="sm"
-            />
+              disabled={isLocking}
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <Badge
+                type="pill-color"
+                color={card.isLocked ? "warning" : "gray"}
+                size="sm"
+              >
+                {card.isLocked ? "Lock: On" : "Lock: Off"}
+              </Badge>
+            </button>
             <CreditCardStatusBadge
               isLocked={card.isLocked}
               isActive={card.isActive}
