@@ -1,6 +1,6 @@
 "use client";
 
-import { cx } from "@/lib/cx";
+import { cx } from "@repo/ui/utils";
 
 type Apr = {
   aprPercentage: number;
