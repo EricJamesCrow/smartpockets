@@ -20,10 +20,7 @@ const schema = defineEntSchema(
             .field("externalId", v.string(), { unique: true }) // Clerk ID
             .edges("members", { ref: true })
             .edges("creditCards", { ref: true })
-            .edges("wallets", { ref: true })
-            .edges("statementSnapshots", { ref: true })
-            .edges("promoRates", { ref: true })
-            .edges("installmentPlans", { ref: true }),
+            .edges("wallets", { ref: true }),
 
         // === ORG LAYER ===
         organizations: defineEnt({
@@ -125,7 +122,8 @@ const schema = defineEntSchema(
             .index("by_accountId", ["accountId"])
             .index("by_plaidItemId", ["plaidItemId"])
             .index("by_user_active", ["userId", "isActive"])
-            .index("by_user_overdue", ["userId", "isOverdue"]),
+            .index("by_user_overdue", ["userId", "isOverdue"])
+            .index("by_closingDay_active", ["statementClosingDay", "isActive"]),
 
         // === CREDIT CARD DETAILS ===
         statementSnapshots: defineEnt({

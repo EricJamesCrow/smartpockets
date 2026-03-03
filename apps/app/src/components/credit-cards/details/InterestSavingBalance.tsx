@@ -3,13 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-
-function formatCurrency(amount: number): string {
-  return amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+import { formatDisplayCurrency } from "@/types/credit-cards";
 
 interface InterestSavingBalanceProps {
   creditCardId: Id<"creditCards">;
@@ -27,7 +21,7 @@ export function InterestSavingBalance({ creditCardId }: InterestSavingBalancePro
         <div className="flex items-baseline justify-between">
           <div>
             <p className="text-2xl font-semibold tabular-nums text-primary">
-              ${formatCurrency(data.interestSavingBalance)}
+              {formatDisplayCurrency(data.interestSavingBalance)}
             </p>
             <p className="mt-1 text-xs text-tertiary">
               {data.hasPromos
@@ -40,15 +34,15 @@ export function InterestSavingBalance({ creditCardId }: InterestSavingBalancePro
         {data.hasPromos && (
           <div className="mt-3 grid grid-cols-3 gap-2 border-t border-secondary pt-3 text-xs text-tertiary">
             <div>
-              <p className="tabular-nums font-medium text-primary">${formatCurrency(data.currentBalance)}</p>
+              <p className="tabular-nums font-medium text-primary">{formatDisplayCurrency(data.currentBalance)}</p>
               <p>Current Balance</p>
             </div>
             <div>
-              <p className="tabular-nums font-medium text-primary">${formatCurrency(data.totalProtectedBalances)}</p>
+              <p className="tabular-nums font-medium text-primary">{formatDisplayCurrency(data.totalProtectedBalances)}</p>
               <p>Protected Balances</p>
             </div>
             <div>
-              <p className="tabular-nums font-medium text-primary">${formatCurrency(data.totalProtectedPayments)}</p>
+              <p className="tabular-nums font-medium text-primary">{formatDisplayCurrency(data.totalProtectedPayments)}</p>
               <p>Required Payments</p>
             </div>
           </div>

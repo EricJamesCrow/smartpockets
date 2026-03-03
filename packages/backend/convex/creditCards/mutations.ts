@@ -225,6 +225,11 @@ export const update = mutation({
       throw new Error("Not authorized to modify this card");
     }
 
+    if (data.statementClosingDay != null &&
+        (data.statementClosingDay < 1 || data.statementClosingDay > 31)) {
+      throw new Error("Statement closing day must be between 1 and 31");
+    }
+
     // Filter out undefined values
     const updates = Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== undefined)

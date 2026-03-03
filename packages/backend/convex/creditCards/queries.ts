@@ -454,7 +454,10 @@ export const computeYtdFeesInterest = query({
     const year = now.getFullYear();
     const yearStart = `${year}-01-01`;
 
-    // Fetch transactions from the Plaid component by accountId
+    // NOTE: The Plaid component API doesn't support date-range filtering.
+    // This fetches all transactions for the account and filters in-memory.
+    // For cards with years of history, consider adding date filtering to
+    // the Plaid component's getTransactionsByAccount query.
     const transactions = await ctx.runQuery(
       components.plaid.public.getTransactionsByAccount,
       { accountId: card.accountId },

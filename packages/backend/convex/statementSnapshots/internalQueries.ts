@@ -22,12 +22,10 @@ export const getCardsWithClosingDay = internalQuery({
     closingDay: v.number(),
   },
   handler: async (ctx, args) => {
-    const allCards = await ctx.table("creditCards").filter((q) =>
-      q.and(
-        q.eq(q.field("isActive"), true),
-        q.eq(q.field("statementClosingDay"), args.closingDay),
-      ),
-    );
+    const allCards = await ctx
+      .table("creditCards", "by_closingDay_active", (q) =>
+        q.eq("statementClosingDay", args.closingDay).eq("isActive", true)
+      );
     return allCards.map((card) => ({
       _id: card._id,
       userId: card.userId,

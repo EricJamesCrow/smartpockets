@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDisplayCurrency } from "@/types/credit-cards";
 import { cx } from "@repo/ui/utils";
 
 type Apr = {
@@ -42,13 +43,6 @@ function computeWeightedAverageApr(aprs: Apr[]): number | null {
     0,
   );
   return Math.round((weightedSum / totalBalance) * 100) / 100;
-}
-
-function formatCurrency(amount: number): string {
-  return amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 }
 
 interface AprBreakdownProps {
@@ -109,7 +103,7 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
                 </span>
                 <span className={cx("text-right text-sm font-medium tabular-nums", color.text)}>
                   {apr.aprPercentage.toFixed(2)}%
-                  {apr.aprPercentage > 0 && (
+                  {apr.aprPercentage > 0 && (apr.aprType?.includes("purchase") || apr.aprType?.includes("cash")) && (
                     <span
                       className="ml-1 cursor-help text-xs text-tertiary"
                       title="Variable rate — tracks the Prime Rate"
@@ -120,12 +114,12 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
                 </span>
                 <span className="text-right text-sm tabular-nums text-primary">
                   {apr.balanceSubjectToApr != null
-                    ? `$${formatCurrency(apr.balanceSubjectToApr)}`
+                    ? formatDisplayCurrency(apr.balanceSubjectToApr)
                     : "—"}
                 </span>
                 <span className="text-right text-sm tabular-nums text-primary">
                   {apr.interestChargeAmount != null
-                    ? `$${formatCurrency(apr.interestChargeAmount)}`
+                    ? formatDisplayCurrency(apr.interestChargeAmount)
                     : "—"}
                 </span>
               </div>

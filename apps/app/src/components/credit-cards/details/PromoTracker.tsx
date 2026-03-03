@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { formatDisplayCurrency } from "@/types/credit-cards";
 import { cx } from "@repo/ui/utils";
 
 function getMonthsRemaining(expirationDate: string): number {
@@ -30,13 +31,6 @@ function getProgressPercentage(startDate: string, expirationDate: string): numbe
   return Math.round(((now - start) / (end - start)) * 100);
 }
 
-function formatCurrency(amount: number): string {
-  return amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 interface PromoTrackerProps {
   creditCardId: Id<"creditCards">;
 }
@@ -54,7 +48,9 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
         <h3 className="mb-4 text-lg font-semibold text-primary">Promotional Financing</h3>
         <button
           type="button"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-6 text-sm text-tertiary transition-colors hover:border-utility-brand-500 hover:text-utility-brand-600"
+          disabled
+          title="Coming soon"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-6 text-sm text-tertiary cursor-not-allowed opacity-60"
         >
           <span className="text-lg">+</span>
           Add promotional APR or installment plan
@@ -83,7 +79,7 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
                     </p>
                   </div>
                   <span className="text-sm font-semibold tabular-nums text-primary">
-                    ${formatCurrency(promo.remainingBalance)}
+                    {formatDisplayCurrency(promo.remainingBalance)}
                   </span>
                 </div>
 
@@ -103,14 +99,14 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
                   promo.accruedDeferredInterest != null &&
                   promo.accruedDeferredInterest > 0 && (
                     <div className="mt-3 rounded-lg bg-utility-error-50 px-3 py-2 text-xs text-utility-error-700">
-                      Deferred interest accrued: ${formatCurrency(promo.accruedDeferredInterest)}.
+                      Deferred interest accrued: {formatDisplayCurrency(promo.accruedDeferredInterest)}.
                       Pay remaining balance by expiration to avoid this charge.
                     </div>
                   )}
 
                 {promo.monthlyMinimumPayment != null && (
                   <p className="mt-2 text-xs text-tertiary">
-                    Monthly minimum: ${formatCurrency(promo.monthlyMinimumPayment)}
+                    Monthly minimum: {formatDisplayCurrency(promo.monthlyMinimumPayment)}
                   </p>
                 )}
               </div>
@@ -135,11 +131,11 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold tabular-nums text-primary">
-                        ${formatCurrency(plan.monthlyPrincipal + plan.monthlyFee)}
+                        {formatDisplayCurrency(plan.monthlyPrincipal + plan.monthlyFee)}
                         <span className="text-xs font-normal text-tertiary">/mo</span>
                       </p>
                       <p className="text-xs tabular-nums text-tertiary">
-                        ${formatCurrency(plan.remainingPrincipal)} remaining
+                        {formatDisplayCurrency(plan.remainingPrincipal)} remaining
                       </p>
                     </div>
                   </div>
@@ -151,7 +147,9 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
 
         <button
           type="button"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-4 text-sm text-tertiary transition-colors hover:border-utility-brand-500 hover:text-utility-brand-600"
+          disabled
+          title="Coming soon"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-4 text-sm text-tertiary cursor-not-allowed opacity-60"
         >
           <span className="text-lg">+</span>
           Add promotional rate or plan

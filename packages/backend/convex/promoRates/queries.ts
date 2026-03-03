@@ -21,6 +21,24 @@ export const listByCard = query({
   args: {
     creditCardId: v.id("creditCards"),
   },
+  returns: v.array(
+    v.object({
+      _id: v.id("promoRates"),
+      _creationTime: v.number(),
+      userId: v.id("users"),
+      creditCardId: v.id("creditCards"),
+      description: v.string(),
+      aprPercentage: v.number(),
+      originalBalance: v.number(),
+      remainingBalance: v.number(),
+      startDate: v.string(),
+      expirationDate: v.string(),
+      isDeferredInterest: v.boolean(),
+      accruedDeferredInterest: v.optional(v.number()),
+      monthlyMinimumPayment: v.optional(v.number()),
+      isActive: v.boolean(),
+    })
+  ),
   async handler(ctx, { creditCardId }) {
     const viewer = ctx.viewerX();
     const card = await ctx.table("creditCards").getX(creditCardId);

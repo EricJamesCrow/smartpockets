@@ -20,6 +20,24 @@ export const listByCard = query({
   args: {
     creditCardId: v.id("creditCards"),
   },
+  returns: v.array(
+    v.object({
+      _id: v.id("statementSnapshots"),
+      _creationTime: v.number(),
+      userId: v.id("users"),
+      creditCardId: v.id("creditCards"),
+      statementDate: v.string(),
+      previousBalance: v.number(),
+      paymentsAndCredits: v.number(),
+      newPurchases: v.number(),
+      fees: v.number(),
+      interestCharged: v.number(),
+      newBalance: v.number(),
+      minimumPaymentDue: v.number(),
+      dueDate: v.string(),
+      source: v.union(v.literal("manual"), v.literal("inferred")),
+    })
+  ),
   async handler(ctx, { creditCardId }) {
     const viewer = ctx.viewerX();
     const card = await ctx.table("creditCards").getX(creditCardId);
@@ -52,6 +70,46 @@ export const getLatest = query({
   args: {
     creditCardId: v.id("creditCards"),
   },
+  returns: v.object({
+    current: v.union(
+      v.object({
+        _id: v.id("statementSnapshots"),
+        _creationTime: v.number(),
+        userId: v.id("users"),
+        creditCardId: v.id("creditCards"),
+        statementDate: v.string(),
+        previousBalance: v.number(),
+        paymentsAndCredits: v.number(),
+        newPurchases: v.number(),
+        fees: v.number(),
+        interestCharged: v.number(),
+        newBalance: v.number(),
+        minimumPaymentDue: v.number(),
+        dueDate: v.string(),
+        source: v.union(v.literal("manual"), v.literal("inferred")),
+      }),
+      v.null()
+    ),
+    previous: v.union(
+      v.object({
+        _id: v.id("statementSnapshots"),
+        _creationTime: v.number(),
+        userId: v.id("users"),
+        creditCardId: v.id("creditCards"),
+        statementDate: v.string(),
+        previousBalance: v.number(),
+        paymentsAndCredits: v.number(),
+        newPurchases: v.number(),
+        fees: v.number(),
+        interestCharged: v.number(),
+        newBalance: v.number(),
+        minimumPaymentDue: v.number(),
+        dueDate: v.string(),
+        source: v.union(v.literal("manual"), v.literal("inferred")),
+      }),
+      v.null()
+    ),
+  }),
   async handler(ctx, { creditCardId }) {
     const viewer = ctx.viewerX();
     const card = await ctx.table("creditCards").getX(creditCardId);
@@ -88,6 +146,25 @@ export const getByDate = query({
     creditCardId: v.id("creditCards"),
     statementDate: v.string(),
   },
+  returns: v.union(
+    v.object({
+      _id: v.id("statementSnapshots"),
+      _creationTime: v.number(),
+      userId: v.id("users"),
+      creditCardId: v.id("creditCards"),
+      statementDate: v.string(),
+      previousBalance: v.number(),
+      paymentsAndCredits: v.number(),
+      newPurchases: v.number(),
+      fees: v.number(),
+      interestCharged: v.number(),
+      newBalance: v.number(),
+      minimumPaymentDue: v.number(),
+      dueDate: v.string(),
+      source: v.union(v.literal("manual"), v.literal("inferred")),
+    }),
+    v.null()
+  ),
   async handler(ctx, { creditCardId, statementDate }) {
     const viewer = ctx.viewerX();
     const card = await ctx.table("creditCards").getX(creditCardId);

@@ -3,19 +3,13 @@
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { formatDisplayCurrency } from "@/types/credit-cards";
 import { cx } from "@repo/ui/utils";
 
 interface BalanceReconciliationProps {
   creditCardId: Id<"creditCards">;
   statementDate?: string;
   statementClosingDay?: number | null;
-}
-
-function formatCurrency(amount: number): string {
-  return amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 }
 
 export function BalanceReconciliation({
@@ -90,8 +84,8 @@ export function BalanceReconciliation({
                 )}
               >
                 {line.type === "credit" && line.amount !== 0 && "-"}
-                {line.type === "debit" && line.amount > 0 && "+"}$
-                {formatCurrency(Math.abs(line.amount))}
+                {line.type === "debit" && line.amount > 0 && "+"}
+                {formatDisplayCurrency(Math.abs(line.amount))}
               </span>
             </div>
           ))}
@@ -99,7 +93,7 @@ export function BalanceReconciliation({
         <div className="flex items-center justify-between border-t-2 border-secondary px-4 py-3">
           <span className="text-sm font-semibold text-primary">New Statement Balance</span>
           <span className="text-sm font-semibold tabular-nums text-primary">
-            ${formatCurrency(snapshot.newBalance)}
+            {formatDisplayCurrency(snapshot.newBalance)}
           </span>
         </div>
       </div>
