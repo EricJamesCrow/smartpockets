@@ -99,6 +99,12 @@ export const list = query({
       isAutoPay: v.optional(v.boolean()), // Optional for backwards compatibility with existing records
       autoPayEnabledAt: v.optional(v.number()),
 
+      // Statement & issuer config
+      statementClosingDay: v.optional(v.number()),
+      payOverTimeEnabled: v.optional(v.boolean()),
+      payOverTimeLimit: v.optional(v.number()),
+      payOverTimeApr: v.optional(v.number()),
+
       // State
       isActive: v.boolean(),
     })
@@ -226,6 +232,12 @@ export const get = query({
       lockedAt: v.optional(v.number()),
       isAutoPay: v.optional(v.boolean()), // Optional for backwards compatibility with existing records
       autoPayEnabledAt: v.optional(v.number()),
+
+      // Statement & issuer config
+      statementClosingDay: v.optional(v.number()),
+      payOverTimeEnabled: v.optional(v.boolean()),
+      payOverTimeLimit: v.optional(v.number()),
+      payOverTimeApr: v.optional(v.number()),
 
       // State
       isActive: v.boolean(),
