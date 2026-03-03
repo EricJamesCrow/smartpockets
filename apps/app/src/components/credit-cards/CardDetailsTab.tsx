@@ -91,129 +91,131 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
       {/* Section 2: APR Breakdown */}
       <AprBreakdown aprs={cardData.aprs ?? undefined} />
 
-      {/* Section 3: Promotional Financing */}
-      <PromoTracker creditCardId={cardId} />
-
-      {/* Section 4: Interest Saving Balance */}
-      <InterestSavingBalance creditCardId={cardId} />
-
-      {/* Section 5: YTD Fees & Interest */}
-      <FeesInterestYtd creditCardId={cardId} />
-
-      {/* Section 6: Pay Over Time (Amex-specific) */}
-      <PayOverTimeSection
-        payOverTimeEnabled={cardData.payOverTimeEnabled ?? undefined}
-        payOverTimeLimit={cardData.payOverTimeLimit ?? undefined}
-        payOverTimeApr={cardData.payOverTimeApr ?? undefined}
-        availableCredit={cardData.availableCredit ?? undefined}
-      />
-
-      {/* Account Details */}
-      <section>
-        <h3 className="mb-4 text-lg font-semibold text-primary">Account Details</h3>
-        <div className="rounded-xl border border-secondary bg-primary">
-          <dl className="divide-y divide-secondary">
-            {cardData.officialName && (
-              <DetailRow label="Official Name" value={cardData.officialName} />
-            )}
-            <DetailRow label="Account Name" value={cardData.accountName} />
-            {cardData.company && (
-              <DetailRow label="Issuer" value={cardData.company} />
-            )}
-            {cardData.brand && (
-              <DetailRow
-                label="Network"
-                value={cardData.brand.charAt(0).toUpperCase() + cardData.brand.slice(1)}
-              />
-            )}
-            {cardData.lastFour && (
-              <DetailRow label="Card Number" value={`•••• •••• •••• ${cardData.lastFour}`} />
-            )}
-            {cardData.accountType && (
-              <DetailRow
-                label="Account Type"
-                value={`${cardData.accountType}${cardData.accountSubtype ? ` / ${cardData.accountSubtype}` : ""}`}
-              />
-            )}
-            {cardData.isoCurrencyCode && (
-              <DetailRow label="Currency" value={cardData.isoCurrencyCode} />
-            )}
-            <DetailRow
-              label="Date Added"
-              value={new Date(cardData._creationTime).toLocaleDateString("en-US", {
-                year: "numeric", month: "long", day: "numeric",
-              })}
-            />
-            {cardData.statementClosingDay != null && (
-              <DetailRow label="Statement Closing Day" value={`Day ${cardData.statementClosingDay}`} />
-            )}
-          </dl>
+      {/* Two-column grid on desktop: financial insights left, reference right */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[7fr_5fr]">
+        {/* Left: Actionable financial insights */}
+        <div className="flex flex-col gap-6">
+          <InterestSavingBalance creditCardId={cardId} />
+          <FeesInterestYtd creditCardId={cardId} />
+          <PromoTracker creditCardId={cardId} />
+          <PayOverTimeSection
+            payOverTimeEnabled={cardData.payOverTimeEnabled ?? undefined}
+            payOverTimeLimit={cardData.payOverTimeLimit ?? undefined}
+            payOverTimeApr={cardData.payOverTimeApr ?? undefined}
+            availableCredit={cardData.availableCredit ?? undefined}
+          />
         </div>
-      </section>
 
-      {/* Payment History */}
-      <section>
-        <h3 className="mb-4 text-lg font-semibold text-primary">Payment History</h3>
-        <div className="rounded-xl border border-secondary bg-primary">
-          <div className="grid grid-cols-1 divide-y divide-secondary sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-            <div className="p-4">
-              <p className="text-xs text-tertiary">Last Payment</p>
-              <p className="text-lg font-semibold tabular-nums text-primary">
-                {cardData.lastPaymentAmount != null
-                  ? formatDisplayCurrency(cardData.lastPaymentAmount)
-                  : "\u2014"}
-              </p>
-              {cardData.lastPaymentDate && (
-                <p className="text-xs text-tertiary">{cardData.lastPaymentDate}</p>
-              )}
-            </div>
-            <div className="p-4">
-              <p className="text-xs text-tertiary">Last Statement Balance</p>
-              <p className="text-lg font-semibold tabular-nums text-primary">
-                {cardData.lastStatementBalance != null
-                  ? formatDisplayCurrency(cardData.lastStatementBalance)
-                  : "\u2014"}
-              </p>
-              {cardData.lastStatementIssueDate && (
-                <p className="text-xs text-tertiary">Issued {cardData.lastStatementIssueDate}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Sync Status */}
-      {cardData.syncStatus && (
-        <section>
-          <h3 className="mb-4 text-lg font-semibold text-primary">Sync Status</h3>
-          <div className="rounded-xl border border-secondary bg-primary px-4 py-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-tertiary">Status</span>
-              <span
-                className={cx(
-                  "text-sm font-medium",
-                  cardData.syncStatus === "synced" && "text-utility-success-700",
-                  cardData.syncStatus === "syncing" && "text-utility-brand-600",
-                  cardData.syncStatus === "error" && "text-utility-error-700",
-                  cardData.syncStatus === "stale" && "text-utility-warning-700",
+        {/* Right: Reference & status */}
+        <div className="flex flex-col gap-6">
+          {/* Account Details */}
+          <section>
+            <h3 className="mb-4 text-lg font-semibold text-primary">Account Details</h3>
+            <div className="rounded-xl border border-secondary bg-primary">
+              <dl className="divide-y divide-secondary">
+                {cardData.officialName && (
+                  <DetailRow label="Official Name" value={cardData.officialName} />
                 )}
-              >
-                {cardData.syncStatus.charAt(0).toUpperCase() + cardData.syncStatus.slice(1)}
-              </span>
+                <DetailRow label="Account Name" value={cardData.accountName} />
+                {cardData.company && (
+                  <DetailRow label="Issuer" value={cardData.company} />
+                )}
+                {cardData.brand && (
+                  <DetailRow
+                    label="Network"
+                    value={cardData.brand.charAt(0).toUpperCase() + cardData.brand.slice(1)}
+                  />
+                )}
+                {cardData.lastFour && (
+                  <DetailRow label="Card Number" value={`•••• •••• •••• ${cardData.lastFour}`} />
+                )}
+                {cardData.accountType && (
+                  <DetailRow
+                    label="Account Type"
+                    value={`${cardData.accountType}${cardData.accountSubtype ? ` / ${cardData.accountSubtype}` : ""}`.replace(/\b\w/g, c => c.toUpperCase())}
+                  />
+                )}
+                {cardData.isoCurrencyCode && (
+                  <DetailRow label="Currency" value={cardData.isoCurrencyCode} />
+                )}
+                <DetailRow
+                  label="Date Added"
+                  value={new Date(cardData._creationTime).toLocaleDateString("en-US", {
+                    year: "numeric", month: "long", day: "numeric",
+                  })}
+                />
+                {cardData.statementClosingDay != null && (
+                  <DetailRow label="Statement Closing Day" value={`Day ${cardData.statementClosingDay}`} />
+                )}
+              </dl>
             </div>
-            {cardData.lastSyncedAt && (
-              <p className="mt-1 text-xs text-tertiary">
-                Last synced: {new Date(cardData.lastSyncedAt).toLocaleString("en-US")}
-              </p>
-            )}
-            {cardData.lastSyncError && (
-              <div className="mt-2 rounded-lg bg-utility-error-50 px-3 py-2 text-xs text-utility-error-700">
-                {cardData.lastSyncError}
+          </section>
+
+          {/* Payment History — stacked vertically for narrower column */}
+          <section>
+            <h3 className="mb-4 text-lg font-semibold text-primary">Payment History</h3>
+            <div className="rounded-xl border border-secondary bg-primary">
+              <div className="grid grid-cols-1 divide-y divide-secondary">
+                <div className="p-4">
+                  <p className="text-xs text-tertiary">Last Payment</p>
+                  <p className="text-lg font-semibold tabular-nums text-primary">
+                    {cardData.lastPaymentAmount != null
+                      ? formatDisplayCurrency(cardData.lastPaymentAmount)
+                      : "\u2014"}
+                  </p>
+                  {cardData.lastPaymentDate && (
+                    <p className="text-xs text-tertiary">{cardData.lastPaymentDate}</p>
+                  )}
+                </div>
+                <div className="p-4">
+                  <p className="text-xs text-tertiary">Last Statement Balance</p>
+                  <p className="text-lg font-semibold tabular-nums text-primary">
+                    {cardData.lastStatementBalance != null
+                      ? formatDisplayCurrency(cardData.lastStatementBalance)
+                      : "\u2014"}
+                  </p>
+                  {cardData.lastStatementIssueDate && (
+                    <p className="text-xs text-tertiary">Issued {cardData.lastStatementIssueDate}</p>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </section>
-      )}
+            </div>
+          </section>
+
+          {/* Sync Status */}
+          {cardData.syncStatus && (
+            <section>
+              <h3 className="mb-4 text-lg font-semibold text-primary">Sync Status</h3>
+              <div className="rounded-xl border border-secondary bg-primary px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-tertiary">Status</span>
+                  <span
+                    className={cx(
+                      "text-sm font-medium",
+                      cardData.syncStatus === "synced" && "text-utility-success-700",
+                      cardData.syncStatus === "syncing" && "text-utility-brand-600",
+                      cardData.syncStatus === "error" && "text-utility-error-700",
+                      cardData.syncStatus === "stale" && "text-utility-warning-700",
+                    )}
+                  >
+                    {cardData.syncStatus.charAt(0).toUpperCase() + cardData.syncStatus.slice(1)}
+                  </span>
+                </div>
+                {cardData.lastSyncedAt && (
+                  <p className="mt-1 text-xs text-tertiary">
+                    Last synced: {new Date(cardData.lastSyncedAt).toLocaleString("en-US")}
+                  </p>
+                )}
+                {cardData.lastSyncError && (
+                  <div className="mt-2 rounded-lg bg-utility-error-50 px-3 py-2 text-xs text-utility-error-700">
+                    {cardData.lastSyncError}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
     </motion.div>
   );
 }
