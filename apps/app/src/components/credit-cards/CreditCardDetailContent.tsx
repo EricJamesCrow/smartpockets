@@ -7,19 +7,17 @@ import { useUser } from "@clerk/nextjs";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { motion } from "motion/react";
-import type { Selection } from "react-aria-components";
 import { CreditCard02 } from "@untitledui/icons";
+import { cx } from "@repo/ui/utils";
 import { Breadcrumbs } from "@repo/ui/untitledui/application/breadcrumbs/breadcrumbs";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
-import { ContentDivider } from "@repo/ui/untitledui/application/content-divider/content-divider";
-import { ButtonGroup, ButtonGroupItem } from "@repo/ui/untitledui/base/button-group/button-group";
 import { useToggleCardLocked } from "@/hooks/useToggleCardLocked";
 import { UntitledCardVisual } from "./UntitledCardVisual";
 import { CreditCardStatusBadge } from "./CreditCardStatusBadge";
 import { PaymentDueBadge } from "./PaymentDueBadge";
 import { KeyMetrics } from "./KeyMetrics";
-import { AutoPayToggle, useAutoPay } from "./AutoPayToggle";
-import { LockCardButton } from "./LockCardButton";
+import { useAutoPay } from "./AutoPayToggle";
+import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { TransactionsSection } from "./TransactionsSection";
 import { CardDetailsTab } from "./CardDetailsTab";
 import { useSharedLayoutAnimation } from "@/lib/context/shared-layout-animation-context";
@@ -52,12 +50,12 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
   // Tab state
   const [selectedTab, setSelectedTab] = useState<TabId>("overview");
 
-  const handleTabChange = (keys: Selection) => {
-    if (keys !== "all" && keys.size > 0) {
-      const selected = Array.from(keys)[0] as TabId;
-      setSelectedTab(selected);
-    }
-  };
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "details", label: "Details" },
+    { id: "transactions", label: "Transactions" },
+    { id: "subscriptions", label: "Subscriptions" },
+  ];
 
   const { toggle: toggleLock, isLoading: isLocking } = useToggleCardLocked();
 
@@ -169,18 +167,35 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
           </Breadcrumbs>
 
           {/* Right: Status Badges */}
-          <div className="flex items-center gap-3">
-            <LockCardButton
-              isLocked={card.isLocked}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => autoPay.toggle(!autoPay.enabled)}
+              disabled={autoPay.isLoading}
+              aria-label={autoPay.enabled ? "Disable AutoPay" : "Enable AutoPay"}
+              className="disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <Badge
+                type="pill-color"
+                color={autoPay.enabled ? "success" : "gray"}
+                size="sm"
+              >
+                {autoPay.isLoading ? "Updating..." : autoPay.enabled ? "AutoPay: On" : "AutoPay: Off"}
+              </Badge>
+            </button>
+            <button
+              type="button"
               onClick={() => toggleLock(cardId, card.isLocked)}
-              isLoading={isLocking}
-              size="sm"
-            />
-            <CreditCardStatusBadge
-              isLocked={card.isLocked}
-              isActive={card.isActive}
-              isOverdue={card.isOverdue}
-            />
+              disabled={isLocking}
+              aria-label={card.isLocked ? "Unlock card" : "Lock card"}
+              className="disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <CreditCardStatusBadge
+                isLocked={card.isLocked}
+                isActive={card.isActive}
+                isOverdue={card.isOverdue}
+              />
+            </button>
           </div>
         </div>
 
@@ -195,25 +210,18 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
             </p>
           </div>
 
-          {/* Payment Due Info & AutoPay */}
-          <div className="flex items-end gap-6">
-            <AutoPayToggle
-              enabled={autoPay.enabled}
-              onToggle={autoPay.toggle}
-              isLoading={autoPay.isLoading}
+          {/* Payment Due Info */}
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-tertiary">
+              Payment Due
+            </span>
+            <span className="text-base font-semibold text-primary">
+              {card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--"}
+            </span>
+            <PaymentDueBadge
+              nextPaymentDueDate={card.nextPaymentDueDate}
+              isOverdue={card.isOverdue}
             />
-            <div className="flex flex-col items-end gap-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-tertiary">
-                Payment Due
-              </span>
-              <span className="text-base font-semibold text-primary">
-                {card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--"}
-              </span>
-              <PaymentDueBadge
-                nextPaymentDueDate={card.nextPaymentDueDate}
-                isOverdue={card.isOverdue}
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -226,18 +234,27 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         </div>
 
         {/* Tab Navigation - Below card */}
-        <div className="px-4 pb-4 lg:px-6">
-          <ContentDivider type="background-fill">
-            <ButtonGroup
-              selectedKeys={new Set([selectedTab])}
-              onSelectionChange={handleTabChange}
-            >
-              <ButtonGroupItem id="overview">Overview</ButtonGroupItem>
-              <ButtonGroupItem id="details">Details</ButtonGroupItem>
-              <ButtonGroupItem id="transactions">Transactions</ButtonGroupItem>
-              <ButtonGroupItem id="subscriptions">Subscriptions</ButtonGroupItem>
-            </ButtonGroup>
-          </ContentDivider>
+        <div className="border-b border-secondary px-4 lg:px-6">
+          <nav className="flex justify-center gap-6" aria-label="Card detail tabs">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSelectedTab(tab.id)}
+                className={cx(
+                  "relative pb-3 text-sm font-semibold transition-colors",
+                  selectedTab === tab.id
+                    ? "text-utility-brand-600"
+                    : "text-tertiary hover:text-secondary"
+                )}
+              >
+                {tab.label}
+                {selectedTab === tab.id && (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-utility-brand-600" />
+                )}
+              </button>
+            ))}
+          </nav>
         </div>
 
         {/* Tab Content */}

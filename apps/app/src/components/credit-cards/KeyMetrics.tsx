@@ -10,7 +10,6 @@ import {
   getUtilizationColor,
 } from "@/types/credit-cards";
 import type { ExtendedCreditCardData, Transaction } from "@/types/credit-cards";
-
 interface KeyMetricsProps {
   card: ExtendedCreditCardData;
   transactions?: Transaction[];
@@ -71,7 +70,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch bg-secondary lg:block" />
+          <div className="hidden w-px self-stretch border-l border-secondary lg:block" />
 
           {/* Minimum Payment */}
           <div className="flex flex-1 flex-col gap-1 lg:px-6">
@@ -90,7 +89,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch bg-secondary lg:block" />
+          <div className="hidden w-px self-stretch border-l border-secondary lg:block" />
 
           {/* APR (Purchase) */}
           <div className="flex flex-1 flex-col gap-1 lg:px-6">
@@ -102,7 +101,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch bg-secondary lg:block" />
+          <div className="hidden w-px self-stretch border-l border-secondary lg:block" />
 
           {/* Available Credit */}
           <div className="flex flex-1 flex-col gap-1 lg:pl-6">
