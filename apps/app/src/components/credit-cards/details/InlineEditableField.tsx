@@ -95,6 +95,14 @@ export function InlineEditableField({
       return;
     }
 
+    // If value unchanged from current, just close without saving
+    // eslint-disable-next-line eqeqeq
+    if (validated == value) {
+      setIsEditing(false);
+      savingRef.current = false;
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
