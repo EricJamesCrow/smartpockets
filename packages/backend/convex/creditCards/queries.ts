@@ -362,6 +362,7 @@ export const computeInterestSavingBalance = query({
     totalProtectedBalances: v.number(),
     totalProtectedPayments: v.number(),
     hasPromos: v.boolean(),
+    hasPlanFeeTransactions: v.boolean(),
   }),
   async handler(ctx, { creditCardId }) {
     const viewer = ctx.viewerX();
@@ -410,12 +411,27 @@ export const computeInterestSavingBalance = query({
     const interestSavingBalance =
       currentBalance - totalProtectedBalances + totalProtectedPayments;
 
+    const hasPromos = promos.length > 0 || installments.length > 0;
+
+    // Detect plan fee transactions (Chase only) to nudge users to enter plans
+    let hasPlanFeeTransactions = false;
+    if (card.company?.toLowerCase() === "chase" && !hasPromos) {
+      const transactions = await ctx.runQuery(
+        components.plaid.public.getTransactionsByAccount,
+        { accountId: card.accountId },
+      );
+      hasPlanFeeTransactions = transactions.some(
+        (tx) => tx.name?.toUpperCase().startsWith("PLAN FEE"),
+      );
+    }
+
     return {
       interestSavingBalance: Math.max(0, interestSavingBalance),
       currentBalance,
       totalProtectedBalances,
       totalProtectedPayments,
-      hasPromos: promos.length > 0 || installments.length > 0,
+      hasPromos,
+      hasPlanFeeTransactions,
     };
   },
 });

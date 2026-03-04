@@ -59,7 +59,9 @@ export function InterestSavingBalance({ creditCardId, purchaseAprPercentage, pay
         <div className="rounded-xl border border-dashed border-utility-brand-200 bg-utility-brand-50 p-4">
           <p className="text-2xl font-semibold text-primary">—</p>
           <p className="mt-1 text-xs text-utility-brand-700">
-            Enter your Pay Over Time plans below to see your accurate interest saving balance
+            {data.hasPlanFeeTransactions
+              ? "We detected plan fees in your transactions — enter your plans below for an accurate interest saving balance"
+              : "Enter your Pay Over Time plans below to see your accurate interest saving balance"}
           </p>
         </div>
       </ISBSection>
