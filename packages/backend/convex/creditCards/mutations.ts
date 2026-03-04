@@ -210,6 +210,10 @@ export const update = mutation({
     nextPaymentDueDate: v.optional(v.string()),
     minimumPaymentAmount: v.optional(v.number()),
     isOverdue: v.optional(v.boolean()),
+    statementClosingDay: v.optional(v.number()),
+    payOverTimeEnabled: v.optional(v.boolean()),
+    payOverTimeLimit: v.optional(v.number()),
+    payOverTimeApr: v.optional(v.number()),
   },
   returns: v.null(),
   async handler(ctx, { cardId, ...data }) {
@@ -219,6 +223,11 @@ export const update = mutation({
     // Verify ownership
     if (card.userId !== viewer._id) {
       throw new Error("Not authorized to modify this card");
+    }
+
+    if (data.statementClosingDay != null &&
+        (!Number.isInteger(data.statementClosingDay) || data.statementClosingDay < 1 || data.statementClosingDay > 31)) {
+      throw new Error("Statement closing day must be an integer between 1 and 31");
     }
 
     // Filter out undefined values

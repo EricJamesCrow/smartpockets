@@ -99,6 +99,12 @@ export const list = query({
       isAutoPay: v.optional(v.boolean()), // Optional for backwards compatibility with existing records
       autoPayEnabledAt: v.optional(v.number()),
 
+      // Statement & issuer config
+      statementClosingDay: v.optional(v.number()),
+      payOverTimeEnabled: v.optional(v.boolean()),
+      payOverTimeLimit: v.optional(v.number()),
+      payOverTimeApr: v.optional(v.number()),
+
       // State
       isActive: v.boolean(),
     })
@@ -227,6 +233,12 @@ export const get = query({
       isAutoPay: v.optional(v.boolean()), // Optional for backwards compatibility with existing records
       autoPayEnabledAt: v.optional(v.number()),
 
+      // Statement & issuer config
+      statementClosingDay: v.optional(v.number()),
+      payOverTimeEnabled: v.optional(v.boolean()),
+      payOverTimeLimit: v.optional(v.number()),
+      payOverTimeApr: v.optional(v.number()),
+
       // State
       isActive: v.boolean(),
     }),
@@ -322,6 +334,155 @@ export const getStats = query({
     return {
       ...stats,
       averageUtilization: Math.round(averageUtilization * 100) / 100,
+    };
+  },
+});
+
+/**
+ * Compute the Interest Saving Balance for a credit card
+ *
+ * The ISB is the minimum payment needed to avoid interest on next month's
+ * regular purchases while keeping promo and installment balances intact.
+ *
+ * Formula: currentBalance - totalProtectedBalances + totalProtectedPayments
+ *
+ * "Protected" balances are promo rates and installment plans that should
+ * not be paid off early (they carry 0% or deferred interest).
+ *
+ * @param creditCardId - Credit card document ID
+ * @returns ISB amount and breakdown components
+ */
+export const computeInterestSavingBalance = query({
+  args: {
+    creditCardId: v.id("creditCards"),
+  },
+  returns: v.object({
+    interestSavingBalance: v.number(),
+    currentBalance: v.number(),
+    totalProtectedBalances: v.number(),
+    totalProtectedPayments: v.number(),
+    hasPromos: v.boolean(),
+  }),
+  async handler(ctx, { creditCardId }) {
+    const viewer = ctx.viewerX();
+    const card = await ctx.table("creditCards").getX(creditCardId);
+
+    // Verify ownership
+    if (card.userId !== viewer._id) {
+      throw new Error("Unauthorized");
+    }
+
+    const currentBalance = card.currentBalance ?? 0;
+
+    // Sum all active promo balances and their minimum payments
+    const promos = await ctx
+      .table("promoRates", "creditCardId", (q) => q.eq("creditCardId", creditCardId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .map((promo) => promo.doc());
+
+    // Sum all active installment balances and their payments
+    const installments = await ctx
+      .table("installmentPlans", "creditCardId", (q) => q.eq("creditCardId", creditCardId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .map((plan) => plan.doc());
+
+    const totalPromoBalances = promos.reduce(
+      (sum, p) => sum + p.remainingBalance,
+      0,
+    );
+    const totalPromoMinPayments = promos.reduce(
+      (sum, p) => sum + (p.monthlyMinimumPayment ?? 0),
+      0,
+    );
+    const totalInstallmentBalances = installments.reduce(
+      (sum, p) => sum + p.remainingPrincipal,
+      0,
+    );
+    const totalInstallmentPayments = installments.reduce(
+      (sum, p) => sum + p.monthlyPrincipal + p.monthlyFee,
+      0,
+    );
+
+    const totalProtectedBalances = totalPromoBalances + totalInstallmentBalances;
+    const totalProtectedPayments =
+      totalPromoMinPayments + totalInstallmentPayments;
+
+    const interestSavingBalance =
+      currentBalance - totalProtectedBalances + totalProtectedPayments;
+
+    return {
+      interestSavingBalance: Math.max(0, interestSavingBalance),
+      currentBalance,
+      totalProtectedBalances,
+      totalProtectedPayments,
+      hasPromos: promos.length > 0 || installments.length > 0,
+    };
+  },
+});
+
+/**
+ * Compute year-to-date fees and interest for a credit card
+ *
+ * Scans the Plaid component's transaction data for the card's account,
+ * filtering to the current year and summing BANK_FEES and INTEREST categories.
+ *
+ * Note: Plaid component stores amounts in MILLIUNITS (amount * 1000).
+ * We convert to dollars before returning.
+ *
+ * @param creditCardId - Credit card document ID
+ * @returns YTD fee total, interest total, and the year
+ */
+export const computeYtdFeesInterest = query({
+  args: {
+    creditCardId: v.id("creditCards"),
+  },
+  returns: v.object({
+    totalFees: v.number(),
+    totalInterest: v.number(),
+    year: v.number(),
+  }),
+  async handler(ctx, { creditCardId }) {
+    const viewer = ctx.viewerX();
+    const card = await ctx.table("creditCards").getX(creditCardId);
+
+    // Verify ownership
+    if (card.userId !== viewer._id) {
+      throw new Error("Unauthorized");
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const yearStart = `${year}-01-01`;
+    const nextYearStart = `${year + 1}-01-01`;
+
+    // NOTE: The Plaid component API doesn't support date-range filtering.
+    // This fetches all transactions for the account and filters in-memory.
+    // For cards with years of history, consider adding date filtering to
+    // the Plaid component's getTransactionsByAccount query.
+    const transactions = await ctx.runQuery(
+      components.plaid.public.getTransactionsByAccount,
+      { accountId: card.accountId },
+    );
+
+    // Filter to current year and sum fees/interest
+    let totalFeesMilliunits = 0;
+    let totalInterestMilliunits = 0;
+
+    for (const tx of transactions) {
+      if (tx.date < yearStart || tx.date >= nextYearStart) continue;
+
+      if (tx.categoryPrimary === "BANK_FEES") {
+        totalFeesMilliunits += tx.amount;
+      } else if (tx.categoryPrimary === "INTEREST") {
+        totalInterestMilliunits += tx.amount;
+      }
+    }
+
+    // Convert from milliunits to dollars
+    return {
+      totalFees: totalFeesMilliunits / 1000,
+      totalInterest: totalInterestMilliunits / 1000,
+      year,
     };
   },
 });

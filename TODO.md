@@ -99,6 +99,20 @@
 
 ## Credit Cards Feature
 
+### Enhanced Details Tab — Follow-ups
+
+Branch: `enhanced-credit-card-details-tab` (pending PR)
+
+**Bugs/polish:**
+- [x] APR Breakdown: Show all 3 standard rows (Purchase, Cash Advance, Balance Transfer) even when balance is $0 — establishes visual expectation
+- [x] APR Breakdown: Add weighted average APR headline ("Effective APR: X.XX%") above the table
+- [x] ISB messaging: Check purchase APR before showing "pay in full to avoid interest" — at 0% APR the urgency is misleading
+
+**Next priority:**
+- [ ] Build promo rate + installment plan create/edit forms (replace "Coming soon" buttons)
+  - Must support Chase Equal Pay promos and installment plans from real statements
+  - Reference: Chase Amazon statement with 2 promos + 2 installment plans
+
 ### Swipeable Card Carousel
 
 Enable users to swipe between credit card detail pages horizontally, similar to the American Express app carousel experience.
