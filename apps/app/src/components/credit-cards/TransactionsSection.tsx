@@ -16,6 +16,7 @@ import { TransactionTableRow } from "./TransactionTableRow";
 import { TransactionDetailDrawer } from "./TransactionDetailDrawer";
 import {
   toTransaction,
+  parseLocalDate,
   type Transaction,
   type PlaidTransactionItem,
 } from "@/types/credit-cards";
@@ -103,7 +104,7 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
       const startDate = filters.dateRange.start.toDate(getLocalTimeZone());
       const endDate = filters.dateRange.end.toDate(getLocalTimeZone());
       result = result.filter((txn) => {
-        const txnDate = new Date(txn.date);
+        const txnDate = parseLocalDate(txn.date);
         return txnDate >= startDate && txnDate <= endDate;
       });
     }
@@ -122,7 +123,7 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
 
       switch (column) {
         case "date":
-          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          comparison = parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime();
           break;
         case "merchant":
           comparison = a.merchant.localeCompare(b.merchant);

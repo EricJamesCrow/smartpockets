@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { SortDescriptor } from "react-aria-components";
 import { Table } from "@repo/ui/untitledui/application/table/table";
 import { TableBody } from "react-aria-components";
+import { parseLocalDate } from "@/types/credit-cards";
 import { TransactionsTableRow, type AggregatedTransaction } from "./TransactionsTableRow";
 
 interface TransactionsTableProps {
@@ -35,7 +36,7 @@ export function TransactionsTable({
 
       switch (column) {
         case "date":
-          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          comparison = parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime();
           break;
         case "merchant":
           const merchantA = a.merchantEnrichment?.merchantName ?? a.merchantName ?? a.name;

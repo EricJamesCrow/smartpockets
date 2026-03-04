@@ -205,7 +205,6 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
                     await updateCard({ cardId, statementClosingDay: day });
                   }}
                   formatDisplay={(v) => v != null ? `Day ${v}` : "Not set"}
-                  placeholder="Not set"
                 />
               </dl>
             </div>
