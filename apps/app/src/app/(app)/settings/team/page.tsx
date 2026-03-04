@@ -4,6 +4,8 @@ import { Fragment, useState, useEffect } from "react";
 import { useOrganization, useOrganizationList } from "@clerk/nextjs";
 import { Plus } from "@untitledui/icons";
 import { toast } from "sonner";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { FileUpload } from "@repo/ui/untitledui/application/file-upload/file-upload-base";
 import { IconNotification } from "@repo/ui/untitledui/application/notifications/notifications";
 import { SectionHeader } from "@repo/ui/untitledui/application/section-headers/section-headers";
@@ -15,6 +17,7 @@ import { Dialog, DialogTrigger, Modal, ModalOverlay } from "@repo/ui/untitledui/
 import { InputBase, TextField } from "@repo/ui/untitledui/base/input/input";
 import { Label } from "@repo/ui/untitledui/base/input/label";
 import { HintText } from "@repo/ui/untitledui/base/input/hint-text";
+import { createOrgSchema, type CreateOrgFormValues } from "@/lib/validations";
 
 function slugify(text: string): string {
     return text
@@ -32,10 +35,12 @@ export default function TeamPage() {
     });
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [newOrgName, setNewOrgName] = useState("");
-    const [newOrgSlug, setNewOrgSlug] = useState("");
-    const [isCreating, setIsCreating] = useState(false);
-    const [createError, setCreateError] = useState<string | null>(null);
+
+    // Create org form
+    const createOrgForm = useForm<CreateOrgFormValues>({
+        resolver: zodResolver(createOrgSchema),
+        defaultValues: { name: "", slug: "" },
+    });
 
     // Logo upload state
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -87,39 +92,31 @@ export default function TeamPage() {
         }
     };
 
-    const handleCreateOrg = async () => {
-        if (!newOrgName.trim()) return;
-
-        setIsCreating(true);
-        setCreateError(null);
-
+    const handleCreateOrg = async (data: CreateOrgFormValues) => {
         try {
             await createOrganization?.({
-                name: newOrgName.trim(),
-                slug: newOrgSlug.trim() || slugify(newOrgName),
+                name: data.name,
+                slug: data.slug?.trim() || slugify(data.name),
             });
 
             toast.custom((t) => (
                 <IconNotification
                     title="Organization created"
-                    description={`${newOrgName} has been created successfully.`}
+                    description={`${data.name} has been created successfully.`}
                     color="success"
                     onClose={() => toast.dismiss(t)}
                 />
             ));
 
             setIsCreateModalOpen(false);
-            setNewOrgName("");
-            setNewOrgSlug("");
+            createOrgForm.reset();
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to create organization";
             if (message.includes("slug")) {
-                setCreateError("Organization slug already taken");
+                createOrgForm.setError("slug", { message: "Organization slug already taken" });
             } else {
-                setCreateError(message);
+                createOrgForm.setError("name", { message });
             }
-        } finally {
-            setIsCreating(false);
         }
     };
 
@@ -184,6 +181,8 @@ export default function TeamPage() {
 
     const organizations = userMemberships?.data ?? [];
     const isAdmin = membership?.role === "org:admin";
+
+    const orgName = createOrgForm.watch("name");
 
     return (
         <>
@@ -339,34 +338,47 @@ export default function TeamPage() {
                                     </div>
 
                                     <div className="flex flex-col gap-4">
-                                        <TextField
-                                            aria-label="Organization name"
-                                            isRequired
-                                            value={newOrgName}
-                                            onChange={setNewOrgName}
-                                        >
-                                            <Label>Organization name</Label>
-                                            <InputBase
-                                                size="md"
-                                                placeholder="Acme Inc"
-                                            />
-                                        </TextField>
+                                        <Controller
+                                            control={createOrgForm.control}
+                                            name="name"
+                                            render={({ field, fieldState }) => (
+                                                <TextField
+                                                    aria-label="Organization name"
+                                                    isRequired
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    onBlur={field.onBlur}
+                                                    isInvalid={!!fieldState.error}
+                                                >
+                                                    <Label>Organization name</Label>
+                                                    <InputBase size="md" placeholder="Acme Inc" />
+                                                    {fieldState.error && <HintText>{fieldState.error.message}</HintText>}
+                                                </TextField>
+                                            )}
+                                        />
 
-                                        <TextField
-                                            aria-label="Organization slug"
-                                            value={newOrgSlug}
-                                            onChange={setNewOrgSlug}
-                                            isInvalid={!!createError}
-                                        >
-                                            <Label>Slug (URL identifier)</Label>
-                                            <InputBase
-                                                size="md"
-                                                placeholder={slugify(newOrgName) || "acme-inc"}
-                                            />
-                                            <HintText>
-                                                {createError || "Leave blank to auto-generate from name"}
-                                            </HintText>
-                                        </TextField>
+                                        <Controller
+                                            control={createOrgForm.control}
+                                            name="slug"
+                                            render={({ field, fieldState }) => (
+                                                <TextField
+                                                    aria-label="Organization slug"
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    onBlur={field.onBlur}
+                                                    isInvalid={!!fieldState.error}
+                                                >
+                                                    <Label>Slug (URL identifier)</Label>
+                                                    <InputBase
+                                                        size="md"
+                                                        placeholder={slugify(orgName) || "acme-inc"}
+                                                    />
+                                                    <HintText>
+                                                        {fieldState.error?.message || "Leave blank to auto-generate from name"}
+                                                    </HintText>
+                                                </TextField>
+                                            )}
+                                        />
                                     </div>
 
                                     <div className="flex justify-end gap-3">
@@ -375,9 +387,7 @@ export default function TeamPage() {
                                             size="md"
                                             onClick={() => {
                                                 close();
-                                                setNewOrgName("");
-                                                setNewOrgSlug("");
-                                                setCreateError(null);
+                                                createOrgForm.reset();
                                             }}
                                         >
                                             Cancel
@@ -385,9 +395,9 @@ export default function TeamPage() {
                                         <Button
                                             color="primary"
                                             size="md"
-                                            onClick={handleCreateOrg}
-                                            isLoading={isCreating}
-                                            isDisabled={!newOrgName.trim()}
+                                            onClick={createOrgForm.handleSubmit(handleCreateOrg)}
+                                            isLoading={createOrgForm.formState.isSubmitting}
+                                            isDisabled={!orgName.trim()}
                                         >
                                             Create organization
                                         </Button>
