@@ -105,6 +105,26 @@ export const list = query({
       payOverTimeLimit: v.optional(v.number()),
       payOverTimeApr: v.optional(v.number()),
 
+      // User overrides
+      userOverrides: v.optional(
+        v.object({
+          officialName: v.optional(v.string()),
+          accountName: v.optional(v.string()),
+          company: v.optional(v.string()),
+          aprs: v.optional(
+            v.array(
+              v.object({
+                index: v.number(),
+                aprPercentage: v.optional(v.number()),
+                balanceSubjectToApr: v.optional(v.number()),
+                interestChargeAmount: v.optional(v.number()),
+              })
+            )
+          ),
+          providerDashboardUrl: v.optional(v.string()),
+        })
+      ),
+
       // State
       isActive: v.boolean(),
     })
@@ -238,6 +258,26 @@ export const get = query({
       payOverTimeEnabled: v.optional(v.boolean()),
       payOverTimeLimit: v.optional(v.number()),
       payOverTimeApr: v.optional(v.number()),
+
+      // User overrides
+      userOverrides: v.optional(
+        v.object({
+          officialName: v.optional(v.string()),
+          accountName: v.optional(v.string()),
+          company: v.optional(v.string()),
+          aprs: v.optional(
+            v.array(
+              v.object({
+                index: v.number(),
+                aprPercentage: v.optional(v.number()),
+                balanceSubjectToApr: v.optional(v.number()),
+                interestChargeAmount: v.optional(v.number()),
+              })
+            )
+          ),
+          providerDashboardUrl: v.optional(v.string()),
+        })
+      ),
 
       // State
       isActive: v.boolean(),
