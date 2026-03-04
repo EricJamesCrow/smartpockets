@@ -78,7 +78,7 @@ export function TransactionsTableRow({
     transaction.merchantEnrichment?.merchantName ??
     transaction.merchantName ??
     transaction.name;
-  const { text: amountText, isRefund } = formatTransactionAmount(
+  const { text: amountText, colorClass: amountColor } = formatTransactionAmount(
     transaction.amount,
     transaction.isoCurrencyCode
   );
@@ -138,9 +138,7 @@ export function TransactionsTableRow({
       {/* Amount */}
       <Table.Cell className="text-right">
         <span
-          className={`text-sm font-medium tabular-nums ${
-            isRefund ? "text-utility-success-600" : "text-primary"
-          }`}
+          className={`text-sm font-medium tabular-nums ${amountColor}`}
         >
           {amountText}
         </span>
