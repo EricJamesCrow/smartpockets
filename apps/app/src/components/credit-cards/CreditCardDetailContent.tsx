@@ -367,10 +367,54 @@ function ProviderLink({
     );
   }
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    const menu = document.createElement("div");
+    menu.className =
+      "fixed z-50 rounded-lg border border-secondary bg-primary shadow-lg py-1 text-sm";
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
+
+    const editItem = document.createElement("button");
+    editItem.className =
+      "w-full px-3 py-1.5 text-left hover:bg-secondary text-primary cursor-pointer";
+    editItem.textContent = "Edit link";
+    editItem.onclick = () => {
+      document.removeEventListener("click", cleanup);
+      document.body.removeChild(menu);
+      setEditing(true);
+    };
+    menu.appendChild(editItem);
+
+    const removeItem = document.createElement("button");
+    removeItem.className =
+      "w-full px-3 py-1.5 text-left hover:bg-secondary text-utility-error-700 cursor-pointer";
+    removeItem.textContent = "Remove link";
+    removeItem.onclick = async () => {
+      document.removeEventListener("click", cleanup);
+      document.body.removeChild(menu);
+      await onClear();
+    };
+    menu.appendChild(removeItem);
+
+    const cleanup = (e: MouseEvent) => {
+      if (!menu.contains(e.target as Node)) {
+        if (document.body.contains(menu)) {
+          document.body.removeChild(menu);
+        }
+        document.removeEventListener("click", cleanup);
+      }
+    };
+    document.addEventListener("click", cleanup);
+    document.body.appendChild(menu);
+  };
+
   return (
     <span
       className="inline-flex items-center gap-1"
       onDoubleClick={() => setEditing(true)}
+      onContextMenu={handleContextMenu}
     >
       <a
         href={url}
