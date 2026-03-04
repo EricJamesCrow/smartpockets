@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useOrganization } from "@clerk/nextjs";
 import { Mail01, RefreshCw01, Trash01 } from "@untitledui/icons";
 import { toast } from "sonner";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { IconNotification } from "@repo/ui/untitledui/application/notifications/notifications";
 import { SectionHeader } from "@repo/ui/untitledui/application/section-headers/section-headers";
 import { SectionLabel } from "@repo/ui/untitledui/application/section-headers/section-label";
@@ -13,9 +14,9 @@ import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Dropdown } from "@repo/ui/untitledui/base/dropdown/dropdown";
 import { Form } from "@repo/ui/untitledui/base/form/form";
 import { InputBase, TextField } from "@repo/ui/untitledui/base/input/input";
-import { Label } from "@repo/ui/untitledui/base/input/label";
 import { HintText } from "@repo/ui/untitledui/base/input/hint-text";
 import { NativeSelect } from "@repo/ui/untitledui/base/select/select-native";
+import { inviteMemberSchema, type InviteMemberFormValues } from "@/lib/validations";
 
 function formatDate(date: Date): string {
     return new Intl.DateTimeFormat("en-US", {
@@ -56,46 +57,45 @@ export default function InvitationsPage() {
         invitations: { pageSize: 50 },
     });
 
-    const [email, setEmail] = useState("");
-    const [role, setRole] = useState("org:member");
-    const [isInviting, setIsInviting] = useState(false);
-    const [inviteError, setInviteError] = useState<string | null>(null);
+    const {
+        control,
+        handleSubmit,
+        reset,
+        setError,
+        formState: { isSubmitting },
+    } = useForm<InviteMemberFormValues>({
+        resolver: zodResolver(inviteMemberSchema),
+        defaultValues: { email: "", role: "org:member" },
+    });
 
     const isAdmin = membership?.role === "org:admin";
 
-    const handleInvite = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!organization || !email.trim()) return;
-
-        setIsInviting(true);
-        setInviteError(null);
+    const onSubmit = async (data: InviteMemberFormValues) => {
+        if (!organization) return;
 
         try {
             await organization.inviteMember({
-                emailAddress: email.trim(),
-                role,
+                emailAddress: data.email,
+                role: data.role,
             });
 
             toast.custom((t) => (
                 <IconNotification
                     title="Invitation sent"
-                    description={`An invitation has been sent to ${email}.`}
+                    description={`An invitation has been sent to ${data.email}.`}
                     color="success"
                     onClose={() => toast.dismiss(t)}
                 />
             ));
 
-            setEmail("");
-            setRole("org:member");
+            reset();
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to send invitation";
             if (message.includes("already") || message.includes("exists")) {
-                setInviteError("This user is already a member or has a pending invitation");
+                setError("email", { message: "This user is already a member or has a pending invitation" });
             } else {
-                setInviteError(message);
+                setError("email", { message });
             }
-        } finally {
-            setIsInviting(false);
         }
     };
 
@@ -185,7 +185,7 @@ export default function InvitationsPage() {
                         </SectionHeader.Group>
                     </SectionHeader.Root>
 
-                    <Form onSubmit={handleInvite} className="contents">
+                    <Form onSubmit={handleSubmit(onSubmit)} className="contents">
                         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(200px,280px)_1fr] lg:gap-8">
                             <SectionLabel.Root
                                 size="sm"
@@ -195,32 +195,46 @@ export default function InvitationsPage() {
 
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-col gap-4 sm:flex-row">
-                                    <TextField
-                                        aria-label="Email address"
-                                        type="email"
-                                        isRequired
-                                        className="flex-1"
-                                        value={email}
-                                        onChange={setEmail}
-                                        isInvalid={!!inviteError}
-                                    >
-                                        <InputBase
-                                            size="md"
-                                            placeholder="colleague@example.com"
-                                            icon={Mail01}
-                                        />
-                                        {inviteError && <HintText>{inviteError}</HintText>}
-                                    </TextField>
+                                    <Controller
+                                        control={control}
+                                        name="email"
+                                        render={({ field, fieldState }) => (
+                                            <TextField
+                                                aria-label="Email address"
+                                                type="email"
+                                                isRequired
+                                                className="flex-1"
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                onBlur={field.onBlur}
+                                                isInvalid={!!fieldState.error}
+                                            >
+                                                <InputBase
+                                                    size="md"
+                                                    placeholder="colleague@example.com"
+                                                    icon={Mail01}
+                                                />
+                                                {fieldState.error && <HintText>{fieldState.error.message}</HintText>}
+                                            </TextField>
+                                        )}
+                                    />
 
-                                    <NativeSelect
-                                        aria-label="Select role"
-                                        className="sm:w-40"
-                                        value={role}
-                                        onChange={(e) => setRole(e.target.value)}
-                                        options={[
-                                            { label: "Member", value: "org:member" },
-                                            { label: "Admin", value: "org:admin" },
-                                        ]}
+                                    <Controller
+                                        control={control}
+                                        name="role"
+                                        render={({ field }) => (
+                                            <NativeSelect
+                                                aria-label="Select role"
+                                                className="sm:w-40"
+                                                value={field.value}
+                                                onChange={(e) => field.onChange(e.target.value)}
+                                                onBlur={field.onBlur}
+                                                options={[
+                                                    { label: "Member", value: "org:member" },
+                                                    { label: "Admin", value: "org:admin" },
+                                                ]}
+                                            />
+                                        )}
                                     />
                                 </div>
 
@@ -229,8 +243,7 @@ export default function InvitationsPage() {
                                         type="submit"
                                         color="primary"
                                         size="md"
-                                        isLoading={isInviting}
-                                        isDisabled={!email.trim()}
+                                        isLoading={isSubmitting}
                                     >
                                         Send invitation
                                     </Button>
