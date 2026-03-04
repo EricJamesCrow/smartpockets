@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { formatDisplayCurrency } from "@/types/credit-cards";
@@ -47,6 +47,11 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
   const hasPromos = promos.length > 0;
   const hasInstallments = installments.length > 0;
   const [showForm, setShowForm] = useState<"installment" | "promo" | null>(null);
+  const removePlan = useMutation(api.installmentPlans.mutations.remove);
+  const removePromo = useMutation(api.promoRates.mutations.remove);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingPromoId, setEditingPromoId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   if (!hasPromos && !hasInstallments) {
     return (
@@ -110,7 +115,14 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
           const progress = getProgressPercentage(promo.startDate, promo.expirationDate);
           const urgencyColor = getUrgencyColor(monthsLeft);
 
-          return (
+          return editingPromoId === promo._id ? (
+            <PromoRateForm
+              key={promo._id}
+              creditCardId={creditCardId}
+              onClose={() => setEditingPromoId(null)}
+              editingPromo={promo}
+            />
+          ) : (
             <div key={promo._id} className="rounded-xl border border-secondary bg-primary">
               <div className="p-4">
                 <div className="mb-3 flex items-start justify-between">
@@ -151,6 +163,19 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
                     Monthly minimum: {formatDisplayCurrency(promo.monthlyMinimumPayment)}
                   </p>
                 )}
+
+                <div className="mt-2 flex gap-2">
+                  <button type="button" onClick={() => setEditingPromoId(promo._id)} className="text-xs text-tertiary hover:text-primary">Edit</button>
+                  {confirmDeleteId === promo._id ? (
+                    <span className="flex items-center gap-1 text-xs">
+                      <span className="text-utility-error-700">Remove?</span>
+                      <button type="button" onClick={async () => { await removePromo({ promoRateId: promo._id }); setConfirmDeleteId(null); }} className="text-utility-error-700 underline">Yes</button>
+                      <button type="button" onClick={() => setConfirmDeleteId(null)} className="text-tertiary underline">No</button>
+                    </span>
+                  ) : (
+                    <button type="button" onClick={() => setConfirmDeleteId(promo._id)} className="text-xs text-tertiary hover:text-utility-error-700">Remove</button>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -162,27 +187,48 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
               <span className="text-xs font-medium text-tertiary">Installment Plans</span>
             </div>
             <div className="divide-y divide-secondary">
-              {installments?.map((plan) => (
-                <div key={plan._id} className="px-4 py-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-primary">{plan.description}</p>
-                      <p className="text-xs text-tertiary">
-                        {plan.remainingPayments} of {plan.totalPayments} payments remaining
-                      </p>
+              {installments?.map((plan) =>
+                editingPlanId === plan._id ? (
+                  <InstallmentPlanForm
+                    key={plan._id}
+                    creditCardId={creditCardId}
+                    onClose={() => setEditingPlanId(null)}
+                    editingPlan={plan}
+                  />
+                ) : (
+                  <div key={plan._id} className="px-4 py-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-primary">{plan.description}</p>
+                        <p className="text-xs text-tertiary">
+                          {plan.remainingPayments} of {plan.totalPayments} payments remaining
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold tabular-nums text-primary">
+                          {formatDisplayCurrency(plan.monthlyPrincipal + plan.monthlyFee)}
+                          <span className="text-xs font-normal text-tertiary">/mo</span>
+                        </p>
+                        <p className="text-xs tabular-nums text-tertiary">
+                          {formatDisplayCurrency(plan.remainingPrincipal)} remaining
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold tabular-nums text-primary">
-                        {formatDisplayCurrency(plan.monthlyPrincipal + plan.monthlyFee)}
-                        <span className="text-xs font-normal text-tertiary">/mo</span>
-                      </p>
-                      <p className="text-xs tabular-nums text-tertiary">
-                        {formatDisplayCurrency(plan.remainingPrincipal)} remaining
-                      </p>
+                    <div className="mt-2 flex gap-2">
+                      <button type="button" onClick={() => setEditingPlanId(plan._id)} className="text-xs text-tertiary hover:text-primary">Edit</button>
+                      {confirmDeleteId === plan._id ? (
+                        <span className="flex items-center gap-1 text-xs">
+                          <span className="text-utility-error-700">Remove?</span>
+                          <button type="button" onClick={async () => { await removePlan({ planId: plan._id }); setConfirmDeleteId(null); }} className="text-utility-error-700 underline">Yes</button>
+                          <button type="button" onClick={() => setConfirmDeleteId(null)} className="text-tertiary underline">No</button>
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => setConfirmDeleteId(plan._id)} className="text-xs text-tertiary hover:text-utility-error-700">Remove</button>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </div>
         )}
