@@ -1,9 +1,12 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { cx } from "@/utils/cx";
 import { formatDisplayCurrency, getPurchaseApr } from "@/types/credit-cards";
+import { InlineEditableField } from "./details/InlineEditableField";
 
 // Section components
 import { StatementClosingBanner } from "./details/StatementClosingBanner";
@@ -54,6 +57,18 @@ interface CardData {
   payOverTimeLimit?: number | null;
   payOverTimeApr?: number | null;
   availableCredit?: number | null;
+  userOverrides?: {
+    officialName?: string;
+    accountName?: string;
+    company?: string;
+    aprs?: Array<{
+      index: number;
+      aprPercentage?: number;
+      balanceSubjectToApr?: number;
+      interestChargeAmount?: number;
+    }>;
+    providerDashboardUrl?: string;
+  } | null;
 }
 
 interface CardDetailsTabProps {
@@ -62,6 +77,9 @@ interface CardDetailsTabProps {
 }
 
 export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
+  const setOverride = useMutation(api.creditCards.mutations.setOverride);
+  const clearOverride = useMutation(api.creditCards.mutations.clearOverride);
+
   if (!cardData) {
     return (
       <div className="p-6 text-center text-sm text-tertiary">
@@ -114,12 +132,36 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
             <h3 className="mb-4 text-lg font-semibold text-primary">Account Details</h3>
             <div className="rounded-xl border border-secondary bg-primary">
               <dl className="divide-y divide-secondary">
-                {cardData.officialName && (
-                  <DetailRow label="Official Name" value={cardData.officialName} />
+                {(cardData.officialName || cardData.userOverrides?.officialName) && (
+                  <EditableDetailRow
+                    label="Official Name"
+                    value={cardData.userOverrides?.officialName ?? cardData.officialName}
+                    plaidValue={cardData.officialName}
+                    isOverridden={cardData.userOverrides?.officialName != null}
+                    type="text"
+                    onSave={async (v) => { await setOverride({ cardId, field: "officialName", value: v }); }}
+                    onRevert={async () => { await clearOverride({ cardId, field: "officialName" }); }}
+                  />
                 )}
-                <DetailRow label="Account Name" value={cardData.accountName} />
-                {cardData.company && (
-                  <DetailRow label="Issuer" value={cardData.company} />
+                <EditableDetailRow
+                  label="Account Name"
+                  value={cardData.userOverrides?.accountName ?? cardData.accountName}
+                  plaidValue={cardData.accountName}
+                  isOverridden={cardData.userOverrides?.accountName != null}
+                  type="text"
+                  onSave={async (v) => { await setOverride({ cardId, field: "accountName", value: v }); }}
+                  onRevert={async () => { await clearOverride({ cardId, field: "accountName" }); }}
+                />
+                {(cardData.company || cardData.userOverrides?.company) && (
+                  <EditableDetailRow
+                    label="Issuer"
+                    value={cardData.userOverrides?.company ?? cardData.company}
+                    plaidValue={cardData.company}
+                    isOverridden={cardData.userOverrides?.company != null}
+                    type="text"
+                    onSave={async (v) => { await setOverride({ cardId, field: "company", value: v }); }}
+                    onRevert={async () => { await clearOverride({ cardId, field: "company" }); }}
+                  />
                 )}
                 {cardData.brand && (
                   <DetailRow
@@ -213,6 +255,43 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function EditableDetailRow({
+  label,
+  value,
+  plaidValue,
+  isOverridden,
+  type,
+  onSave,
+  onRevert,
+  formatDisplay,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+  plaidValue?: string | number | null | undefined;
+  isOverridden: boolean;
+  type: "text" | "number" | "currency" | "percentage" | "date" | "url";
+  onSave: (newValue: string | number) => Promise<void>;
+  onRevert?: () => Promise<void>;
+  formatDisplay?: (value: string | number | null | undefined) => string;
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3">
+      <dt className="text-sm text-tertiary">{label}</dt>
+      <dd>
+        <InlineEditableField
+          value={value}
+          plaidValue={plaidValue}
+          isOverridden={isOverridden}
+          type={type}
+          onSave={onSave}
+          onRevert={onRevert}
+          formatDisplay={formatDisplay}
+        />
+      </dd>
+    </div>
   );
 }
 
