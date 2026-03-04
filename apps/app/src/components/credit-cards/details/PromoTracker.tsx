@@ -5,6 +5,9 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { formatDisplayCurrency } from "@/types/credit-cards";
 import { cx } from "@/utils/cx";
+import { useState } from "react";
+import { InstallmentPlanForm } from "./InstallmentPlanForm";
+import { PromoRateForm } from "./PromoRateForm";
 
 function getMonthsRemaining(expirationDate: string): number {
   const now = new Date();
@@ -43,20 +46,57 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
 
   const hasPromos = promos.length > 0;
   const hasInstallments = installments.length > 0;
+  const [showForm, setShowForm] = useState<"installment" | "promo" | null>(null);
 
   if (!hasPromos && !hasInstallments) {
     return (
       <section>
         <h3 className="mb-4 text-lg font-semibold text-primary">Promotional Financing</h3>
-        <button
-          type="button"
-          disabled
-          title="Coming soon"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-6 text-sm text-tertiary cursor-not-allowed opacity-60"
-        >
-          <span className="text-lg">+</span>
-          Add promotional APR or installment plan
-        </button>
+        {showForm ? (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowForm("installment")}
+                className={cx(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                  showForm === "installment"
+                    ? "bg-utility-brand-600 text-white"
+                    : "bg-secondary text-tertiary hover:text-primary",
+                )}
+              >
+                Installment Plan
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForm("promo")}
+                className={cx(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                  showForm === "promo"
+                    ? "bg-utility-brand-600 text-white"
+                    : "bg-secondary text-tertiary hover:text-primary",
+                )}
+              >
+                Promo Rate
+              </button>
+            </div>
+            {showForm === "installment" && (
+              <InstallmentPlanForm creditCardId={creditCardId} onClose={() => setShowForm(null)} />
+            )}
+            {showForm === "promo" && (
+              <PromoRateForm creditCardId={creditCardId} onClose={() => setShowForm(null)} />
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowForm("installment")}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-6 text-sm text-tertiary transition-colors hover:border-utility-brand-300 hover:text-primary"
+          >
+            <span className="text-lg">+</span>
+            Add promotional APR or installment plan
+          </button>
+        )}
       </section>
     );
   }
@@ -147,15 +187,51 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
           </div>
         )}
 
-        <button
-          type="button"
-          disabled
-          title="Coming soon"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-4 text-sm text-tertiary cursor-not-allowed opacity-60"
-        >
-          <span className="text-lg">+</span>
-          Add promotional rate or plan
-        </button>
+        {showForm ? (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowForm("installment")}
+                className={cx(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                  showForm === "installment"
+                    ? "bg-utility-brand-600 text-white"
+                    : "bg-secondary text-tertiary hover:text-primary",
+                )}
+              >
+                Installment Plan
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForm("promo")}
+                className={cx(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                  showForm === "promo"
+                    ? "bg-utility-brand-600 text-white"
+                    : "bg-secondary text-tertiary hover:text-primary",
+                )}
+              >
+                Promo Rate
+              </button>
+            </div>
+            {showForm === "installment" && (
+              <InstallmentPlanForm creditCardId={creditCardId} onClose={() => setShowForm(null)} />
+            )}
+            {showForm === "promo" && (
+              <PromoRateForm creditCardId={creditCardId} onClose={() => setShowForm(null)} />
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowForm("installment")}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-4 text-sm text-tertiary transition-colors hover:border-utility-brand-300 hover:text-primary"
+          >
+            <span className="text-lg">+</span>
+            Add promotional rate or plan
+          </button>
+        )}
       </div>
     </section>
   );
