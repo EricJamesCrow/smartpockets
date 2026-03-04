@@ -2,8 +2,11 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { addPromoSchema, type AddPromoFormValues } from "@/lib/validations";
 import { formatDisplayCurrency, parseLocalDate } from "@/types/credit-cards";
 import { cx } from "@/utils/cx";
 import { InlineEditableField } from "./InlineEditableField";
@@ -206,90 +209,81 @@ function AddPromoForm({
   }) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [description, setDescription] = useState("");
-  const [aprPercentage, setAprPercentage] = useState("");
-  const [balance, setBalance] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [expirationDate, setExpirationDate] = useState("");
-  const [isDeferredInterest, setIsDeferredInterest] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { isSubmitting, errors },
+  } = useForm<AddPromoFormValues>({
+    resolver: zodResolver(addPromoSchema),
+    defaultValues: {
+      description: "",
+      aprPercentage: undefined as unknown as number,
+      balance: undefined as unknown as number,
+      startDate: "",
+      expirationDate: "",
+      isDeferredInterest: false,
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedDescription = description.trim();
-    if (!trimmedDescription || !aprPercentage || !balance || !startDate || !expirationDate) {
-      setError("All fields are required.");
-      return;
-    }
-    const aprNum = parseFloat(aprPercentage);
-    const balanceNum = parseFloat(balance);
-    if (aprNum < 0) {
-      setError("APR cannot be negative.");
-      return;
-    }
-    if (balanceNum <= 0) {
-      setError("Balance must be greater than zero.");
-      return;
-    }
-    if (expirationDate <= startDate) {
-      setError("Expiration date must be after start date.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
+  const onSubmit = async (data: AddPromoFormValues) => {
     try {
       await onSave({
-        description: trimmedDescription,
-        aprPercentage: aprNum,
-        originalBalance: balanceNum,
-        remainingBalance: balanceNum,
-        startDate,
-        expirationDate,
-        isDeferredInterest,
+        description: data.description,
+        aprPercentage: data.aprPercentage,
+        originalBalance: data.balance,
+        remainingBalance: data.balance,
+        startDate: data.startDate,
+        expirationDate: data.expirationDate,
+        isDeferredInterest: data.isDeferredInterest,
       });
     } catch {
-      setError("Failed to create promo rate. Please try again.");
-    } finally {
-      setSaving(false);
+      setError("root", { message: "Failed to create promo rate. Please try again." });
     }
   };
 
+  const inputClassName = "w-full rounded-lg border border-secondary px-3 py-1.5 text-sm text-primary placeholder:text-tertiary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500";
+
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-secondary bg-primary p-4 space-y-3">
+    <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-secondary bg-primary p-4 space-y-3">
       <h4 className="text-sm font-medium text-primary">Add Promotional Rate</h4>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs text-tertiary">Description</label>
-          <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. 0% Intro APR" className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm text-primary placeholder:text-tertiary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+          <input type="text" {...register("description")} placeholder="e.g. 0% Intro APR" className={inputClassName} />
+          {errors.description && <p className="mt-1 text-xs text-utility-error-700">{errors.description.message}</p>}
         </div>
         <div>
           <label className="mb-1 block text-xs text-tertiary">APR %</label>
-          <input type="number" step="0.01" value={aprPercentage} onChange={(e) => setAprPercentage(e.target.value)} placeholder="0.00" className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm tabular-nums text-primary placeholder:text-tertiary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+          <input type="number" step="0.01" {...register("aprPercentage", { valueAsNumber: true })} placeholder="0.00" className={cx(inputClassName, "tabular-nums")} />
+          {errors.aprPercentage && <p className="mt-1 text-xs text-utility-error-700">{errors.aprPercentage.message}</p>}
         </div>
         <div>
           <label className="mb-1 block text-xs text-tertiary">Balance</label>
-          <input type="number" step="0.01" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0.00" className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm tabular-nums text-primary placeholder:text-tertiary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+          <input type="number" step="0.01" {...register("balance", { valueAsNumber: true })} placeholder="0.00" className={cx(inputClassName, "tabular-nums")} />
+          {errors.balance && <p className="mt-1 text-xs text-utility-error-700">{errors.balance.message}</p>}
         </div>
         <div>
           <label className="mb-1 block text-xs text-tertiary">Start Date</label>
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm text-primary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+          <input type="date" {...register("startDate")} className={inputClassName} />
+          {errors.startDate && <p className="mt-1 text-xs text-utility-error-700">{errors.startDate.message}</p>}
         </div>
         <div>
           <label className="mb-1 block text-xs text-tertiary">Expiration Date</label>
-          <input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm text-primary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+          <input type="date" {...register("expirationDate")} className={inputClassName} />
+          {errors.expirationDate && <p className="mt-1 text-xs text-utility-error-700">{errors.expirationDate.message}</p>}
         </div>
         <div className="flex items-end">
           <label className="flex items-center gap-2 text-xs text-tertiary">
-            <input type="checkbox" checked={isDeferredInterest} onChange={(e) => setIsDeferredInterest(e.target.checked)} className="rounded border-secondary" />
+            <input type="checkbox" {...register("isDeferredInterest")} className="rounded border-secondary" />
             Deferred interest
           </label>
         </div>
       </div>
-      {error && <p className="text-xs text-utility-error-700">{error}</p>}
+      {errors.root && <p className="text-xs text-utility-error-700">{errors.root.message}</p>}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} className="rounded-lg px-3 py-1.5 text-sm text-tertiary hover:text-primary">Cancel</button>
-        <button type="submit" disabled={saving} className="rounded-lg bg-utility-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-utility-brand-700 disabled:opacity-50">{saving ? "Saving..." : "Add"}</button>
+        <button type="submit" disabled={isSubmitting} className="rounded-lg bg-utility-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-utility-brand-700 disabled:opacity-50">{isSubmitting ? "Saving..." : "Add"}</button>
       </div>
     </form>
   );
