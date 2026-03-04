@@ -1,10 +1,11 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { formatDisplayCurrency } from "@/types/credit-cards";
 import { cx } from "@/utils/cx";
+import { InlineEditableField } from "./InlineEditableField";
 
 function getMonthsRemaining(expirationDate: string): number {
   const now = new Date();
@@ -38,6 +39,8 @@ interface PromoTrackerProps {
 export function PromoTracker({ creditCardId }: PromoTrackerProps) {
   const promos = useQuery(api.promoRates.queries.listByCard, { creditCardId });
   const installments = useQuery(api.installmentPlans.queries.listByCard, { creditCardId });
+  const setExpirationOverride = useMutation(api.promoRates.mutations.setExpirationOverride);
+  const clearExpirationOverride = useMutation(api.promoRates.mutations.clearExpirationOverride);
 
   if (promos === undefined || installments === undefined) return null;
 
@@ -66,8 +69,9 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
       <h3 className="mb-4 text-lg font-semibold text-primary">Promotional Financing</h3>
       <div className="space-y-3">
         {promos?.map((promo) => {
-          const monthsLeft = getMonthsRemaining(promo.expirationDate);
-          const progress = getProgressPercentage(promo.startDate, promo.expirationDate);
+          const effectiveExpiration = promo.userOverrides?.expirationDate ?? promo.expirationDate;
+          const monthsLeft = getMonthsRemaining(effectiveExpiration);
+          const progress = getProgressPercentage(promo.startDate, effectiveExpiration);
           const urgencyColor = getUrgencyColor(monthsLeft);
 
           return (
@@ -75,9 +79,29 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
               <div className="p-4">
                 <div className="mb-3 flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-primary">{promo.description}</p>
+                    <p className="text-sm font-medium text-primary">
+                      {promo.description}
+                      {promo.isManual && (
+                        <span className="ml-2 rounded-full bg-utility-brand-50 px-2 py-0.5 text-xs font-medium text-utility-brand-700">
+                          Manual
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-tertiary">
-                      {promo.aprPercentage}% APR &middot; Expires {promo.expirationDate}
+                      {promo.aprPercentage}% APR &middot; Expires{" "}
+                      <InlineEditableField
+                        value={promo.userOverrides?.expirationDate ?? promo.expirationDate}
+                        plaidValue={promo.expirationDate}
+                        isOverridden={promo.userOverrides?.expirationDate != null}
+                        type="date"
+                        onSave={async (v) => {
+                          await setExpirationOverride({ promoRateId: promo._id, expirationDate: String(v) });
+                        }}
+                        onRevert={async () => {
+                          await clearExpirationOverride({ promoRateId: promo._id });
+                        }}
+                        className="inline"
+                      />
                     </p>
                   </div>
                   <span className="text-sm font-semibold tabular-nums text-primary">

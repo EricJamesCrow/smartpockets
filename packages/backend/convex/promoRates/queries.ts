@@ -37,6 +37,12 @@ export const listByCard = query({
       accruedDeferredInterest: v.optional(v.number()),
       monthlyMinimumPayment: v.optional(v.number()),
       isActive: v.boolean(),
+      userOverrides: v.optional(
+        v.object({
+          expirationDate: v.optional(v.string()),
+        })
+      ),
+      isManual: v.optional(v.boolean()),
     })
   ),
   async handler(ctx, { creditCardId }) {

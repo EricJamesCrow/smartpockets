@@ -39,6 +39,7 @@ export const create = mutation({
     isDeferredInterest: v.boolean(),
     accruedDeferredInterest: v.optional(v.number()),
     monthlyMinimumPayment: v.optional(v.number()),
+    isManual: v.optional(v.boolean()),
   },
   returns: v.id("promoRates"),
   async handler(ctx, args) {
@@ -52,6 +53,7 @@ export const create = mutation({
 
     return await ctx.table("promoRates").insert({
       ...args,
+      isManual: args.isManual ?? false,
       userId: viewer._id,
       isActive: true,
     });
@@ -121,6 +123,47 @@ export const remove = mutation({
     }
 
     await promo.patch({ isActive: false });
+    return null;
+  },
+});
+
+/**
+ * Set a user override on a promo rate's expiration date.
+ */
+export const setExpirationOverride = mutation({
+  args: {
+    promoRateId: v.id("promoRates"),
+    expirationDate: v.string(),
+  },
+  returns: v.null(),
+  async handler(ctx, { promoRateId, expirationDate }) {
+    const viewer = ctx.viewerX();
+    const promo = await ctx.table("promoRates").getX(promoRateId);
+    if (promo.userId !== viewer._id) {
+      throw new Error("Not authorized to modify this promo rate");
+    }
+    await promo.patch({
+      userOverrides: { expirationDate },
+    });
+    return null;
+  },
+});
+
+/**
+ * Clear the user override on a promo rate's expiration date.
+ */
+export const clearExpirationOverride = mutation({
+  args: {
+    promoRateId: v.id("promoRates"),
+  },
+  returns: v.null(),
+  async handler(ctx, { promoRateId }) {
+    const viewer = ctx.viewerX();
+    const promo = await ctx.table("promoRates").getX(promoRateId);
+    if (promo.userId !== viewer._id) {
+      throw new Error("Not authorized to modify this promo rate");
+    }
+    await promo.patch({ userOverrides: undefined });
     return null;
   },
 });
