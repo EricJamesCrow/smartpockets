@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
+import { Tooltip } from "@repo/ui/untitledui/base/tooltip/tooltip";
 import { Check, Eye, EyeOff } from "@untitledui/icons";
 
 interface TransactionDetailHeaderProps {
@@ -38,14 +39,22 @@ export function TransactionDetailHeader({
         {isReviewed ? "Reviewed" : "Mark as reviewed"}
       </Button>
 
-      <Button
-        color="tertiary"
-        size="sm"
-        iconLeading={isHidden ? EyeOff : Eye}
-        isLoading={savingField === "isHidden"}
-        onClick={onToggleHidden}
-        aria-label={isHidden ? "Show transaction" : "Hide transaction"}
-      />
+      <Tooltip
+        title={
+          isHidden
+            ? "Transaction is hidden. Click to unhide."
+            : "Hide this transaction from reports and totals"
+        }
+      >
+        <Button
+          color="tertiary"
+          size="sm"
+          iconLeading={isHidden ? EyeOff : Eye}
+          isLoading={savingField === "isHidden"}
+          onClick={onToggleHidden}
+          aria-label={isHidden ? "Show transaction" : "Hide transaction"}
+        />
+      </Tooltip>
     </div>
   );
 }
