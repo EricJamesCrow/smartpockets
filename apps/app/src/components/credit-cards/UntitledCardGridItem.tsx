@@ -21,6 +21,7 @@ import {
   formatDueDate,
   type ExtendedCreditCardData,
 } from "@/types/credit-cards";
+import { PaymentDueBadge } from "./PaymentDueBadge";
 
 interface UntitledCardGridItemProps {
   card: ExtendedCreditCardData;
@@ -182,12 +183,21 @@ export function UntitledCardGridItem({
             transition={{ duration: 0.15 }}
             className="mt-3"
           >
-            {/* Card Name & Company */}
-            <div className="mb-2">
-              <h3 className="truncate text-sm font-semibold text-primary">
-                {card.cardName}
-              </h3>
-              <p className="text-xs text-tertiary">{card.company}</p>
+            {/* Card Name & Payment Status */}
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold text-primary">
+                  {card.cardName}
+                </h3>
+                <p className="text-xs text-tertiary">{card.company}</p>
+              </div>
+              <PaymentDueBadge
+                nextPaymentDueDate={card.nextPaymentDueDate}
+                isOverdue={card.isOverdue}
+                minimumPaymentAmount={card.minimumPaymentAmount}
+                size="sm"
+                showIcon={false}
+              />
             </div>
 
             {/* Utilization Bar */}

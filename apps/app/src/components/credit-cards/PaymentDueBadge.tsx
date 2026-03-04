@@ -12,6 +12,7 @@ import {
 interface PaymentDueBadgeProps {
   nextPaymentDueDate: string | null;
   isOverdue?: boolean;
+  minimumPaymentAmount?: number | null;
   size?: "sm" | "md" | "lg";
   showIcon?: boolean;
 }
@@ -28,6 +29,7 @@ interface PaymentDueBadgeProps {
 export function PaymentDueBadge({
   nextPaymentDueDate,
   isOverdue = false,
+  minimumPaymentAmount,
   size = "sm",
   showIcon = true,
 }: PaymentDueBadgeProps) {
@@ -43,6 +45,20 @@ export function PaymentDueBadge({
         iconLeading={showIcon ? Calendar : undefined}
       >
         Overdue
+      </BadgeWithIcon>
+    );
+  }
+
+  // Minimum payment is $0 — already paid
+  if (minimumPaymentAmount != null && minimumPaymentAmount <= 0) {
+    return (
+      <BadgeWithIcon
+        type="pill-color"
+        color="success"
+        size={size}
+        iconLeading={showIcon ? Calendar : undefined}
+      >
+        Paid
       </BadgeWithIcon>
     );
   }

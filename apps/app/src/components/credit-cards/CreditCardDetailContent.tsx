@@ -221,6 +221,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
             <PaymentDueBadge
               nextPaymentDueDate={card.nextPaymentDueDate}
               isOverdue={card.isOverdue}
+              minimumPaymentAmount={card.minimumPaymentAmount}
             />
           </div>
         </div>
