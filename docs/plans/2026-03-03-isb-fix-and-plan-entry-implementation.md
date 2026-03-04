@@ -201,17 +201,17 @@ export function InstallmentPlanForm({ creditCardId, onClose, editingPlan }: Inst
     };
 
     // Validation
-    if (!parsed.description) return;
-    if (isNaN(parsed.originalPrincipal) || parsed.originalPrincipal < 0) return;
-    if (isNaN(parsed.remainingPrincipal) || parsed.remainingPrincipal < 0) return;
-    if (parsed.remainingPrincipal > parsed.originalPrincipal) return;
-    if (isNaN(parsed.totalPayments) || parsed.totalPayments < 1) return;
-    if (isNaN(parsed.remainingPayments) || parsed.remainingPayments < 0) return;
-    if (parsed.remainingPayments > parsed.totalPayments) return;
-    if (isNaN(parsed.monthlyPrincipal) || parsed.monthlyPrincipal < 0) return;
-    if (isNaN(parsed.monthlyFee) || parsed.monthlyFee < 0) return;
-    if (isNaN(parsed.aprPercentage) || parsed.aprPercentage < 0) return;
-    if (!parsed.startDate) return;
+    if (!parsed.description) { setError("Description is required"); return; }
+    if (isNaN(parsed.originalPrincipal) || parsed.originalPrincipal < 0) { setError("Invalid original amount"); return; }
+    if (isNaN(parsed.remainingPrincipal) || parsed.remainingPrincipal < 0) { setError("Invalid remaining balance"); return; }
+    if (parsed.remainingPrincipal > parsed.originalPrincipal) { setError("Remaining balance cannot exceed original amount"); return; }
+    if (isNaN(parsed.totalPayments) || parsed.totalPayments < 1) { setError("Invalid total payments"); return; }
+    if (isNaN(parsed.remainingPayments) || parsed.remainingPayments < 0) { setError("Invalid remaining payments"); return; }
+    if (parsed.remainingPayments > parsed.totalPayments) { setError("Remaining payments cannot exceed total payments"); return; }
+    if (isNaN(parsed.monthlyPrincipal) || parsed.monthlyPrincipal < 0) { setError("Invalid monthly payment"); return; }
+    if (isNaN(parsed.monthlyFee) || parsed.monthlyFee < 0) { setError("Invalid monthly fee"); return; }
+    if (isNaN(parsed.aprPercentage) || parsed.aprPercentage < 0) { setError("Invalid APR"); return; }
+    if (!parsed.startDate) { setError("Start date is required"); return; }
 
     setError(null);
     setSaving(true);
@@ -376,13 +376,13 @@ export function PromoRateForm({ creditCardId, onClose, editingPromo }: PromoRate
     };
 
     // Validation
-    if (!parsed.description) return;
-    if (isNaN(parsed.aprPercentage) || parsed.aprPercentage < 0) return;
-    if (isNaN(parsed.originalBalance) || parsed.originalBalance < 0) return;
-    if (isNaN(parsed.remainingBalance) || parsed.remainingBalance < 0) return;
-    if (parsed.remainingBalance > parsed.originalBalance) return;
-    if (!parsed.startDate || !parsed.expirationDate) return;
-    if (parsed.expirationDate <= parsed.startDate) return;
+    if (!parsed.description) { setError("Description is required"); return; }
+    if (isNaN(parsed.aprPercentage) || parsed.aprPercentage < 0) { setError("Invalid APR"); return; }
+    if (isNaN(parsed.originalBalance) || parsed.originalBalance < 0) { setError("Invalid original balance"); return; }
+    if (isNaN(parsed.remainingBalance) || parsed.remainingBalance < 0) { setError("Invalid remaining balance"); return; }
+    if (parsed.remainingBalance > parsed.originalBalance) { setError("Remaining balance cannot exceed original balance"); return; }
+    if (!parsed.startDate || !parsed.expirationDate) { setError("Dates are required"); return; }
+    if (parsed.expirationDate <= parsed.startDate) { setError("Expiration date must be after start date"); return; }
 
     setError(null);
     setSaving(true);
