@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 import { Check } from "@untitledui/icons";
 import { cx } from "@repo/ui/utils";
 import Link from "next/link";
+import { parseLocalDate } from "@/types/credit-cards";
 
 function formatCurrency(amount: number): string {
   return (amount / 1000).toLocaleString("en-US", {
@@ -21,7 +22,7 @@ function formatDueDate(dueDate: string, daysUntilDue: number): string {
   if (daysUntilDue === 0) return "TODAY";
   if (daysUntilDue === 1) return "Tomorrow";
   if (daysUntilDue <= 7) return `in ${daysUntilDue} days`;
-  return new Date(dueDate).toLocaleDateString("en-US", {
+  return parseLocalDate(dueDate).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });

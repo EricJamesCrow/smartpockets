@@ -3,6 +3,7 @@
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { parseLocalDate } from "@/types/credit-cards";
 import type { MCPTransaction, MCPToolResponse } from "../types";
 
 /**
@@ -14,10 +15,12 @@ export async function listTransactions(
   startDate?: string,
   endDate?: string
 ): Promise<MCPToolResponse<MCPTransaction[]>> {
-  // Default to last 30 days
-  const end = endDate ? new Date(endDate) : new Date();
+  // Default to last 30 days (use local-midnight to match parseLocalDate on tx.date)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = endDate ? parseLocalDate(endDate) : today;
   const start = startDate
-    ? new Date(startDate)
+    ? parseLocalDate(startDate)
     : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   // First get the card to find the accountId
@@ -44,7 +47,7 @@ export async function listTransactions(
   // Filter by date range and map to MCP format
   const mappedTransactions: MCPTransaction[] = transactions
     .filter((tx) => {
-      const txDate = new Date(tx.date);
+      const txDate = parseLocalDate(tx.date);
       return txDate >= start && txDate <= end;
     })
     .map((tx) => ({
