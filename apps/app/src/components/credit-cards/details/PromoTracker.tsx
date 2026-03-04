@@ -217,17 +217,31 @@ function AddPromoForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !aprPercentage || !balance || !startDate || !expirationDate) {
+    const trimmedDescription = description.trim();
+    if (!trimmedDescription || !aprPercentage || !balance || !startDate || !expirationDate) {
       setError("All fields are required.");
+      return;
+    }
+    const aprNum = parseFloat(aprPercentage);
+    const balanceNum = parseFloat(balance);
+    if (aprNum < 0) {
+      setError("APR cannot be negative.");
+      return;
+    }
+    if (balanceNum <= 0) {
+      setError("Balance must be greater than zero.");
+      return;
+    }
+    if (expirationDate <= startDate) {
+      setError("Expiration date must be after start date.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const balanceNum = parseFloat(balance);
       await onSave({
-        description,
-        aprPercentage: parseFloat(aprPercentage),
+        description: trimmedDescription,
+        aprPercentage: aprNum,
         originalBalance: balanceNum,
         remainingBalance: balanceNum,
         startDate,

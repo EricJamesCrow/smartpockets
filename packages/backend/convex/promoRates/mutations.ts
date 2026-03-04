@@ -9,6 +9,21 @@
 import { v } from "convex/values";
 import { mutation } from "../functions";
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function assertValidDate(value: string, field: string): void {
+  if (!DATE_RE.test(value)) {
+    throw new Error(`${field} must be in YYYY-MM-DD format`);
+  }
+  const parts = value.split("-").map(Number);
+  const y = parts[0]!;
+  const m = parts[1]!;
+  const d = parts[2]!;
+  const date = new Date(y, m - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) {
+    throw new Error(`${field} is not a valid calendar date`);
+  }
+}
+
 /**
  * Create a new promo rate
  *
@@ -43,6 +58,9 @@ export const create = mutation({
   },
   returns: v.id("promoRates"),
   async handler(ctx, args) {
+    assertValidDate(args.startDate, "startDate");
+    assertValidDate(args.expirationDate, "expirationDate");
+
     const viewer = ctx.viewerX();
     const card = await ctx.table("creditCards").getX(args.creditCardId);
 
@@ -80,6 +98,10 @@ export const update = mutation({
   },
   returns: v.null(),
   async handler(ctx, { promoRateId, ...data }) {
+    if (data.expirationDate !== undefined) {
+      assertValidDate(data.expirationDate, "expirationDate");
+    }
+
     const viewer = ctx.viewerX();
     const promo = await ctx.table("promoRates").getX(promoRateId);
 
@@ -137,6 +159,8 @@ export const setExpirationOverride = mutation({
   },
   returns: v.null(),
   async handler(ctx, { promoRateId, expirationDate }) {
+    assertValidDate(expirationDate, "expirationDate");
+
     const viewer = ctx.viewerX();
     const promo = await ctx.table("promoRates").getX(promoRateId);
     if (promo.userId !== viewer._id) {
