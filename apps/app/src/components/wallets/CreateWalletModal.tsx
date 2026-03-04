@@ -2,16 +2,21 @@
 
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "@convex/_generated/api";
 import { Wallet02 } from "@untitledui/icons";
 import { Heading as AriaHeading } from "react-aria-components";
 import { Dialog, Modal, ModalOverlay } from "@repo/ui/untitledui/application/modals/modal";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { CloseButton } from "@repo/ui/untitledui/base/buttons/close-button";
-import { Input } from "@repo/ui/untitledui/base/input/input";
+import { HintText } from "@repo/ui/untitledui/base/input/hint-text";
+import { InputBase, TextField } from "@repo/ui/untitledui/base/input/input";
+import { Label } from "@repo/ui/untitledui/base/input/label";
 import { FeaturedIcon } from "@repo/ui/untitledui/foundations/featured-icon/featured-icon";
 import { BackgroundPattern } from "@repo/ui/untitledui/shared-assets/background-patterns";
 import { cx } from "@repo/ui/utils";
+import { createWalletSchema, type CreateWalletFormValues } from "@/lib/validations";
 
 // =============================================================================
 // PRESET OPTIONS
@@ -54,45 +59,40 @@ interface CreateWalletModalProps {
 // MAIN COMPONENT
 // =============================================================================
 
-/**
- * Modal for creating a new wallet
- *
- * Features:
- * - Required wallet name input
- * - Optional color picker with preset colors
- * - Optional icon/emoji picker
- * - Form validation (name required)
- * - Loading state during creation
- */
 export function CreateWalletModal({ isOpen, onClose }: CreateWalletModalProps) {
-  const [name, setName] = useState("");
   const [color, setColor] = useState<string | undefined>(undefined);
   const [icon, setIcon] = useState<string | undefined>(undefined);
-  const [isCreating, setIsCreating] = useState(false);
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+    watch,
+  } = useForm<CreateWalletFormValues>({
+    resolver: zodResolver(createWalletSchema),
+    defaultValues: { name: "" },
+  });
 
   const createWallet = useMutation(api.wallets.mutations.create);
 
-  const handleCreate = async () => {
-    if (!name.trim()) return;
+  const nameValue = watch("name");
 
-    setIsCreating(true);
+  const onSubmit = async (data: CreateWalletFormValues) => {
     try {
       await createWallet({
-        name: name.trim(),
+        name: data.name,
         color,
         icon,
       });
       handleClose();
     } catch (error) {
       console.error("Failed to create wallet:", error);
-    } finally {
-      setIsCreating(false);
     }
   };
 
   const handleClose = () => {
-    // Reset form state
-    setName("");
+    reset();
     setColor(undefined);
     setIcon(undefined);
     onClose();
@@ -134,14 +134,27 @@ export function CreateWalletModal({ isOpen, onClose }: CreateWalletModalProps) {
             {/* Form content */}
             <div className="mt-5 flex flex-col gap-5 px-4 sm:px-6">
               {/* Name Input */}
-              <Input
-                label="Wallet Name"
-                placeholder="e.g., Travel Cards, Daily Spending"
-                value={name}
-                onChange={setName}
-                isRequired
-                autoFocus
-                size="md"
+              <Controller
+                control={control}
+                name="name"
+                render={({ field, fieldState }) => (
+                  <TextField
+                    aria-label="Wallet Name"
+                    isRequired
+                    autoFocus
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    isInvalid={!!fieldState.error}
+                  >
+                    <Label>Wallet Name</Label>
+                    <InputBase
+                      size="md"
+                      placeholder="e.g., Travel Cards, Daily Spending"
+                    />
+                    {fieldState.error && <HintText>{fieldState.error.message}</HintText>}
+                  </TextField>
+                )}
               />
 
               {/* Color Picker */}
@@ -204,9 +217,9 @@ export function CreateWalletModal({ isOpen, onClose }: CreateWalletModalProps) {
               <Button
                 color="primary"
                 size="lg"
-                onClick={handleCreate}
-                isLoading={isCreating}
-                isDisabled={!name.trim()}
+                onClick={handleSubmit(onSubmit)}
+                isLoading={isSubmitting}
+                isDisabled={!nameValue.trim()}
               >
                 Create Wallet
               </Button>
