@@ -5,6 +5,8 @@ import { useUser } from "@clerk/nextjs";
 import type { EmailAddressResource } from "@clerk/types";
 import { Mail01, Star01, Trash02 } from "@untitledui/icons";
 import { toast } from "sonner";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Dialog, DialogTrigger, Modal, ModalOverlay } from "@repo/ui/untitledui/application/modals/modal";
 import { IconNotification } from "@repo/ui/untitledui/application/notifications/notifications";
 import { SectionFooter } from "@repo/ui/untitledui/application/section-footers/section-footer";
@@ -16,6 +18,7 @@ import { Dropdown } from "@repo/ui/untitledui/base/dropdown/dropdown";
 import { HintText } from "@repo/ui/untitledui/base/input/hint-text";
 import { InputBase, TextField } from "@repo/ui/untitledui/base/input/input";
 import { Label } from "@repo/ui/untitledui/base/input/label";
+import { addEmailSchema, verificationCodeSchema, type AddEmailFormValues, type VerificationCodeFormValues } from "@/lib/validations";
 
 function getClerkErrorMessage(error: unknown): string {
     if (error && typeof error === "object" && "errors" in error) {
@@ -77,17 +80,21 @@ function EmailActionsDropdown({ email, isPrimary, isVerified, canRemove, onMakeP
 export default function EmailPage() {
     const { user } = useUser();
 
-    // Add email form state
-    const [newEmailAddress, setNewEmailAddress] = useState("");
-    const [isAdding, setIsAdding] = useState(false);
-    const [addError, setAddError] = useState("");
+    // Add email form
+    const addEmailForm = useForm<AddEmailFormValues>({
+        resolver: zodResolver(addEmailSchema),
+        defaultValues: { email: "" },
+    });
 
     // Verification modal state
     const [verifyingEmail, setVerifyingEmail] = useState<EmailAddressResource | null>(null);
-    const [verificationCode, setVerificationCode] = useState("");
-    const [isVerifying, setIsVerifying] = useState(false);
-    const [verifyError, setVerifyError] = useState("");
     const [isResending, setIsResending] = useState(false);
+
+    // Verification code form
+    const verifyForm = useForm<VerificationCodeFormValues>({
+        resolver: zodResolver(verificationCodeSchema),
+        defaultValues: { code: "" },
+    });
 
     // Loading state for actions
     const [loadingEmailId, setLoadingEmailId] = useState<string | null>(null);
@@ -95,55 +102,44 @@ export default function EmailPage() {
     const emails = user?.emailAddresses || [];
     const canRemoveEmails = emails.length > 1;
 
-    const handleAddEmail = async () => {
-        if (!user || !newEmailAddress.trim()) return;
-
-        setAddError("");
-        setIsAdding(true);
+    const handleAddEmail = async (data: AddEmailFormValues) => {
+        if (!user) return;
 
         try {
-            const email = await user.createEmailAddress({ email: newEmailAddress.trim() });
+            const email = await user.createEmailAddress({ email: data.email });
             await email.prepareVerification({ strategy: "email_code" });
 
-            setNewEmailAddress("");
+            addEmailForm.reset();
             setVerifyingEmail(email);
-            setVerificationCode("");
-            setVerifyError("");
+            verifyForm.reset();
 
             toast.custom((t) => (
                 <IconNotification
                     title="Verification code sent"
-                    description={`We've sent a code to ${newEmailAddress.trim()}`}
+                    description={`We've sent a code to ${data.email}`}
                     color="success"
                     onClose={() => toast.dismiss(t)}
                 />
             ));
         } catch (error) {
-            setAddError(getClerkErrorMessage(error));
-        } finally {
-            setIsAdding(false);
+            addEmailForm.setError("email", { message: getClerkErrorMessage(error) });
         }
     };
 
-    const handleVerifyEmail = async () => {
-        if (!verifyingEmail || !verificationCode.trim()) return;
-
-        setVerifyError("");
-        setIsVerifying(true);
+    const handleVerifyEmail = async (data: VerificationCodeFormValues) => {
+        if (!verifyingEmail) return;
 
         try {
-            await verifyingEmail.attemptVerification({ code: verificationCode.trim() });
+            await verifyingEmail.attemptVerification({ code: data.code.trim() });
 
             toast.custom((t) => (
                 <IconNotification title="Email verified" description="Your email has been verified successfully." color="success" onClose={() => toast.dismiss(t)} />
             ));
 
             setVerifyingEmail(null);
-            setVerificationCode("");
+            verifyForm.reset();
         } catch (error) {
-            setVerifyError(getClerkErrorMessage(error));
-        } finally {
-            setIsVerifying(false);
+            verifyForm.setError("code", { message: getClerkErrorMessage(error) });
         }
     };
 
@@ -219,8 +215,7 @@ export default function EmailPage() {
         try {
             await email.prepareVerification({ strategy: "email_code" });
             setVerifyingEmail(email);
-            setVerificationCode("");
-            setVerifyError("");
+            verifyForm.reset();
         } catch (error) {
             toast.custom((t) => (
                 <IconNotification title="Error" description={getClerkErrorMessage(error)} color="error" onClose={() => toast.dismiss(t)} />
@@ -232,8 +227,7 @@ export default function EmailPage() {
 
     const handleCloseVerificationModal = () => {
         setVerifyingEmail(null);
-        setVerificationCode("");
-        setVerifyError("");
+        verifyForm.reset();
     };
 
     return (
@@ -317,21 +311,25 @@ export default function EmailPage() {
                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
                         <SectionLabel.Root size="sm" title="Email address" className="max-lg:hidden" />
 
-                        <TextField
-                            aria-label="New email address"
-                            name="newEmail"
-                            type="email"
-                            isInvalid={!!addError}
-                            value={newEmailAddress}
-                            onChange={(value) => {
-                                setNewEmailAddress(value);
-                                setAddError("");
-                            }}
-                        >
-                            <Label className="lg:hidden">Email address</Label>
-                            <InputBase size="md" placeholder="you@example.com" />
-                            {addError && <HintText>{addError}</HintText>}
-                        </TextField>
+                        <Controller
+                            control={addEmailForm.control}
+                            name="email"
+                            render={({ field, fieldState }) => (
+                                <TextField
+                                    aria-label="New email address"
+                                    name="newEmail"
+                                    type="email"
+                                    isInvalid={!!fieldState.error}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                >
+                                    <Label className="lg:hidden">Email address</Label>
+                                    <InputBase size="md" placeholder="you@example.com" />
+                                    {fieldState.error && <HintText>{fieldState.error.message}</HintText>}
+                                </TextField>
+                            )}
+                        />
                     </div>
                 </div>
 
@@ -340,14 +338,17 @@ export default function EmailPage() {
                         <Button
                             color="secondary"
                             size="md"
-                            onClick={() => {
-                                setNewEmailAddress("");
-                                setAddError("");
-                            }}
+                            onClick={() => addEmailForm.reset()}
                         >
                             Cancel
                         </Button>
-                        <Button color="primary" size="md" isLoading={isAdding} onClick={handleAddEmail} isDisabled={!newEmailAddress.trim()}>
+                        <Button
+                            color="primary"
+                            size="md"
+                            isLoading={addEmailForm.formState.isSubmitting}
+                            onClick={addEmailForm.handleSubmit(handleAddEmail)}
+                            isDisabled={!addEmailForm.watch("email").trim()}
+                        >
                             Add email
                         </Button>
                     </SectionFooter.Actions>
@@ -369,20 +370,24 @@ export default function EmailPage() {
                                             </p>
                                         </div>
 
-                                        <TextField
-                                            aria-label="Verification code"
-                                            isInvalid={!!verifyError}
-                                            maxLength={6}
-                                            value={verificationCode}
-                                            onChange={(value) => {
-                                                setVerificationCode(value);
-                                                setVerifyError("");
-                                            }}
-                                        >
-                                            <Label>Verification code</Label>
-                                            <InputBase size="md" placeholder="000000" />
-                                            {verifyError && <HintText>{verifyError}</HintText>}
-                                        </TextField>
+                                        <Controller
+                                            control={verifyForm.control}
+                                            name="code"
+                                            render={({ field, fieldState }) => (
+                                                <TextField
+                                                    aria-label="Verification code"
+                                                    isInvalid={!!fieldState.error}
+                                                    maxLength={6}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    onBlur={field.onBlur}
+                                                >
+                                                    <Label>Verification code</Label>
+                                                    <InputBase size="md" placeholder="000000" />
+                                                    {fieldState.error && <HintText>{fieldState.error.message}</HintText>}
+                                                </TextField>
+                                            )}
+                                        />
 
                                         <div className="flex items-center justify-between">
                                             <Button color="link-gray" size="sm" onClick={handleResendCode} isLoading={isResending}>
@@ -398,9 +403,9 @@ export default function EmailPage() {
                                                 color="primary"
                                                 size="md"
                                                 className="flex-1"
-                                                isLoading={isVerifying}
-                                                onClick={handleVerifyEmail}
-                                                isDisabled={verificationCode.length < 6}
+                                                isLoading={verifyForm.formState.isSubmitting}
+                                                onClick={verifyForm.handleSubmit(handleVerifyEmail)}
+                                                isDisabled={verifyForm.watch("code").length < 6}
                                             >
                                                 Verify
                                             </Button>
