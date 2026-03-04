@@ -177,7 +177,13 @@ export function InlineEditableField({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={() => {
-            if (!savingRef.current) handleSave();
+            if (!savingRef.current) {
+              if (!draft.trim()) {
+                handleCancel();
+              } else {
+                handleSave();
+              }
+            }
           }}
           step={type === "percentage" ? "0.01" : type === "currency" ? "0.01" : undefined}
           disabled={saving}
