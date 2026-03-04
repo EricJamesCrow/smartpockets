@@ -142,16 +142,12 @@ export function InlineEditableField({
     menu.style.left = `${e.clientX}px`;
     menu.style.top = `${e.clientY}px`;
 
-    const formattedPlaid = formatDisplay
-      ? formatDisplay(plaidValue)
-      : plaidValue != null
-        ? String(plaidValue)
-        : "default";
+    const hasPlaidValue = plaidValue != null && plaidValue !== "";
 
     const item = document.createElement("button");
     item.className =
       "w-full px-3 py-1.5 text-left hover:bg-secondary text-primary cursor-pointer";
-    item.textContent = `Revert to Plaid value: ${formattedPlaid}`;
+    item.textContent = hasPlaidValue ? "Revert" : "Clear";
     item.onclick = async () => {
       document.removeEventListener("click", cleanup);
       document.body.removeChild(menu);

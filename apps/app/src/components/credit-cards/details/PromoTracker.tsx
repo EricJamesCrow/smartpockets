@@ -50,6 +50,25 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
   const hasPromos = promos.length > 0;
   const hasInstallments = installments.length > 0;
 
+  const addPromoToggle = showAddForm ? (
+    <AddPromoForm
+      onSave={async (data) => {
+        await createPromo({ ...data, creditCardId, isManual: true });
+        setShowAddForm(false);
+      }}
+      onCancel={() => setShowAddForm(false)}
+    />
+  ) : (
+    <button
+      type="button"
+      onClick={() => setShowAddForm(true)}
+      className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-6 text-sm text-tertiary transition-colors hover:border-utility-brand-300 hover:text-utility-brand-700"
+    >
+      <span className="text-lg">+</span>
+      Add promotional APR or installment plan
+    </button>
+  );
+
   if (!hasPromos && !hasInstallments) {
     return (
       <section>
