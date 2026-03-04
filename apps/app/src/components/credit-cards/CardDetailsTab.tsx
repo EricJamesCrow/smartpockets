@@ -79,6 +79,7 @@ interface CardDetailsTabProps {
 export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
   const setOverride = useMutation(api.creditCards.mutations.setOverride);
   const clearOverride = useMutation(api.creditCards.mutations.clearOverride);
+  const updateCard = useMutation(api.creditCards.mutations.update);
 
   if (!cardData) {
     return (
@@ -191,9 +192,21 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
                     year: "numeric", month: "long", day: "numeric",
                   })}
                 />
-                {cardData.statementClosingDay != null && (
-                  <DetailRow label="Statement Closing Day" value={`Day ${cardData.statementClosingDay}`} />
-                )}
+                <EditableDetailRow
+                  label="Statement Closing Day"
+                  value={cardData.statementClosingDay}
+                  isOverridden={false}
+                  type="number"
+                  onSave={async (v) => {
+                    const day = Number(v);
+                    if (!Number.isInteger(day) || day < 1 || day > 31) {
+                      throw new Error("Must be 1-31");
+                    }
+                    await updateCard({ cardId, statementClosingDay: day });
+                  }}
+                  formatDisplay={(v) => v != null ? `Day ${v}` : "Not set"}
+                  placeholder="Not set"
+                />
               </dl>
             </div>
           </section>

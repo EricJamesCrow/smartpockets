@@ -177,7 +177,10 @@ export function InlineEditableField({
           }}
           step={type === "percentage" ? "0.01" : type === "currency" ? "0.01" : undefined}
           disabled={saving}
-          className="w-full rounded border border-utility-brand-300 bg-primary px-2 py-0.5 text-sm font-medium tabular-nums text-primary outline-none ring-1 ring-utility-brand-300 focus:border-utility-brand-500 focus:ring-utility-brand-500"
+          className={cx(
+            "rounded border border-utility-brand-300 bg-primary px-2 py-0.5 text-sm font-medium tabular-nums text-primary outline-none ring-1 ring-utility-brand-300 focus:border-utility-brand-500 focus:ring-utility-brand-500",
+            type === "number" || type === "currency" || type === "percentage" ? "w-24 text-right" : "w-full",
+          )}
         />
         {error && (
           <span className="mt-0.5 text-xs text-utility-error-700">{error}</span>
