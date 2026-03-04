@@ -120,11 +120,23 @@ export const deleteFromClerk = internalMutation({
         const user = await ctx.table("users").get("externalId", clerkUserId);
 
         if (user !== null) {
-            // Delete all user's memberships
-            const members = await user.edge("members");
-            for (const member of members) {
-                const writable = await ctx.table("members").getX(member._id);
-                await writable.delete();
+            // Delete all child entities with ref: true edges
+            const edgeNames = [
+                "members",
+                "creditCards",
+                "wallets",
+                "statementSnapshots",
+                "promoRates",
+                "installmentPlans",
+                "transactionOverlays",
+            ] as const;
+
+            for (const edgeName of edgeNames) {
+                const children = await user.edge(edgeName);
+                for (const child of children) {
+                    const writable = await ctx.table(edgeName).getX(child._id);
+                    await writable.delete();
+                }
             }
 
             const writableUser = await ctx.table("users").getX(user._id);

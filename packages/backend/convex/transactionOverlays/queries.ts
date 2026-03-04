@@ -9,6 +9,17 @@
 import { v } from "convex/values";
 import { query } from "../functions";
 
+/** Reusable shape for overlay fields returned to clients. */
+const overlayFields = {
+  isReviewed: v.optional(v.boolean()),
+  reviewedAt: v.optional(v.number()),
+  isHidden: v.optional(v.boolean()),
+  notes: v.optional(v.string()),
+  userCategory: v.optional(v.string()),
+  userDate: v.optional(v.string()),
+  userMerchantName: v.optional(v.string()),
+};
+
 /**
  * Get a single overlay by Plaid transaction ID.
  *
@@ -19,6 +30,13 @@ export const getByTransactionId = query({
   args: {
     plaidTransactionId: v.string(),
   },
+  returns: v.union(
+    v.object({
+      plaidTransactionId: v.string(),
+      ...overlayFields,
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
     const viewer = ctx.viewerX();
 
@@ -36,8 +54,8 @@ export const getByTransactionId = query({
 /**
  * Get overlays for multiple Plaid transaction IDs (batch lookup).
  *
- * Returns a record keyed by plaidTransactionId with overlay fields.
- * Only includes entries where an overlay exists for the authenticated user.
+ * Queries each requested ID individually via the by_plaidTransactionId index
+ * to avoid loading all overlays for the user.
  *
  * @param plaidTransactionIds - Array of Plaid transaction IDs
  * @returns Record mapping plaidTransactionId to overlay fields
@@ -46,24 +64,17 @@ export const getByTransactionIds = query({
   args: {
     plaidTransactionIds: v.array(v.string()),
   },
+  returns: v.record(v.string(), v.object(overlayFields)),
   handler: async (ctx, args) => {
     const viewer = ctx.viewerX();
 
-    // Fetch all overlays for this user
-    const allOverlays = await ctx
-      .table("transactionOverlays", "userId", (q) =>
-        q.eq("userId", viewer._id)
-      )
-      .map((doc) => doc.doc());
+    const uniqueIds = [...new Set(args.plaidTransactionIds)];
 
-    // Build a set for fast lookup of requested IDs
-    const requestedIds = new Set(args.plaidTransactionIds);
-
-    // Build the result record, filtering to only requested IDs
     const result: Record<
       string,
       {
         isReviewed?: boolean;
+        reviewedAt?: number;
         isHidden?: boolean;
         notes?: string;
         userCategory?: string;
@@ -72,15 +83,24 @@ export const getByTransactionIds = query({
       }
     > = {};
 
-    for (const overlay of allOverlays) {
-      if (requestedIds.has(overlay.plaidTransactionId)) {
-        result[overlay.plaidTransactionId] = {
-          isReviewed: overlay.isReviewed,
-          isHidden: overlay.isHidden,
-          notes: overlay.notes,
-          userCategory: overlay.userCategory,
-          userDate: overlay.userDate,
-          userMerchantName: overlay.userMerchantName,
+    for (const id of uniqueIds) {
+      const overlay = await ctx
+        .table("transactionOverlays", "by_plaidTransactionId", (q) =>
+          q.eq("plaidTransactionId", id)
+        )
+        .filter((q) => q.eq(q.field("userId"), viewer._id))
+        .first();
+
+      if (overlay) {
+        const doc = overlay.doc();
+        result[id] = {
+          isReviewed: doc.isReviewed,
+          reviewedAt: doc.reviewedAt,
+          isHidden: doc.isHidden,
+          notes: doc.notes,
+          userCategory: doc.userCategory,
+          userDate: doc.userDate,
+          userMerchantName: doc.userMerchantName,
         };
       }
     }
