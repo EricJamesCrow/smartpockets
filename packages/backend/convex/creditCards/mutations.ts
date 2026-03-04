@@ -244,6 +244,162 @@ export const update = mutation({
 });
 
 /**
+ * Set a user override on a credit card field.
+ * Stores the user's value in userOverrides while preserving the raw Plaid value.
+ */
+export const setOverride = mutation({
+  args: {
+    cardId: v.id("creditCards"),
+    field: v.string(),
+    value: v.union(v.string(), v.number()),
+  },
+  returns: v.null(),
+  async handler(ctx, { cardId, field, value }) {
+    const viewer = ctx.viewerX();
+    const card = await ctx.table("creditCards").getX(cardId);
+
+    if (card.userId !== viewer._id) {
+      throw new Error("Not authorized to modify this card");
+    }
+
+    const allowedFields = ["officialName", "accountName", "company", "providerDashboardUrl"];
+    if (!allowedFields.includes(field)) {
+      throw new Error(`Field "${field}" is not user-editable`);
+    }
+
+    const currentOverrides = card.userOverrides ?? {};
+    await card.patch({
+      userOverrides: { ...currentOverrides, [field]: value },
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Set a user override on an APR field.
+ * The index identifies which APR entry in the array to override.
+ */
+export const setAprOverride = mutation({
+  args: {
+    cardId: v.id("creditCards"),
+    aprIndex: v.number(),
+    field: v.union(
+      v.literal("aprPercentage"),
+      v.literal("balanceSubjectToApr"),
+      v.literal("interestChargeAmount"),
+    ),
+    value: v.number(),
+  },
+  returns: v.null(),
+  async handler(ctx, { cardId, aprIndex, field, value }) {
+    const viewer = ctx.viewerX();
+    const card = await ctx.table("creditCards").getX(cardId);
+
+    if (card.userId !== viewer._id) {
+      throw new Error("Not authorized to modify this card");
+    }
+
+    const currentOverrides = card.userOverrides ?? {};
+    const aprOverrides = [...(currentOverrides.aprs ?? [])];
+
+    // Find or create override entry for this index
+    const existingIdx = aprOverrides.findIndex((o) => o.index === aprIndex);
+    if (existingIdx >= 0) {
+      aprOverrides[existingIdx] = { ...aprOverrides[existingIdx], [field]: value };
+    } else {
+      aprOverrides.push({ index: aprIndex, [field]: value });
+    }
+
+    await card.patch({
+      userOverrides: { ...currentOverrides, aprs: aprOverrides },
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Clear a user override, reverting to the Plaid value.
+ */
+export const clearOverride = mutation({
+  args: {
+    cardId: v.id("creditCards"),
+    field: v.string(),
+  },
+  returns: v.null(),
+  async handler(ctx, { cardId, field }) {
+    const viewer = ctx.viewerX();
+    const card = await ctx.table("creditCards").getX(cardId);
+
+    if (card.userId !== viewer._id) {
+      throw new Error("Not authorized to modify this card");
+    }
+
+    const currentOverrides = card.userOverrides ?? {};
+    const { [field]: _removed, ...remaining } = currentOverrides as Record<string, unknown>;
+
+    // If empty, set to undefined
+    const hasOverrides = Object.values(remaining).some((v) => v !== undefined);
+    await card.patch({
+      userOverrides: hasOverrides ? (remaining as typeof currentOverrides) : undefined,
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Clear an APR field override, reverting to the Plaid value.
+ */
+export const clearAprOverride = mutation({
+  args: {
+    cardId: v.id("creditCards"),
+    aprIndex: v.number(),
+    field: v.union(
+      v.literal("aprPercentage"),
+      v.literal("balanceSubjectToApr"),
+      v.literal("interestChargeAmount"),
+    ),
+  },
+  returns: v.null(),
+  async handler(ctx, { cardId, aprIndex, field }) {
+    const viewer = ctx.viewerX();
+    const card = await ctx.table("creditCards").getX(cardId);
+
+    if (card.userId !== viewer._id) {
+      throw new Error("Not authorized to modify this card");
+    }
+
+    const currentOverrides = card.userOverrides ?? {};
+    let aprOverrides = [...(currentOverrides.aprs ?? [])];
+
+    const existingIdx = aprOverrides.findIndex((o) => o.index === aprIndex);
+    if (existingIdx >= 0) {
+      const { [field]: _removed, ...remaining } = aprOverrides[existingIdx];
+      // If only index remains, remove the entry entirely
+      if (Object.keys(remaining).length <= 1) {
+        aprOverrides = aprOverrides.filter((_, i) => i !== existingIdx);
+      } else {
+        aprOverrides[existingIdx] = remaining as (typeof aprOverrides)[number];
+      }
+    }
+
+    const updatedOverrides = {
+      ...currentOverrides,
+      aprs: aprOverrides.length > 0 ? aprOverrides : undefined,
+    };
+
+    const hasOverrides = Object.values(updatedOverrides).some((v) => v !== undefined);
+    await card.patch({
+      userOverrides: hasOverrides ? updatedOverrides : undefined,
+    });
+
+    return null;
+  },
+});
+
+/**
  * Delete a credit card (soft delete - marks as inactive)
  *
  * @param cardId - Credit card document ID
