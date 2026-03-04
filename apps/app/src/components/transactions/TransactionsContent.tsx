@@ -12,8 +12,9 @@ import {
 } from "./TransactionsFilters";
 import { TransactionsTable } from "./TransactionsTable";
 import { TransactionsPagination } from "./TransactionsPagination";
-import { TransactionDetailDrawer } from "./TransactionDetailDrawer";
+import { TransactionDetailPanel, type DetailPanelTransaction } from "./TransactionDetailPanel";
 import type { AggregatedTransaction } from "./TransactionsTableRow";
+import { mapPlaidCategory } from "@/utils/transaction-helpers";
 
 const PAGE_SIZE = 50;
 
@@ -35,7 +36,7 @@ export function TransactionsContent() {
 
   // Selected transaction for detail drawer
   const [selectedTransaction, setSelectedTransaction] =
-    useState<AggregatedTransaction | null>(null);
+    useState<DetailPanelTransaction | null>(null);
 
   // Convert date range to ISO strings for the query
   const dateFrom = filters.dateRange?.start
@@ -79,7 +80,25 @@ export function TransactionsContent() {
   };
 
   const handleSelectTransaction = (transaction: AggregatedTransaction) => {
-    setSelectedTransaction(transaction);
+    const merchantName =
+      transaction.merchantEnrichment?.merchantName ??
+      transaction.merchantName ??
+      transaction.name;
+
+    setSelectedTransaction({
+      transactionId: transaction.transactionId,
+      date: transaction.date,
+      datetime: transaction.datetime,
+      name: transaction.name,
+      merchantName,
+      amount: transaction.amount,
+      isoCurrencyCode: transaction.isoCurrencyCode,
+      pending: transaction.pending,
+      categoryPrimary: transaction.categoryPrimary,
+      category: mapPlaidCategory(transaction.categoryPrimary),
+      merchantEnrichment: transaction.merchantEnrichment,
+      sourceInfo: transaction.sourceInfo,
+    });
   };
 
   const handleCloseDrawer = () => {
@@ -122,8 +141,8 @@ export function TransactionsContent() {
         />
       )}
 
-      {/* Transaction Detail Drawer */}
-      <TransactionDetailDrawer
+      {/* Transaction Detail Panel */}
+      <TransactionDetailPanel
         transaction={selectedTransaction}
         onClose={handleCloseDrawer}
       />

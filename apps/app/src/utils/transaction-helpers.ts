@@ -43,17 +43,26 @@ export function mapPlaidCategory(category?: string): TransactionCategory {
 export function formatTransactionAmount(
   amount: number,
   isoCurrencyCode?: string
-): { text: string; isRefund: boolean } {
+): { text: string; isRefund: boolean; colorClass: string } {
   const isRefund = amount < 0;
   const displayAmount = Math.abs(amount);
 
   const formatted = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: isoCurrencyCode ?? "USD",
-  }).format(displayAmount / 1000); // Convert from milliunits
+  }).format(displayAmount / 1000);
+
+  if (isRefund) {
+    return {
+      text: `+${formatted}`,
+      isRefund: true,
+      colorClass: "text-utility-success-600",
+    };
+  }
 
   return {
-    text: isRefund ? `+${formatted}` : `-${formatted}`,
-    isRefund,
+    text: formatted,
+    isRefund: false,
+    colorClass: "text-primary",
   };
 }

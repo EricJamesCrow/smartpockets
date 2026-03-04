@@ -13,7 +13,7 @@ import { PaginationCardMinimal } from "@repo/ui/untitledui/application/paginatio
 import { TransactionFilters, defaultTransactionFilters, type TransactionFiltersState } from "./TransactionFilters";
 import { TransactionTableHeader, type TransactionSortColumn } from "./TransactionTableHeader";
 import { TransactionTableRow } from "./TransactionTableRow";
-import { TransactionDetailDrawer } from "./TransactionDetailDrawer";
+import { TransactionDetailPanel, type DetailPanelTransaction } from "@/components/transactions/TransactionDetailPanel";
 import {
   toTransaction,
   parseLocalDate,
@@ -49,7 +49,7 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
   const [currentPage, setCurrentPage] = useState(1);
 
   // Selected transaction for detail drawer
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<DetailPanelTransaction | null>(null);
 
   // Fetch transactions from Convex
   const txResult = useQuery(
@@ -171,6 +171,23 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
     // CSV export will be implemented when file download utilities are added
   }, []);
 
+  // Convert credit-card Transaction to DetailPanelTransaction for the panel
+  const handleSelectTransaction = useCallback((transaction: Transaction) => {
+    setSelectedTransaction({
+      transactionId: transaction.id,
+      date: transaction.date,
+      name: transaction.description ?? transaction.merchant,
+      merchantName: transaction.merchant,
+      amount: transaction.amount * 1000, // Convert dollars back to milliunits for formatTransactionAmount
+      pending: transaction.status === "Pending",
+      categoryPrimary: undefined,
+      category: transaction.category,
+      merchantEnrichment: transaction.merchantEnrichment,
+      isRecurring: transaction.isRecurring,
+      recurringFrequency: transaction.recurringFrequency,
+    });
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -245,7 +262,7 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
                 <TransactionTableRow
                   key={transaction.id}
                   transaction={transaction}
-                  onSelect={setSelectedTransaction}
+                  onSelect={handleSelectTransaction}
                 />
               )}
             </AriaTableBody>
@@ -263,8 +280,8 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
         )}
       </TableCard.Root>
 
-      {/* Transaction Detail Drawer */}
-      <TransactionDetailDrawer
+      {/* Transaction Detail Panel */}
+      <TransactionDetailPanel
         transaction={selectedTransaction}
         onClose={() => setSelectedTransaction(null)}
       />

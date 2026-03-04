@@ -13,5 +13,5 @@ export {
   type TransactionSourceInfo,
 } from "./TransactionsTableRow";
 export { TransactionsPagination } from "./TransactionsPagination";
-export { TransactionDetailDrawer } from "./TransactionDetailDrawer";
+export { TransactionDetailPanel, type DetailPanelTransaction } from "./TransactionDetailPanel";
 export { TransactionSourceCell } from "./TransactionSourceCell";
