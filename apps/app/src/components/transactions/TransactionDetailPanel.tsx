@@ -98,11 +98,7 @@ export function TransactionDetailPanel({
                   upsertField={upsertField}
                 />
 
-                <TransactionDetailActions
-                  isHidden={isHidden}
-                  savingField={savingField}
-                  onToggleHidden={() => toggleHidden(!isHidden)}
-                />
+                <TransactionDetailActions />
               </div>
             </SlideoutMenu.Content>
           </>
