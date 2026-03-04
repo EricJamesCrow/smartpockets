@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { FileUpload } from "@repo/ui/untitledui/application/file-upload/file-upload-base";
 import { Dialog, DialogTrigger, Modal, ModalOverlay } from "@repo/ui/untitledui/application/modals/modal";
 import { IconNotification } from "@repo/ui/untitledui/application/notifications/notifications";
@@ -14,6 +16,7 @@ import { Form } from "@repo/ui/untitledui/base/form/form";
 import { InputBase, TextField } from "@repo/ui/untitledui/base/input/input";
 import { Label } from "@repo/ui/untitledui/base/input/label";
 import { toast } from "sonner";
+import { deleteAccountSchema, profileSchema, type DeleteAccountFormValues, type ProfileFormValues } from "@/lib/validations";
 
 function getClerkErrorMessage(error: unknown): { field?: string; message: string } {
     console.error("Clerk update error:", error);
@@ -42,31 +45,38 @@ function getClerkErrorMessage(error: unknown): { field?: string; message: string
 export default function SettingsPage() {
     const { user, isLoaded } = useUser();
 
-    // Form state - Clerk native fields only
-    const [firstName, setFirstName] = useState("");
-    const [lastName, setLastName] = useState("");
+    // Profile form
+    const {
+        control,
+        handleSubmit,
+        reset,
+        setError,
+        formState: { isSubmitting },
+    } = useForm<ProfileFormValues>({
+        resolver: zodResolver(profileSchema),
+        defaultValues: { firstName: "", lastName: "" },
+    });
 
-    // Avatar state
+    // Avatar state (not part of react-hook-form since it's a file upload)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
-    // Loading state
-    const [isLoading, setIsLoading] = useState(false);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    // Delete account form
+    const deleteForm = useForm<DeleteAccountFormValues>({
+        resolver: zodResolver(deleteAccountSchema),
+        defaultValues: { confirmation: "" as "DELETE" },
+    });
 
     // Delete account state
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [deleteConfirmation, setDeleteConfirmation] = useState("");
-    const [isDeleting, setIsDeleting] = useState(false);
 
     // Initialize form from Clerk user data
     useEffect(() => {
         if (user) {
-            setFirstName(user.firstName || "");
-            setLastName(user.lastName || "");
+            reset({ firstName: user.firstName || "", lastName: user.lastName || "" });
             setAvatarPreview(user.imageUrl || null);
         }
-    }, [user]);
+    }, [user, reset]);
 
     const handleAvatarUpload = (files: FileList | null) => {
         const file = files?.[0];
@@ -76,12 +86,8 @@ export default function SettingsPage() {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const onSubmit = async (data: ProfileFormValues) => {
         if (!user) return;
-
-        setIsLoading(true);
-        setFieldErrors({});
 
         try {
             // Update avatar if a new file was selected
@@ -92,8 +98,8 @@ export default function SettingsPage() {
 
             // Update profile - Clerk native fields only
             await user.update({
-                firstName,
-                lastName,
+                firstName: data.firstName,
+                lastName: data.lastName,
             });
 
             toast.custom((t) => (
@@ -107,30 +113,25 @@ export default function SettingsPage() {
         } catch (error) {
             const { field, message } = getClerkErrorMessage(error);
 
-            if (field) {
-                setFieldErrors({ [field]: message });
+            if (field === "firstName" || field === "lastName") {
+                setError(field, { message });
             } else {
                 toast.custom((t) => <IconNotification title="Error" description={message} color="error" onClose={() => toast.dismiss(t)} />);
             }
-        } finally {
-            setIsLoading(false);
         }
     };
 
     const handleCancel = () => {
         if (user) {
-            setFirstName(user.firstName || "");
-            setLastName(user.lastName || "");
+            reset({ firstName: user.firstName || "", lastName: user.lastName || "" });
             setAvatarPreview(user.imageUrl || null);
             setAvatarFile(null);
         }
-        setFieldErrors({});
     };
 
     const handleDeleteAccount = async () => {
-        if (!user || deleteConfirmation !== "DELETE") return;
+        if (!user) return;
 
-        setIsDeleting(true);
         try {
             await user.delete();
             // Clerk will automatically redirect to the sign-in page after deletion
@@ -138,7 +139,6 @@ export default function SettingsPage() {
             toast.custom((t) => (
                 <IconNotification title="Error" description="Failed to delete account. Please try again." color="error" onClose={() => toast.dismiss(t)} />
             ));
-            setIsDeleting(false);
         }
     };
 
@@ -152,7 +152,7 @@ export default function SettingsPage() {
 
     return (
         <>
-            <Form className="flex flex-col gap-6 px-4 lg:px-8" onSubmit={handleSubmit}>
+            <Form className="flex flex-col gap-6 px-4 lg:px-8" onSubmit={handleSubmit(onSubmit)}>
                 <SectionHeader.Root>
                     <SectionHeader.Group>
                         <div className="flex flex-1 flex-col justify-center gap-0.5 self-stretch">
@@ -169,15 +169,45 @@ export default function SettingsPage() {
                         <SectionLabel.Root isRequired size="sm" title="Name" className="max-lg:hidden" />
 
                         <div className="flex gap-4">
-                            <TextField aria-label="First name" isRequired name="firstName" className="flex-1" value={firstName} onChange={setFirstName}>
-                                <Label className="lg:hidden">First name</Label>
-                                <InputBase size="md" placeholder="First name" />
-                            </TextField>
+                            <Controller
+                                control={control}
+                                name="firstName"
+                                render={({ field, fieldState }) => (
+                                    <TextField
+                                        aria-label="First name"
+                                        isRequired
+                                        name="firstName"
+                                        className="flex-1"
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        onBlur={field.onBlur}
+                                        isInvalid={!!fieldState.error}
+                                    >
+                                        <Label className="lg:hidden">First name</Label>
+                                        <InputBase size="md" placeholder="First name" />
+                                    </TextField>
+                                )}
+                            />
 
-                            <TextField aria-label="Last name" isRequired name="lastName" className="flex-1" value={lastName} onChange={setLastName}>
-                                <Label className="lg:hidden">Last name</Label>
-                                <InputBase size="md" placeholder="Last name" />
-                            </TextField>
+                            <Controller
+                                control={control}
+                                name="lastName"
+                                render={({ field, fieldState }) => (
+                                    <TextField
+                                        aria-label="Last name"
+                                        isRequired
+                                        name="lastName"
+                                        className="flex-1"
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        onBlur={field.onBlur}
+                                        isInvalid={!!fieldState.error}
+                                    >
+                                        <Label className="lg:hidden">Last name</Label>
+                                        <InputBase size="md" placeholder="Last name" />
+                                    </TextField>
+                                )}
+                            />
                         </div>
                     </div>
 
@@ -203,7 +233,7 @@ export default function SettingsPage() {
                         <Button color="secondary" size="md" onClick={handleCancel}>
                             Cancel
                         </Button>
-                        <Button type="submit" color="primary" size="md" isLoading={isLoading}>
+                        <Button type="submit" color="primary" size="md" isLoading={isSubmitting}>
                             Save
                         </Button>
                     </SectionFooter.Actions>
@@ -242,10 +272,23 @@ export default function SettingsPage() {
                                         </div>
 
                                         <div className="flex flex-col gap-4">
-                                            <TextField aria-label="Confirmation" isRequired value={deleteConfirmation} onChange={setDeleteConfirmation}>
-                                                <Label>Type "DELETE" to confirm</Label>
-                                                <InputBase size="md" placeholder="DELETE" />
-                                            </TextField>
+                                            <Controller
+                                                control={deleteForm.control}
+                                                name="confirmation"
+                                                render={({ field, fieldState }) => (
+                                                    <TextField
+                                                        aria-label="Confirmation"
+                                                        isRequired
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        onBlur={field.onBlur}
+                                                        isInvalid={!!fieldState.error}
+                                                    >
+                                                        <Label>Type "DELETE" to confirm</Label>
+                                                        <InputBase size="md" placeholder="DELETE" />
+                                                    </TextField>
+                                                )}
+                                            />
                                         </div>
 
                                         <div className="flex justify-end gap-3">
@@ -254,7 +297,7 @@ export default function SettingsPage() {
                                                 size="md"
                                                 onClick={() => {
                                                     close();
-                                                    setDeleteConfirmation("");
+                                                    deleteForm.reset();
                                                 }}
                                             >
                                                 Cancel
@@ -262,9 +305,9 @@ export default function SettingsPage() {
                                             <Button
                                                 color="primary-destructive"
                                                 size="md"
-                                                onClick={handleDeleteAccount}
-                                                isLoading={isDeleting}
-                                                isDisabled={deleteConfirmation !== "DELETE"}
+                                                onClick={deleteForm.handleSubmit(handleDeleteAccount)}
+                                                isLoading={deleteForm.formState.isSubmitting}
+                                                isDisabled={deleteForm.watch("confirmation") !== "DELETE"}
                                             >
                                                 Delete account
                                             </Button>
