@@ -4,13 +4,13 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { formatDisplayCurrency } from "@/types/credit-cards";
+import { formatDisplayCurrency, parseLocalDate } from "@/types/credit-cards";
 import { cx } from "@/utils/cx";
 import { InlineEditableField } from "./InlineEditableField";
 
 function getMonthsRemaining(expirationDate: string): number {
   const now = new Date();
-  const expiry = new Date(expirationDate);
+  const expiry = parseLocalDate(expirationDate);
   const months =
     (expiry.getFullYear() - now.getFullYear()) * 12 +
     (expiry.getMonth() - now.getMonth());
@@ -25,8 +25,8 @@ function getUrgencyColor(monthsRemaining: number): string {
 }
 
 function getProgressPercentage(startDate: string, expirationDate: string): number {
-  const start = new Date(startDate).getTime();
-  const end = new Date(expirationDate).getTime();
+  const start = parseLocalDate(startDate).getTime();
+  const end = parseLocalDate(expirationDate).getTime();
   const now = Date.now();
   if (now >= end) return 100;
   if (now <= start) return 0;
