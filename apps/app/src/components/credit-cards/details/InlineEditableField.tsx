@@ -33,6 +33,7 @@ export function InlineEditableField({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const savingRef = useRef(false);
 
   const displayValue = formatDisplay
     ? formatDisplay(value)
@@ -84,9 +85,13 @@ export function InlineEditableField({
   };
 
   const handleSave = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+
     const validated = validate(draft);
     if (validated === null) {
       setError(getValidationMessage(type));
+      savingRef.current = false;
       return;
     }
 
@@ -99,6 +104,7 @@ export function InlineEditableField({
       setError("Failed to save. Please try again.");
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 
@@ -139,6 +145,7 @@ export function InlineEditableField({
       "w-full px-3 py-1.5 text-left hover:bg-secondary text-primary cursor-pointer";
     item.textContent = `Revert to Plaid value: ${formattedPlaid}`;
     item.onclick = async () => {
+      document.removeEventListener("click", cleanup);
       document.body.removeChild(menu);
       await onRevert();
     };
@@ -166,7 +173,7 @@ export function InlineEditableField({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={() => {
-            if (!saving) handleSave();
+            if (!savingRef.current) handleSave();
           }}
           step={type === "percentage" ? "0.01" : type === "currency" ? "0.01" : undefined}
           disabled={saving}
@@ -199,7 +206,7 @@ export function InlineEditableField({
     >
       {isOverridden && (
         <span
-          className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-utility-brand-500"
+          className="inline-block h-1 w-1 flex-shrink-0 rounded-full bg-utility-brand-500"
           aria-hidden="true"
         />
       )}

@@ -205,7 +205,7 @@ function AddPromoForm({
     setSaving(true);
     setError(null);
     try {
-      const balanceNum = Math.round(parseFloat(balance) * 100);
+      const balanceNum = parseFloat(balance);
       await onSave({
         description,
         aprPercentage: parseFloat(aprPercentage),

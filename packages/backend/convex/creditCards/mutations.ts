@@ -250,7 +250,12 @@ export const update = mutation({
 export const setOverride = mutation({
   args: {
     cardId: v.id("creditCards"),
-    field: v.string(),
+    field: v.union(
+      v.literal("officialName"),
+      v.literal("accountName"),
+      v.literal("company"),
+      v.literal("providerDashboardUrl"),
+    ),
     value: v.union(v.string(), v.number()),
   },
   returns: v.null(),
@@ -260,11 +265,6 @@ export const setOverride = mutation({
 
     if (card.userId !== viewer._id) {
       throw new Error("Not authorized to modify this card");
-    }
-
-    const allowedFields = ["officialName", "accountName", "company", "providerDashboardUrl"];
-    if (!allowedFields.includes(field)) {
-      throw new Error(`Field "${field}" is not user-editable`);
     }
 
     const currentOverrides = card.userOverrides ?? {};
@@ -326,7 +326,12 @@ export const setAprOverride = mutation({
 export const clearOverride = mutation({
   args: {
     cardId: v.id("creditCards"),
-    field: v.string(),
+    field: v.union(
+      v.literal("officialName"),
+      v.literal("accountName"),
+      v.literal("company"),
+      v.literal("providerDashboardUrl"),
+    ),
   },
   returns: v.null(),
   async handler(ctx, { cardId, field }) {
