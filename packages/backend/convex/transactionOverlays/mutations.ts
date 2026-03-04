@@ -37,10 +37,9 @@ export const upsertField = mutation({
     const viewer = ctx.viewerX();
 
     const existing = await ctx
-      .table("transactionOverlays", "by_plaidTransactionId", (q) =>
-        q.eq("plaidTransactionId", plaidTransactionId)
+      .table("transactionOverlays", "by_user_and_transaction", (q) =>
+        q.eq("userId", viewer._id).eq("plaidTransactionId", plaidTransactionId)
       )
-      .filter((q) => q.eq(q.field("userId"), viewer._id))
       .first();
 
     const fieldValue = value === null ? undefined : value;
@@ -78,10 +77,9 @@ export const toggleReviewed = mutation({
     const viewer = ctx.viewerX();
 
     const existing = await ctx
-      .table("transactionOverlays", "by_plaidTransactionId", (q) =>
-        q.eq("plaidTransactionId", plaidTransactionId)
+      .table("transactionOverlays", "by_user_and_transaction", (q) =>
+        q.eq("userId", viewer._id).eq("plaidTransactionId", plaidTransactionId)
       )
-      .filter((q) => q.eq(q.field("userId"), viewer._id))
       .first();
 
     const reviewedAt = isReviewed ? Date.now() : undefined;
@@ -119,10 +117,9 @@ export const toggleHidden = mutation({
     const viewer = ctx.viewerX();
 
     const existing = await ctx
-      .table("transactionOverlays", "by_plaidTransactionId", (q) =>
-        q.eq("plaidTransactionId", plaidTransactionId)
+      .table("transactionOverlays", "by_user_and_transaction", (q) =>
+        q.eq("userId", viewer._id).eq("plaidTransactionId", plaidTransactionId)
       )
-      .filter((q) => q.eq(q.field("userId"), viewer._id))
       .first();
 
     if (existing) {

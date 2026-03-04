@@ -252,7 +252,8 @@ const schema = defineEntSchema(
             userMerchantName: v.optional(v.string()),
         })
             .edge("user")
-            .index("by_plaidTransactionId", ["plaidTransactionId"]),
+            .index("by_plaidTransactionId", ["plaidTransactionId"])
+            .index("by_user_and_transaction", ["userId", "plaidTransactionId"]),
     },
     { schemaValidation: false },
 );

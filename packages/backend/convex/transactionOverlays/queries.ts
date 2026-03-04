@@ -41,10 +41,9 @@ export const getByTransactionId = query({
     const viewer = ctx.viewerX();
 
     const overlay = await ctx
-      .table("transactionOverlays", "by_plaidTransactionId", (q) =>
-        q.eq("plaidTransactionId", args.plaidTransactionId)
+      .table("transactionOverlays", "by_user_and_transaction", (q) =>
+        q.eq("userId", viewer._id).eq("plaidTransactionId", args.plaidTransactionId)
       )
-      .filter((q) => q.eq(q.field("userId"), viewer._id))
       .first();
 
     return overlay?.doc() ?? null;
@@ -54,8 +53,8 @@ export const getByTransactionId = query({
 /**
  * Get overlays for multiple Plaid transaction IDs (batch lookup).
  *
- * Queries each requested ID individually via the by_plaidTransactionId index
- * to avoid loading all overlays for the user.
+ * Queries each requested ID individually via the by_user_and_transaction
+ * compound index for fully-indexed lookups.
  *
  * @param plaidTransactionIds - Array of Plaid transaction IDs
  * @returns Record mapping plaidTransactionId to overlay fields
@@ -85,10 +84,9 @@ export const getByTransactionIds = query({
 
     for (const id of uniqueIds) {
       const overlay = await ctx
-        .table("transactionOverlays", "by_plaidTransactionId", (q) =>
-          q.eq("plaidTransactionId", id)
+        .table("transactionOverlays", "by_user_and_transaction", (q) =>
+          q.eq("userId", viewer._id).eq("plaidTransactionId", id)
         )
-        .filter((q) => q.eq(q.field("userId"), viewer._id))
         .first();
 
       if (overlay) {
