@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import type { Id } from "@convex/_generated/dataModel";
-import { cx } from "@repo/ui/utils";
+import { cx } from "@/utils/cx";
 import { formatDisplayCurrency, getPurchaseApr } from "@/types/credit-cards";
 
 // Section components
@@ -196,14 +196,14 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
                     {capitalize(cardData.syncStatus)}
                   </span>
                 </div>
-                {cardData.lastSyncedAt && (
+                {cardData.lastSyncedAt != null && (
                   <p className="mt-1 text-xs text-tertiary">
                     Last synced: {new Date(cardData.lastSyncedAt).toLocaleString("en-US")}
                   </p>
                 )}
                 {cardData.lastSyncError && (
                   <div className="mt-2 rounded-lg bg-utility-error-50 px-3 py-2 text-xs text-utility-error-700">
-                    {cardData.lastSyncError}
+                    There was a problem syncing your card. Please try again later.
                   </div>
                 )}
               </div>

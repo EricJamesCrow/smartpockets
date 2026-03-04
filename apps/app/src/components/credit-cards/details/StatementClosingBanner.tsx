@@ -37,8 +37,9 @@ export function StatementClosingBanner({
         Set your statement closing date to unlock balance tracking and smart recommendations
       </p>
       <div className="flex items-center gap-3">
-        <label className="text-xs text-utility-brand-600">Statement closes on day:</label>
+        <label htmlFor="statement-closing-day" className="text-xs text-utility-brand-600">Statement closes on day:</label>
         <input
+          id="statement-closing-day"
           type="number"
           min={1}
           max={31}

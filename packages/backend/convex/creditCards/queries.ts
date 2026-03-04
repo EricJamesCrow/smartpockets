@@ -453,6 +453,7 @@ export const computeYtdFeesInterest = query({
     const now = new Date();
     const year = now.getFullYear();
     const yearStart = `${year}-01-01`;
+    const nextYearStart = `${year + 1}-01-01`;
 
     // NOTE: The Plaid component API doesn't support date-range filtering.
     // This fetches all transactions for the account and filters in-memory.
@@ -468,8 +469,7 @@ export const computeYtdFeesInterest = query({
     let totalInterestMilliunits = 0;
 
     for (const tx of transactions) {
-      // Skip transactions before the current year
-      if (tx.date < yearStart) continue;
+      if (tx.date < yearStart || tx.date >= nextYearStart) continue;
 
       if (tx.categoryPrimary === "BANK_FEES") {
         totalFeesMilliunits += tx.amount;

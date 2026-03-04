@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDisplayCurrency } from "@/types/credit-cards";
-import { cx } from "@repo/ui/utils";
+import { cx } from "@/utils/cx";
 
 type Apr = {
   aprPercentage: number | null;
@@ -63,7 +63,7 @@ interface AprBreakdownProps {
 }
 
 export function AprBreakdown({ aprs }: AprBreakdownProps) {
-  if (!aprs || aprs.length === 0) {
+  if (!aprs) {
     return (
       <section>
         <h3 className="mb-4 text-lg font-semibold text-primary">

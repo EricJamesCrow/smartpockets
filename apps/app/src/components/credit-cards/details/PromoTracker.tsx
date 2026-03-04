@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { formatDisplayCurrency } from "@/types/credit-cards";
-import { cx } from "@repo/ui/utils";
+import { cx } from "@/utils/cx";
 
 function getMonthsRemaining(expirationDate: string): number {
   const now = new Date();
@@ -39,8 +39,10 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
   const promos = useQuery(api.promoRates.queries.listByCard, { creditCardId });
   const installments = useQuery(api.installmentPlans.queries.listByCard, { creditCardId });
 
-  const hasPromos = promos && promos.length > 0;
-  const hasInstallments = installments && installments.length > 0;
+  if (promos === undefined || installments === undefined) return null;
+
+  const hasPromos = promos.length > 0;
+  const hasInstallments = installments.length > 0;
 
   if (!hasPromos && !hasInstallments) {
     return (

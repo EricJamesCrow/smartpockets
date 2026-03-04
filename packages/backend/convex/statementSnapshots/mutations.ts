@@ -150,7 +150,6 @@ export const remove = mutation({
  */
 export const createInferredInternal = internalMutation({
   args: {
-    userId: v.id("users"),
     creditCardId: v.id("creditCards"),
     statementDate: v.string(),
     newBalance: v.number(),
@@ -170,8 +169,12 @@ export const createInferredInternal = internalMutation({
 
     if (existing) return existing._id;
 
+    // Derive userId from the card to prevent mismatched writes
+    const card = await ctx.table("creditCards").getX(args.creditCardId);
+
     return await ctx.table("statementSnapshots").insert({
       ...args,
+      userId: card.userId,
       previousBalance: 0,
       paymentsAndCredits: 0,
       newPurchases: 0,

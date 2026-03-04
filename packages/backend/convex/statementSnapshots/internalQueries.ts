@@ -21,6 +21,15 @@ export const getCardsWithClosingDay = internalQuery({
   args: {
     closingDay: v.number(),
   },
+  returns: v.array(
+    v.object({
+      _id: v.id("creditCards"),
+      userId: v.id("users"),
+      currentBalance: v.union(v.number(), v.null()),
+      minimumPaymentAmount: v.union(v.number(), v.null()),
+      nextPaymentDueDate: v.union(v.string(), v.null()),
+    })
+  ),
   handler: async (ctx, args) => {
     const allCards = await ctx
       .table("creditCards", "by_closingDay_active", (q) =>
@@ -29,9 +38,9 @@ export const getCardsWithClosingDay = internalQuery({
     return allCards.map((card) => ({
       _id: card._id,
       userId: card.userId,
-      currentBalance: card.currentBalance,
-      minimumPaymentAmount: card.minimumPaymentAmount,
-      nextPaymentDueDate: card.nextPaymentDueDate,
+      currentBalance: card.currentBalance ?? null,
+      minimumPaymentAmount: card.minimumPaymentAmount ?? null,
+      nextPaymentDueDate: card.nextPaymentDueDate ?? null,
     }));
   },
 });

@@ -48,7 +48,7 @@ export const listByCard = query({
     }
 
     const snapshots = await ctx
-      .table("statementSnapshots", "creditCardId", (q) =>
+      .table("statementSnapshots", "by_card_date", (q) =>
         q.eq("creditCardId", creditCardId)
       )
       .order("desc")
@@ -62,6 +62,7 @@ export const listByCard = query({
  * Get the latest two statement snapshots for a credit card
  *
  * Returns the current and previous snapshots for comparison.
+ * Uses the by_card_date index to sort by statementDate rather than insertion order.
  *
  * @param creditCardId - Credit card document ID
  * @returns Object with current and previous snapshots (or null)
@@ -120,7 +121,7 @@ export const getLatest = query({
     }
 
     const snapshots = await ctx
-      .table("statementSnapshots", "creditCardId", (q) =>
+      .table("statementSnapshots", "by_card_date", (q) =>
         q.eq("creditCardId", creditCardId)
       )
       .order("desc")

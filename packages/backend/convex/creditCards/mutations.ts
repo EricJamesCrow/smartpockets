@@ -226,8 +226,8 @@ export const update = mutation({
     }
 
     if (data.statementClosingDay != null &&
-        (data.statementClosingDay < 1 || data.statementClosingDay > 31)) {
-      throw new Error("Statement closing day must be between 1 and 31");
+        (!Number.isInteger(data.statementClosingDay) || data.statementClosingDay < 1 || data.statementClosingDay > 31)) {
+      throw new Error("Statement closing day must be an integer between 1 and 31");
     }
 
     // Filter out undefined values
