@@ -37,7 +37,6 @@ export { TransactionsSection } from "./TransactionsSection";
 export { TransactionFilters, defaultTransactionFilters } from "./TransactionFilters";
 export { TransactionTableHeader } from "./TransactionTableHeader";
 export { TransactionTableRow } from "./TransactionTableRow";
-export { TransactionDetailDrawer } from "./TransactionDetailDrawer";
 
 // =============================================================================
 // CONFIGURATION
