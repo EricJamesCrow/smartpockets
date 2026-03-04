@@ -12,6 +12,7 @@ import {
   AmexIcon,
   DiscoverIcon,
 } from "@repo/ui/untitledui/foundations/payment-icons";
+import { parseLocalDate } from "@/types/credit-cards";
 
 function formatCurrency(amount: number): string {
   return (amount / 1000).toLocaleString("en-US", {
@@ -128,7 +129,7 @@ export function YourCards() {
                 {/* Payment status */}
                 <p className="mt-2 text-xs text-tertiary">
                   {card.nextPaymentDueDate
-                    ? `Due ${new Date(card.nextPaymentDueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                    ? `Due ${parseLocalDate(card.nextPaymentDueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
                     : card.isAutoPay
                       ? "✓ AutoPay"
                       : "No due date"}

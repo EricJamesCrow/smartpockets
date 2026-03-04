@@ -4,6 +4,7 @@
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import Link from "next/link";
+import { parseLocalDate } from "@/types/credit-cards";
 
 function formatCurrency(amount: number): string {
   const formatted = Math.abs(amount).toLocaleString("en-US", {
@@ -24,8 +25,7 @@ function groupByDate<T extends { date: string }>(
   yesterday.setDate(yesterday.getDate() - 1);
 
   for (const tx of transactions) {
-    const txDate = new Date(tx.date);
-    txDate.setHours(0, 0, 0, 0);
+    const txDate = parseLocalDate(tx.date);
 
     let label: string;
     if (txDate.getTime() === today.getTime()) {
