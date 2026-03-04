@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { formatDisplayCurrency } from "@/types/credit-cards";
@@ -41,6 +42,8 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
   const installments = useQuery(api.installmentPlans.queries.listByCard, { creditCardId });
   const setExpirationOverride = useMutation(api.promoRates.mutations.setExpirationOverride);
   const clearExpirationOverride = useMutation(api.promoRates.mutations.clearExpirationOverride);
+  const createPromo = useMutation(api.promoRates.mutations.create);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   if (promos === undefined || installments === undefined) return null;
 
@@ -51,15 +54,7 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
     return (
       <section>
         <h3 className="mb-4 text-lg font-semibold text-primary">Promotional Financing</h3>
-        <button
-          type="button"
-          disabled
-          title="Coming soon"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-6 text-sm text-tertiary cursor-not-allowed opacity-60"
-        >
-          <span className="text-lg">+</span>
-          Add promotional APR or installment plan
-        </button>
+        {addPromoToggle}
       </section>
     );
   }
@@ -171,16 +166,98 @@ export function PromoTracker({ creditCardId }: PromoTrackerProps) {
           </div>
         )}
 
-        <button
-          type="button"
-          disabled
-          title="Coming soon"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary bg-primary p-4 text-sm text-tertiary cursor-not-allowed opacity-60"
-        >
-          <span className="text-lg">+</span>
-          Add promotional rate or plan
-        </button>
+        {addPromoToggle}
       </div>
     </section>
+  );
+}
+
+function AddPromoForm({
+  onSave,
+  onCancel,
+}: {
+  onSave: (data: {
+    description: string;
+    aprPercentage: number;
+    originalBalance: number;
+    remainingBalance: number;
+    startDate: string;
+    expirationDate: string;
+    isDeferredInterest: boolean;
+  }) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [description, setDescription] = useState("");
+  const [aprPercentage, setAprPercentage] = useState("");
+  const [balance, setBalance] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [expirationDate, setExpirationDate] = useState("");
+  const [isDeferredInterest, setIsDeferredInterest] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!description || !aprPercentage || !balance || !startDate || !expirationDate) {
+      setError("All fields are required.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const balanceNum = Math.round(parseFloat(balance) * 100);
+      await onSave({
+        description,
+        aprPercentage: parseFloat(aprPercentage),
+        originalBalance: balanceNum,
+        remainingBalance: balanceNum,
+        startDate,
+        expirationDate,
+        isDeferredInterest,
+      });
+    } catch {
+      setError("Failed to create promo rate. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-xl border border-secondary bg-primary p-4 space-y-3">
+      <h4 className="text-sm font-medium text-primary">Add Promotional Rate</h4>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-xs text-tertiary">Description</label>
+          <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. 0% Intro APR" className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm text-primary placeholder:text-tertiary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-tertiary">APR %</label>
+          <input type="number" step="0.01" value={aprPercentage} onChange={(e) => setAprPercentage(e.target.value)} placeholder="0.00" className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm tabular-nums text-primary placeholder:text-tertiary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-tertiary">Balance</label>
+          <input type="number" step="0.01" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0.00" className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm tabular-nums text-primary placeholder:text-tertiary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-tertiary">Start Date</label>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm text-primary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-tertiary">Expiration Date</label>
+          <input type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} className="w-full rounded-lg border border-secondary px-3 py-1.5 text-sm text-primary focus:border-utility-brand-500 focus:outline-none focus:ring-1 focus:ring-utility-brand-500" />
+        </div>
+        <div className="flex items-end">
+          <label className="flex items-center gap-2 text-xs text-tertiary">
+            <input type="checkbox" checked={isDeferredInterest} onChange={(e) => setIsDeferredInterest(e.target.checked)} className="rounded border-secondary" />
+            Deferred interest
+          </label>
+        </div>
+      </div>
+      {error && <p className="text-xs text-utility-error-700">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-1.5 text-sm text-tertiary hover:text-primary">Cancel</button>
+        <button type="submit" disabled={saving} className="rounded-lg bg-utility-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-utility-brand-700 disabled:opacity-50">{saving ? "Saving..." : "Add"}</button>
+      </div>
+    </form>
   );
 }
