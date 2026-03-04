@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -20,6 +20,7 @@ import { useAutoPay } from "./AutoPayToggle";
 import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { TransactionsSection } from "./TransactionsSection";
 import { CardDetailsTab } from "./CardDetailsTab";
+import { InlineEditableField } from "./details/InlineEditableField";
 import { useSharedLayoutAnimation } from "@/lib/context/shared-layout-animation-context";
 import {
   formatDueDate,
@@ -58,6 +59,8 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
   ];
 
   const { toggle: toggleLock, isLoading: isLocking } = useToggleCardLocked();
+  const setOverride = useMutation(api.creditCards.mutations.setOverride);
+  const clearOverride = useMutation(api.creditCards.mutations.clearOverride);
 
   const handleBack = () => {
     startAnimation(cardIdStr);
@@ -208,6 +211,31 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
             <p className="mt-1 text-sm text-tertiary">
               CREDIT • {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} •••• {card.lastFour}
             </p>
+            {/* Provider Dashboard Link */}
+            <div className="mt-1 flex items-center">
+              {cardData?.userOverrides?.providerDashboardUrl ? (
+                <ProviderLink
+                  url={cardData.userOverrides.providerDashboardUrl}
+                  onSave={async (v) => {
+                    await setOverride({ cardId, field: "providerDashboardUrl", value: v });
+                  }}
+                  onClear={async () => {
+                    await clearOverride({ cardId, field: "providerDashboardUrl" });
+                  }}
+                />
+              ) : (
+                <InlineEditableField
+                  value={null}
+                  isOverridden={false}
+                  type="url"
+                  placeholder="+ Add provider link"
+                  onSave={async (v) => {
+                    await setOverride({ cardId, field: "providerDashboardUrl", value: v });
+                  }}
+                  className="text-xs text-tertiary"
+                />
+              )}
+            </div>
           </div>
 
           {/* Payment Due Info */}
@@ -302,5 +330,68 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         )}
       </div>
     </motion.div>
+  );
+}
+
+// =============================================================================
+// HELPER COMPONENTS
+// =============================================================================
+
+function ProviderLink({
+  url,
+  onSave,
+  onClear,
+}: {
+  url: string;
+  onSave: (url: string | number) => Promise<void>;
+  onClear: () => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <InlineEditableField
+        value={url}
+        plaidValue={undefined}
+        isOverridden={true}
+        type="url"
+        onSave={async (v) => {
+          await onSave(v);
+          setEditing(false);
+        }}
+        onRevert={async () => {
+          await onClear();
+          setEditing(false);
+        }}
+      />
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1"
+      onDoubleClick={() => setEditing(true)}
+    >
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 text-xs text-utility-brand-600 hover:text-utility-brand-700 hover:underline"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 16 16"
+          fill="currentColor"
+          className="h-3 w-3"
+        >
+          <path
+            fillRule="evenodd"
+            d="M4.22 11.78a.75.75 0 0 1 0-1.06L9.44 5.5H5.75a.75.75 0 0 1 0-1.5h5.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0V6.56l-5.22 5.22a.75.75 0 0 1-1.06 0Z"
+            clipRule="evenodd"
+          />
+        </svg>
+        Provider Dashboard
+      </a>
+    </span>
   );
 }
