@@ -140,7 +140,6 @@ export const remove = mutation({
  * Idempotent: skips creation if a snapshot already exists for the same
  * card and statement date.
  *
- * @param userId - User document ID
  * @param creditCardId - Credit card document ID
  * @param statementDate - Statement closing date
  * @param newBalance - Statement balance

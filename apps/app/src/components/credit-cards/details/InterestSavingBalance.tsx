@@ -12,7 +12,10 @@ interface InterestSavingBalanceProps {
 
 function getDescription(purchaseAprPercentage: number | null | undefined, hasPromos: boolean): string {
   if (purchaseAprPercentage === 0) {
-    return "Your purchases are at 0% APR \u2014 no interest accruing on new purchases";
+    if (hasPromos) {
+      return "Your purchase APR is 0% \u2014 pay at least required promo and installment amounts to stay on track";
+    }
+    return "Your purchase APR is 0% \u2014 no interest accruing on new purchases";
   }
   if (hasPromos) {
     return "Pay this amount to avoid interest on next month\u2019s purchases while keeping promotional balances intact";
@@ -25,6 +28,11 @@ export function InterestSavingBalance({ creditCardId, purchaseAprPercentage }: I
 
   if (!data) return null;
 
+  const isZeroPurchaseApr = purchaseAprPercentage === 0;
+  const displayedAmount = isZeroPurchaseApr && data.hasPromos
+    ? data.totalProtectedPayments
+    : data.interestSavingBalance;
+
   return (
     <section>
       <h3 className="mb-4 text-lg font-semibold text-primary">Interest Saving Balance</h3>
@@ -32,7 +40,7 @@ export function InterestSavingBalance({ creditCardId, purchaseAprPercentage }: I
         <div className="flex items-baseline justify-between">
           <div>
             <p className="text-2xl font-semibold tabular-nums text-primary">
-              {formatDisplayCurrency(data.interestSavingBalance)}
+              {formatDisplayCurrency(displayedAmount)}
             </p>
             <p className="mt-1 text-xs text-tertiary">
               {getDescription(purchaseAprPercentage, data.hasPromos)}

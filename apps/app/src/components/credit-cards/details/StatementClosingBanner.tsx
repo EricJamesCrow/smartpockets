@@ -17,15 +17,19 @@ export function StatementClosingBanner({
   const updateCard = useMutation(api.creditCards.mutations.update);
   const [day, setDay] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (statementClosingDay != null) return null;
 
   const handleSave = async () => {
     const parsed = parseInt(day, 10);
     if (isNaN(parsed) || parsed < 1 || parsed > 31) return;
+    setError(null);
     setSaving(true);
     try {
       await updateCard({ cardId: creditCardId, statementClosingDay: parsed });
+    } catch {
+      setError("Could not save statement closing day. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -57,6 +61,9 @@ export function StatementClosingBanner({
           {saving ? "Saving..." : "Save"}
         </button>
       </div>
+      {error && (
+        <p className="mt-2 text-xs text-utility-error-700">{error}</p>
+      )}
     </div>
   );
 }

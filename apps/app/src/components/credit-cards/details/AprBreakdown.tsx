@@ -129,14 +129,6 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
                 </span>
                 <span className={cx("text-right text-sm font-medium tabular-nums", color.text)}>
                   {apr.aprPercentage != null ? `${apr.aprPercentage.toFixed(2)}%` : "—"}
-                  {apr.aprPercentage != null && apr.aprPercentage > 0 && STANDARD_APR_TYPES.includes(apr.aprType) && (
-                    <span
-                      className="ml-1 cursor-help text-xs text-tertiary"
-                      title="Variable rate — tracks the Prime Rate"
-                    >
-                      (v)
-                    </span>
-                  )}
                 </span>
                 <span className="text-right text-sm tabular-nums text-primary">
                   {apr.balanceSubjectToApr != null
