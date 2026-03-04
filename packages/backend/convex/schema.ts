@@ -176,6 +176,14 @@ const schema = defineEntSchema(
             accruedDeferredInterest: v.optional(v.number()),
             monthlyMinimumPayment: v.optional(v.number()),
             isActive: v.boolean(),
+            // User overrides for Plaid-synced promos
+            userOverrides: v.optional(
+                v.object({
+                    expirationDate: v.optional(v.string()),
+                }),
+            ),
+            // True for user-created promos (not from Plaid)
+            isManual: v.optional(v.boolean()),
         })
             .edge("user")
             .edge("creditCard"),
