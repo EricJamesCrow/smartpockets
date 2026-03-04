@@ -71,9 +71,12 @@ export function TransactionDetailFields({
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
+    // Skip blur save if user hasn't typed and overlay is still loading
+    // to avoid clearing existing notes with a spurious null write
+    if (notes === undefined && overlay === undefined) return;
     const value = notes ?? overlay?.notes ?? "";
     void upsertField("notes", value || null);
-  }, [notes, overlay?.notes, upsertField]);
+  }, [notes, overlay, upsertField]);
 
   return (
     <div className="flex flex-col gap-5">
