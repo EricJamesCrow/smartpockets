@@ -306,7 +306,8 @@ export const setAprOverride = mutation({
     // Find or create override entry for this index
     const existingIdx = aprOverrides.findIndex((o) => o.index === aprIndex);
     if (existingIdx >= 0) {
-      aprOverrides[existingIdx] = { ...aprOverrides[existingIdx], [field]: value };
+      const existing = aprOverrides[existingIdx]!;
+      aprOverrides[existingIdx] = { ...existing, index: existing.index, [field]: value };
     } else {
       aprOverrides.push({ index: aprIndex, [field]: value });
     }
@@ -376,7 +377,8 @@ export const clearAprOverride = mutation({
 
     const existingIdx = aprOverrides.findIndex((o) => o.index === aprIndex);
     if (existingIdx >= 0) {
-      const { [field]: _removed, ...remaining } = aprOverrides[existingIdx];
+      const entry = aprOverrides[existingIdx]!;
+      const { [field]: _removed, ...remaining } = entry;
       // If only index remains, remove the entry entirely
       if (Object.keys(remaining).length <= 1) {
         aprOverrides = aprOverrides.filter((_, i) => i !== existingIdx);

@@ -105,7 +105,11 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
         statementClosingDay={cardData.statementClosingDay}
       />
 
-      <AprBreakdown aprs={cardData.aprs ?? undefined} />
+      <AprBreakdown
+        aprs={cardData.aprs ?? undefined}
+        cardId={cardId}
+        aprOverrides={cardData.userOverrides?.aprs}
+      />
 
       {/* Two-column grid on desktop: financial insights left, reference right */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[7fr_5fr]">
