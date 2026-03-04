@@ -29,6 +29,36 @@ export function InterestSavingBalance({ creditCardId, purchaseAprPercentage, pay
 
   if (!data) return null;
 
+  // Zero balance short-circuit — no nag needed
+  if (data.currentBalance === 0) {
+    return (
+      <section>
+        <h3 className="mb-4 text-lg font-semibold text-primary">Interest Saving Balance</h3>
+        <div className="rounded-xl border border-secondary bg-primary p-4">
+          <p className="text-2xl font-semibold tabular-nums text-primary">
+            {formatDisplayCurrency(0)}
+          </p>
+          <p className="mt-1 text-xs text-tertiary">No balance — you're all clear</p>
+        </div>
+      </section>
+    );
+  }
+
+  // POT enabled but no plan data entered — ISB would be misleading
+  if (payOverTimeEnabled && !data.hasPromos) {
+    return (
+      <section>
+        <h3 className="mb-4 text-lg font-semibold text-primary">Interest Saving Balance</h3>
+        <div className="rounded-xl border border-dashed border-utility-brand-200 bg-utility-brand-50 p-4">
+          <p className="text-2xl font-semibold text-primary">—</p>
+          <p className="mt-1 text-xs text-utility-brand-700">
+            Enter your Pay Over Time plans below to see your accurate interest saving balance
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   const isZeroPurchaseApr = purchaseAprPercentage === 0;
   const displayedAmount = isZeroPurchaseApr && data.hasPromos
     ? data.totalProtectedPayments
