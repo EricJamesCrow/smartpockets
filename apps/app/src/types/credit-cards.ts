@@ -163,6 +163,12 @@ export type UtilizationLevel = "low" | "medium" | "high";
 // UTILITY FUNCTIONS
 // =============================================================================
 
+/** Parse a YYYY-MM-DD string as local midnight (not UTC) */
+export function parseLocalDate(dateString: string): Date {
+  const parts = dateString.split("-").map(Number) as [number, number, number];
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
 /**
  * Calculate credit utilization percentage
  */
@@ -259,12 +265,9 @@ export function getPurchaseApr(
 export function getDaysUntilDue(paymentDueDate: string | null): number | null {
   if (!paymentDueDate) return null;
 
-  const due = new Date(paymentDueDate);
+  const due = parseLocalDate(paymentDueDate);
   const today = new Date();
-
-  // Reset time components to compare dates only
-  today.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0); // Compare dates only (parseLocalDate already returns midnight)
 
   const diffTime = due.getTime() - today.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -351,7 +354,7 @@ export function formatApr(apr: number | null): string {
  */
 export function formatDueDate(dateString: string | null): string {
   if (!dateString) return "--";
-  const date = new Date(dateString);
+  const date = parseLocalDate(dateString);
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -565,7 +568,7 @@ export function getCategoryBadgeColor(
  * Format a date for transaction display (e.g., "Jan 14")
  */
 export function formatTransactionDate(dateString: string): string {
-  const date = new Date(dateString);
+  const date = parseLocalDate(dateString);
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -576,7 +579,7 @@ export function formatTransactionDate(dateString: string): string {
  * Format a date for transaction detail (e.g., "January 14, 2026")
  */
 export function formatTransactionDateFull(dateString: string): string {
-  const date = new Date(dateString);
+  const date = parseLocalDate(dateString);
   return date.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
