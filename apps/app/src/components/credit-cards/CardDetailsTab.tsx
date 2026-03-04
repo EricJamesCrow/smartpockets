@@ -96,6 +96,7 @@ export function CardDetailsTab({ cardId, cardData }: CardDetailsTabProps) {
           <InterestSavingBalance
             creditCardId={cardId}
             purchaseAprPercentage={getPurchaseApr(cardData.aprs ?? undefined)}
+            payOverTimeEnabled={cardData.payOverTimeEnabled ?? undefined}
           />
           <FeesInterestYtd creditCardId={cardId} />
           <PromoTracker creditCardId={cardId} />

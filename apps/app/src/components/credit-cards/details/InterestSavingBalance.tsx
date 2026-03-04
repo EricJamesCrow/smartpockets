@@ -8,6 +8,7 @@ import { formatDisplayCurrency } from "@/types/credit-cards";
 interface InterestSavingBalanceProps {
   creditCardId: Id<"creditCards">;
   purchaseAprPercentage?: number | null;
+  payOverTimeEnabled?: boolean;
 }
 
 function getDescription(purchaseAprPercentage: number | null | undefined, hasPromos: boolean): string {
@@ -23,7 +24,7 @@ function getDescription(purchaseAprPercentage: number | null | undefined, hasPro
   return "Pay in full to avoid interest charges";
 }
 
-export function InterestSavingBalance({ creditCardId, purchaseAprPercentage }: InterestSavingBalanceProps) {
+export function InterestSavingBalance({ creditCardId, purchaseAprPercentage, payOverTimeEnabled }: InterestSavingBalanceProps) {
   const data = useQuery(api.creditCards.queries.computeInterestSavingBalance, { creditCardId });
 
   if (!data) return null;
