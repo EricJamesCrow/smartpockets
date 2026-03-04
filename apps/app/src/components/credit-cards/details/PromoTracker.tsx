@@ -41,17 +41,17 @@ interface PromoTrackerProps {
 export function PromoTracker({ creditCardId }: PromoTrackerProps) {
   const promos = useQuery(api.promoRates.queries.listByCard, { creditCardId });
   const installments = useQuery(api.installmentPlans.queries.listByCard, { creditCardId });
+  const removePlan = useMutation(api.installmentPlans.mutations.remove);
+  const removePromo = useMutation(api.promoRates.mutations.remove);
+  const [showForm, setShowForm] = useState<"installment" | "promo" | null>(null);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingPromoId, setEditingPromoId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   if (promos === undefined || installments === undefined) return null;
 
   const hasPromos = promos.length > 0;
   const hasInstallments = installments.length > 0;
-  const [showForm, setShowForm] = useState<"installment" | "promo" | null>(null);
-  const removePlan = useMutation(api.installmentPlans.mutations.remove);
-  const removePromo = useMutation(api.promoRates.mutations.remove);
-  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
-  const [editingPromoId, setEditingPromoId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   if (!hasPromos && !hasInstallments) {
     return (
