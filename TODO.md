@@ -109,9 +109,28 @@ Branch: `enhanced-credit-card-details-tab` (pending PR)
 - [x] ISB messaging: Check purchase APR before showing "pay in full to avoid interest" — at 0% APR the urgency is misleading
 
 **Next priority:**
-- [ ] Build promo rate + installment plan create/edit forms (replace "Coming soon" buttons)
+- [x] Build promo rate create form (replace "Coming soon" button with inline form)
+- [ ] Build installment plan create/edit form
   - Must support Chase Equal Pay promos and installment plans from real statements
   - Reference: Chase Amazon statement with 2 promos + 2 installment plans
+
+### Editable Card Details
+
+Branch: `editable-card-details`
+
+- [x] Override Map pattern — `userOverrides` field on creditCards schema
+- [x] InlineEditableField component (Figma-style double-click to edit)
+- [x] Editable Account Details (Official Name, Account Name, Issuer)
+- [x] Editable APR fields (APR %, Balance Subject, Interest Charged)
+- [x] Editable promo expiration dates with override tracking
+- [x] Manual promo rate creation (Add button functional)
+- [x] Provider Dashboard link in card header
+- [x] Right-click "Revert to Plaid value" context menu
+- [x] Sync-safe — Plaid syncs preserve user overrides
+
+**Follow-ups:**
+- [ ] Extend override pattern to transactions (merchant names, categories)
+- [ ] Add manual installment plan creation (similar to manual promos)
 
 ### Swipeable Card Carousel
 

@@ -1,7 +1,11 @@
 "use client";
 
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { formatDisplayCurrency } from "@/types/credit-cards";
 import { cx } from "@/utils/cx";
+import { InlineEditableField } from "./InlineEditableField";
 
 type Apr = {
   aprPercentage: number | null;
@@ -60,9 +64,18 @@ function computeWeightedAverageApr(aprs: Apr[]): number | null {
 
 interface AprBreakdownProps {
   aprs: Apr[] | undefined;
+  cardId: Id<"creditCards">;
+  aprOverrides?: Array<{
+    index: number;
+    aprPercentage?: number;
+    balanceSubjectToApr?: number;
+    interestChargeAmount?: number;
+  }>;
 }
 
-export function AprBreakdown({ aprs }: AprBreakdownProps) {
+export function AprBreakdown({ aprs, cardId, aprOverrides }: AprBreakdownProps) {
+  const setAprOverride = useMutation(api.creditCards.mutations.setAprOverride);
+  const clearAprOverride = useMutation(api.creditCards.mutations.clearAprOverride);
   if (!aprs) {
     return (
       <section>
@@ -116,6 +129,12 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
         <div className="divide-y divide-secondary">
           {allAprs.map((apr, i) => {
             const color = getAprColor(apr);
+            const override = aprOverrides?.find((o) => o.index === i);
+
+            const resolvedApr = override?.aprPercentage ?? apr.aprPercentage;
+            const resolvedBalance = override?.balanceSubjectToApr ?? apr.balanceSubjectToApr;
+            const resolvedInterest = override?.interestChargeAmount ?? apr.interestChargeAmount;
+
             return (
               <div
                 key={`${apr.aprType}-${i}`}
@@ -127,19 +146,54 @@ export function AprBreakdown({ aprs }: AprBreakdownProps) {
                 <span className="text-sm text-primary">
                   {APR_DISPLAY_NAMES[apr.aprType] ?? formatAprType(apr.aprType)}
                 </span>
-                <span className={cx("text-right text-sm font-medium tabular-nums", color.text)}>
-                  {apr.aprPercentage != null ? `${apr.aprPercentage.toFixed(2)}%` : "—"}
-                </span>
-                <span className="text-right text-sm tabular-nums text-primary">
-                  {apr.balanceSubjectToApr != null
-                    ? formatDisplayCurrency(apr.balanceSubjectToApr)
-                    : "—"}
-                </span>
-                <span className="text-right text-sm tabular-nums text-primary">
-                  {apr.interestChargeAmount != null
-                    ? formatDisplayCurrency(apr.interestChargeAmount)
-                    : "—"}
-                </span>
+                <div className="text-right">
+                  <InlineEditableField
+                    value={resolvedApr}
+                    plaidValue={apr.aprPercentage}
+                    isOverridden={override?.aprPercentage != null}
+                    type="percentage"
+                    onSave={async (v) => {
+                      await setAprOverride({ cardId, aprIndex: i, field: "aprPercentage", value: v as number });
+                    }}
+                    onRevert={async () => {
+                      await clearAprOverride({ cardId, aprIndex: i, field: "aprPercentage" });
+                    }}
+                    formatDisplay={(v) => v != null ? `${Number(v).toFixed(2)}%` : "—"}
+                    className="justify-end"
+                  />
+                </div>
+                <div className="text-right">
+                  <InlineEditableField
+                    value={resolvedBalance}
+                    plaidValue={apr.balanceSubjectToApr}
+                    isOverridden={override?.balanceSubjectToApr != null}
+                    type="currency"
+                    onSave={async (v) => {
+                      await setAprOverride({ cardId, aprIndex: i, field: "balanceSubjectToApr", value: v as number });
+                    }}
+                    onRevert={async () => {
+                      await clearAprOverride({ cardId, aprIndex: i, field: "balanceSubjectToApr" });
+                    }}
+                    formatDisplay={(v) => v != null ? formatDisplayCurrency(Number(v)) : "—"}
+                    className="justify-end"
+                  />
+                </div>
+                <div className="text-right">
+                  <InlineEditableField
+                    value={resolvedInterest}
+                    plaidValue={apr.interestChargeAmount}
+                    isOverridden={override?.interestChargeAmount != null}
+                    type="currency"
+                    onSave={async (v) => {
+                      await setAprOverride({ cardId, aprIndex: i, field: "interestChargeAmount", value: v as number });
+                    }}
+                    onRevert={async () => {
+                      await clearAprOverride({ cardId, aprIndex: i, field: "interestChargeAmount" });
+                    }}
+                    formatDisplay={(v) => v != null ? formatDisplayCurrency(Number(v)) : "—"}
+                    className="justify-end"
+                  />
+                </div>
               </div>
             );
           })}

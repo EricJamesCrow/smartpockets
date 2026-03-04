@@ -114,6 +114,26 @@ const schema = defineEntSchema(
             payOverTimeLimit: v.optional(v.number()),
             payOverTimeApr: v.optional(v.number()),
 
+            // User overrides (preserves raw Plaid data, user edits stored here)
+            userOverrides: v.optional(
+                v.object({
+                    officialName: v.optional(v.string()),
+                    accountName: v.optional(v.string()),
+                    company: v.optional(v.string()),
+                    aprs: v.optional(
+                        v.array(
+                            v.object({
+                                index: v.number(),
+                                aprPercentage: v.optional(v.number()),
+                                balanceSubjectToApr: v.optional(v.number()),
+                                interestChargeAmount: v.optional(v.number()),
+                            }),
+                        ),
+                    ),
+                    providerDashboardUrl: v.optional(v.string()),
+                }),
+            ),
+
             // State
             isActive: v.boolean(),
         })
@@ -156,6 +176,14 @@ const schema = defineEntSchema(
             accruedDeferredInterest: v.optional(v.number()),
             monthlyMinimumPayment: v.optional(v.number()),
             isActive: v.boolean(),
+            // User overrides for Plaid-synced promos
+            userOverrides: v.optional(
+                v.object({
+                    expirationDate: v.optional(v.string()),
+                }),
+            ),
+            // True for user-created promos (not from Plaid)
+            isManual: v.optional(v.boolean()),
         })
             .edge("user")
             .edge("creditCard"),
