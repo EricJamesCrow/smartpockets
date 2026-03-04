@@ -5,6 +5,8 @@ import { useSession, useUser } from "@clerk/nextjs";
 import type { SessionWithActivitiesResource } from "@clerk/types";
 import { LogOut01, Monitor04, Phone01 } from "@untitledui/icons";
 import { toast } from "sonner";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { IconNotification } from "@repo/ui/untitledui/application/notifications/notifications";
 import { SectionFooter } from "@repo/ui/untitledui/application/section-footers/section-footer";
 import { SectionHeader } from "@repo/ui/untitledui/application/section-headers/section-headers";
@@ -16,14 +18,9 @@ import { Form } from "@repo/ui/untitledui/base/form/form";
 import { HintText } from "@repo/ui/untitledui/base/input/hint-text";
 import { InputBase, TextField } from "@repo/ui/untitledui/base/input/input";
 import { Label } from "@repo/ui/untitledui/base/input/label";
+import { passwordChangeSchema, type PasswordChangeFormValues } from "@/lib/validations";
 
-type FieldErrors = {
-    currentPassword?: string;
-    newPassword?: string;
-    confirmPassword?: string;
-};
-
-function getClerkErrorMessage(error: unknown): { field?: keyof FieldErrors; message: string } {
+function getClerkErrorMessage(error: unknown): { field?: keyof PasswordChangeFormValues; message: string } {
     if (error && typeof error === "object" && "errors" in error) {
         const clerkError = error as { errors: Array<{ code: string; message: string }> };
         const firstError = clerkError.errors[0];
@@ -113,12 +110,16 @@ export default function PasswordPage() {
     const { user } = useUser();
     const { session: currentSession } = useSession();
 
-    // Form state
-    const [currentPassword, setCurrentPassword] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+    const {
+        control,
+        handleSubmit,
+        reset,
+        setError,
+        formState: { isSubmitting, errors },
+    } = useForm<PasswordChangeFormValues>({
+        resolver: zodResolver(passwordChangeSchema),
+        defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
+    });
 
     // Sessions state
     const [sessions, setSessions] = useState<SessionWithActivitiesResource[]>([]);
@@ -140,31 +141,16 @@ export default function PasswordPage() {
         fetchSessions();
     }, [fetchSessions]);
 
-    const handlePasswordChange = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setFieldErrors({});
-
-        // Client-side validation
-        if (newPassword !== confirmPassword) {
-            setFieldErrors({ confirmPassword: "Passwords don't match" });
-            return;
-        }
-        if (newPassword.length < 8) {
-            setFieldErrors({ newPassword: "Password must be at least 8 characters" });
-            return;
-        }
-
+    const onSubmit = async (data: PasswordChangeFormValues) => {
         if (!user) return;
 
-        setIsLoading(true);
         try {
             await user.updatePassword({
-                currentPassword,
-                newPassword,
+                currentPassword: data.currentPassword,
+                newPassword: data.newPassword,
                 signOutOfOtherSessions: true,
             });
 
-            // Success toast
             toast.custom((t) => (
                 <IconNotification
                     title="Password updated"
@@ -174,25 +160,18 @@ export default function PasswordPage() {
                 />
             ));
 
-            // Clear form
-            setCurrentPassword("");
-            setNewPassword("");
-            setConfirmPassword("");
-
-            // Refresh sessions (other sessions were signed out)
+            reset();
             await fetchSessions();
         } catch (error) {
             const { field, message } = getClerkErrorMessage(error);
 
             if (field) {
-                setFieldErrors({ [field]: message });
+                setError(field, { message });
             } else {
                 toast.custom((t) => (
                     <IconNotification title="Error" description={message} color="error" onClose={() => toast.dismiss(t)} />
                 ));
             }
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -222,13 +201,6 @@ export default function PasswordPage() {
         }
     };
 
-    const handleCancel = () => {
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        setFieldErrors({});
-    };
-
     return (
         <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-6 px-4 lg:px-8">
@@ -241,28 +213,32 @@ export default function PasswordPage() {
                     </SectionHeader.Group>
                 </SectionHeader.Root>
 
-                <Form className="contents" onSubmit={handlePasswordChange}>
+                <Form className="contents" onSubmit={handleSubmit(onSubmit)}>
                     <div className="flex flex-col gap-5">
                         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
                             <SectionLabel.Root isRequired size="sm" title="Current password" className="max-lg:hidden" />
 
-                            <TextField
-                                aria-label="Current password"
-                                isRequired
+                            <Controller
+                                control={control}
                                 name="currentPassword"
-                                type="password"
-                                autoComplete="current-password"
-                                isInvalid={!!fieldErrors.currentPassword}
-                            >
-                                <Label className="lg:hidden">Current password</Label>
-                                <InputBase
-                                    size="md"
-                                    placeholder="••••••••"
-                                    value={currentPassword}
-                                    onChange={(value) => setCurrentPassword(value)}
-                                />
-                                {fieldErrors.currentPassword && <HintText>{fieldErrors.currentPassword}</HintText>}
-                            </TextField>
+                                render={({ field, fieldState }) => (
+                                    <TextField
+                                        aria-label="Current password"
+                                        isRequired
+                                        name="currentPassword"
+                                        type="password"
+                                        autoComplete="current-password"
+                                        isInvalid={!!fieldState.error}
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        onBlur={field.onBlur}
+                                    >
+                                        <Label className="lg:hidden">Current password</Label>
+                                        <InputBase size="md" placeholder="••••••••" />
+                                        {fieldState.error && <HintText>{fieldState.error.message}</HintText>}
+                                    </TextField>
+                                )}
+                            />
                         </div>
 
                         <hr className="h-px w-full border-none bg-border-secondary" />
@@ -270,30 +246,34 @@ export default function PasswordPage() {
                         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
                             <SectionLabel.Root isRequired size="sm" title="New password" className="max-lg:hidden" />
 
-                            <TextField
-                                aria-label="New password"
-                                isRequired
+                            <Controller
+                                control={control}
                                 name="newPassword"
-                                type="password"
-                                autoComplete="new-password"
-                                isInvalid={!!fieldErrors.newPassword}
-                            >
-                                <Label className="lg:hidden">New password</Label>
-                                <InputBase
-                                    size="md"
-                                    placeholder="••••••••"
-                                    value={newPassword}
-                                    onChange={(value) => setNewPassword(value)}
-                                />
-                                <HintText>
-                                    {fieldErrors.newPassword || (
-                                        <>
-                                            <span className="max-lg:hidden">Your new password must be more than 8 characters.</span>
-                                            <span className="lg:hidden">Must be more than 8 characters.</span>
-                                        </>
-                                    )}
-                                </HintText>
-                            </TextField>
+                                render={({ field, fieldState }) => (
+                                    <TextField
+                                        aria-label="New password"
+                                        isRequired
+                                        name="newPassword"
+                                        type="password"
+                                        autoComplete="new-password"
+                                        isInvalid={!!fieldState.error}
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        onBlur={field.onBlur}
+                                    >
+                                        <Label className="lg:hidden">New password</Label>
+                                        <InputBase size="md" placeholder="••••••••" />
+                                        <HintText>
+                                            {fieldState.error?.message || (
+                                                <>
+                                                    <span className="max-lg:hidden">Your new password must be more than 8 characters.</span>
+                                                    <span className="lg:hidden">Must be more than 8 characters.</span>
+                                                </>
+                                            )}
+                                        </HintText>
+                                    </TextField>
+                                )}
+                            />
                         </div>
 
                         <hr className="h-px w-full border-none bg-border-secondary" />
@@ -301,31 +281,35 @@ export default function PasswordPage() {
                         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(200px,280px)_minmax(400px,512px)] lg:gap-8">
                             <SectionLabel.Root isRequired size="sm" title="Confirm new password" className="max-lg:hidden" />
 
-                            <TextField
-                                aria-label="Confirm new password"
-                                isRequired
+                            <Controller
+                                control={control}
                                 name="confirmPassword"
-                                type="password"
-                                autoComplete="new-password"
-                                isInvalid={!!fieldErrors.confirmPassword}
-                            >
-                                <Label className="lg:hidden">Confirm new password</Label>
-                                <InputBase
-                                    size="md"
-                                    placeholder="••••••••"
-                                    value={confirmPassword}
-                                    onChange={(value) => setConfirmPassword(value)}
-                                />
-                                {fieldErrors.confirmPassword && <HintText>{fieldErrors.confirmPassword}</HintText>}
-                            </TextField>
+                                render={({ field, fieldState }) => (
+                                    <TextField
+                                        aria-label="Confirm new password"
+                                        isRequired
+                                        name="confirmPassword"
+                                        type="password"
+                                        autoComplete="new-password"
+                                        isInvalid={!!fieldState.error}
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        onBlur={field.onBlur}
+                                    >
+                                        <Label className="lg:hidden">Confirm new password</Label>
+                                        <InputBase size="md" placeholder="••••••••" />
+                                        {fieldState.error && <HintText>{fieldState.error.message}</HintText>}
+                                    </TextField>
+                                )}
+                            />
                         </div>
                     </div>
                     <SectionFooter.Root>
                         <SectionFooter.Actions>
-                            <Button color="secondary" size="md" onClick={handleCancel}>
+                            <Button color="secondary" size="md" onClick={() => reset()}>
                                 Cancel
                             </Button>
-                            <Button type="submit" color="primary" size="md" isLoading={isLoading}>
+                            <Button type="submit" color="primary" size="md" isLoading={isSubmitting}>
                                 Update password
                             </Button>
                         </SectionFooter.Actions>
