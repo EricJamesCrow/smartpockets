@@ -35,7 +35,7 @@ export const generateDailySnapshots = internalAction({
 
     let successCount = 0;
     let failureCount = 0;
-    const statementDate = today.toISOString().split("T")[0];
+    const statementDate = today.toISOString().split("T")[0]!;
 
     for (const card of cards) {
       try {
