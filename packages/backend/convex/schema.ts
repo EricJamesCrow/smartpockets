@@ -23,7 +23,8 @@ const schema = defineEntSchema(
             .edges("wallets", { ref: true })
             .edges("statementSnapshots", { ref: true })
             .edges("promoRates", { ref: true })
-            .edges("installmentPlans", { ref: true }),
+            .edges("installmentPlans", { ref: true })
+            .edges("transactionOverlays", { ref: true }),
 
         // === ORG LAYER ===
         organizations: defineEnt({
@@ -238,6 +239,20 @@ const schema = defineEntSchema(
                 }),
             ),
         }).index("byUserId", ["userId"]),
+
+        // === TRANSACTION OVERLAYS ===
+        transactionOverlays: defineEnt({
+            plaidTransactionId: v.string(),
+            isReviewed: v.optional(v.boolean()),
+            reviewedAt: v.optional(v.number()),
+            isHidden: v.optional(v.boolean()),
+            notes: v.optional(v.string()),
+            userCategory: v.optional(v.string()),
+            userDate: v.optional(v.string()),
+            userMerchantName: v.optional(v.string()),
+        })
+            .edge("user")
+            .index("by_plaidTransactionId", ["plaidTransactionId"]),
     },
     { schemaValidation: false },
 );
