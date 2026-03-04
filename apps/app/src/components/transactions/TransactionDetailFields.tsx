@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { cx } from "@repo/ui/utils";
+import type { Key } from "react-aria-components";
+import { parseDate } from "@internationalized/date";
+import type { DateValue } from "@internationalized/date";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
+import { ButtonUtility } from "@repo/ui/untitledui/base/buttons/button-utility";
+import { Select } from "@repo/ui/untitledui/base/select/select";
+import { DatePicker } from "@repo/ui/untitledui/application/date-picker/date-picker";
+import { TextArea } from "@repo/ui/untitledui/base/textarea/textarea";
+import { TagGroup, TagList, Tag } from "@repo/ui/untitledui/base/tags/tags";
+import { FileUpload } from "@repo/ui/untitledui/application/file-upload/file-upload-base";
 import { Copy01, ScissorsCut01, Tag01, Attachment01 } from "@untitledui/icons";
 import {
   TRANSACTION_CATEGORIES,
@@ -28,6 +36,11 @@ interface TransactionDetailFieldsProps {
   ) => Promise<void>;
 }
 
+const categoryItems = TRANSACTION_CATEGORIES.map((cat) => ({
+  id: cat,
+  label: cat,
+}));
+
 /**
  * Editable fields section of the transaction detail panel.
  *
@@ -42,10 +55,12 @@ export function TransactionDetailFields({
 }: TransactionDetailFieldsProps) {
   const [copied, setCopied] = useState(false);
   const [notes, setNotes] = useState<string | undefined>(undefined);
+  const [pendingDate, setPendingDate] = useState<DateValue | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Resolved values (overlay wins over transaction defaults)
-  const currentCategory = (overlay?.userCategory ?? transaction.category) as TransactionCategory;
+  const currentCategory = (overlay?.userCategory ??
+    transaction.category) as TransactionCategory;
   const currentDate = overlay?.userDate ?? transaction.date;
   const currentNotes = notes ?? overlay?.notes ?? "";
 
@@ -54,6 +69,30 @@ export function TransactionDetailFields({
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }, [transaction.name]);
+
+  const handleCategoryChange = useCallback(
+    (key: Key | null) => {
+      if (key !== null) {
+        void upsertField("userCategory", key as string);
+      }
+    },
+    [upsertField]
+  );
+
+  const handleDateChange = useCallback((value: DateValue | null) => {
+    setPendingDate(value);
+  }, []);
+
+  const handleDateApply = useCallback(() => {
+    if (pendingDate) {
+      void upsertField("userDate", pendingDate.toString());
+      setPendingDate(null);
+    }
+  }, [pendingDate, upsertField]);
+
+  const handleDateCancel = useCallback(() => {
+    setPendingDate(null);
+  }, []);
 
   const handleNotesChange = useCallback(
     (value: string) => {
@@ -78,6 +117,9 @@ export function TransactionDetailFields({
     void upsertField("notes", value || null);
   }, [notes, overlay, upsertField]);
 
+  // DatePicker value: use pending selection if active, otherwise current date
+  const datePickerValue = pendingDate ?? parseDate(currentDate);
+
   return (
     <div className="flex flex-col gap-5">
       {/* Original Statement */}
@@ -89,14 +131,13 @@ export function TransactionDetailFields({
           <span className="flex-1 truncate text-sm text-secondary">
             {transaction.name}
           </span>
-          <button
-            type="button"
+          <ButtonUtility
+            icon={Copy01}
+            size="xs"
+            color="tertiary"
+            tooltip="Copy original statement"
             onClick={handleCopy}
-            className="shrink-0 rounded p-1 text-tertiary hover:bg-primary_hover hover:text-secondary"
-            aria-label="Copy original statement"
-          >
-            <Copy01 className="size-4" />
-          </button>
+          />
           {copied && (
             <span className="text-xs text-utility-success-600">Copied</span>
           )}
@@ -105,32 +146,24 @@ export function TransactionDetailFields({
 
       {/* Date */}
       <div>
-        <label
-          htmlFor="txn-date"
-          className="text-xs font-semibold uppercase tracking-wider text-tertiary"
-        >
+        <label className="text-xs font-semibold uppercase tracking-wider text-tertiary">
           Date
         </label>
-        <input
-          id="txn-date"
-          type="date"
-          value={currentDate}
-          onChange={(e) => void upsertField("userDate", e.target.value || null)}
-          className={cx(
-            "mt-1 block w-full rounded-lg border border-secondary bg-primary px-3 py-2 text-sm text-primary",
-            "focus:border-brand-solid focus:outline-none focus:ring-1 focus:ring-brand-solid",
-            savingField === "userDate" && "opacity-60"
-          )}
-        />
+        <div className="mt-1">
+          <DatePicker
+            value={datePickerValue}
+            onChange={handleDateChange}
+            onApply={handleDateApply}
+            onCancel={handleDateCancel}
+            isDisabled={savingField === "userDate"}
+          />
+        </div>
       </div>
 
       {/* Category */}
       <div>
         <div className="flex items-center justify-between">
-          <label
-            htmlFor="txn-category"
-            className="text-xs font-semibold uppercase tracking-wider text-tertiary"
-          >
+          <label className="text-xs font-semibold uppercase tracking-wider text-tertiary">
             Category
           </label>
           <Button
@@ -142,69 +175,67 @@ export function TransactionDetailFields({
             Split
           </Button>
         </div>
-        <select
-          id="txn-category"
-          value={currentCategory}
-          onChange={(e) =>
-            void upsertField("userCategory", e.target.value || null)
-          }
-          className={cx(
-            "mt-1 block w-full rounded-lg border border-secondary bg-primary px-3 py-2 text-sm text-primary",
-            "focus:border-brand-solid focus:outline-none focus:ring-1 focus:ring-brand-solid",
-            savingField === "userCategory" && "opacity-60"
-          )}
+        <Select
+          items={categoryItems}
+          selectedKey={currentCategory}
+          onSelectionChange={handleCategoryChange}
+          placeholder="Select category"
+          size="sm"
+          isDisabled={savingField === "userCategory"}
         >
-          {TRANSACTION_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
+          {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
+        </Select>
       </div>
 
       {/* Notes */}
       <div>
-        <label
-          htmlFor="txn-notes"
-          className="text-xs font-semibold uppercase tracking-wider text-tertiary"
-        >
-          Notes
-        </label>
-        <textarea
-          id="txn-notes"
+        <TextArea
+          label="Notes"
+          placeholder="Add a note..."
           rows={3}
           value={currentNotes}
-          onChange={(e) => handleNotesChange(e.target.value)}
+          onChange={handleNotesChange}
           onBlur={handleNotesBlur}
-          placeholder="Add a note..."
-          className={cx(
-            "mt-1 block w-full resize-none rounded-lg border border-secondary bg-primary px-3 py-2 text-sm text-primary placeholder:text-quaternary",
-            "focus:border-brand-solid focus:outline-none focus:ring-1 focus:ring-brand-solid",
-            savingField === "notes" && "opacity-60"
-          )}
+          isDisabled={savingField === "notes"}
         />
       </div>
 
       {/* Deferred: Tags */}
-      <div className="opacity-50">
-        <div className="flex items-center gap-2">
+      <div className="pointer-events-none opacity-50">
+        <div className="mb-2 flex items-center gap-2">
           <Tag01 className="size-4 text-tertiary" />
           <span className="text-xs font-semibold uppercase tracking-wider text-tertiary">
             Tags
           </span>
         </div>
-        <p className="mt-1 text-sm text-quaternary">Coming soon</p>
+        <TagGroup label="Transaction tags" size="sm">
+          <TagList>
+            <Tag id="food" isDisabled>
+              Food
+            </Tag>
+            <Tag id="recurring" isDisabled>
+              Recurring
+            </Tag>
+            <Tag id="business" isDisabled>
+              Business
+            </Tag>
+          </TagList>
+        </TagGroup>
       </div>
 
       {/* Deferred: Attachments */}
-      <div className="opacity-50">
-        <div className="flex items-center gap-2">
+      <div className="pointer-events-none opacity-50">
+        <div className="mb-2 flex items-center gap-2">
           <Attachment01 className="size-4 text-tertiary" />
           <span className="text-xs font-semibold uppercase tracking-wider text-tertiary">
             Attachments
           </span>
         </div>
-        <p className="mt-1 text-sm text-quaternary">Coming soon</p>
+        <FileUpload.DropZone
+          isDisabled
+          hint="PNG, JPG or PDF (max. 5MB)"
+          accept="image/*,.pdf"
+        />
       </div>
     </div>
   );
