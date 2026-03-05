@@ -104,6 +104,7 @@ export function TransactionDetailFields({
     if (notes === undefined && overlay === undefined) return;
     const value = notes ?? overlay?.notes ?? "";
     void upsertField("notes", value || null);
+    setNotes(undefined); // Reset dirty flag — prevents debounce effect from double-firing
   }, [notes, overlay, upsertField]);
 
   // Debounced auto-save for notes
