@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { toast } from "sonner";
@@ -54,34 +54,31 @@ export function useDisconnectPlaidItem(
 
   const deleteMutation = useMutation(api.items.mutations.deletePlaidItem);
 
-  const disconnect = useCallback(
-    async (plaidItemId: string) => {
-      setIsLoading(true);
-      setError(null);
+  const disconnect = async (plaidItemId: string) => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        await deleteMutation({ plaidItemId });
+    try {
+      await deleteMutation({ plaidItemId });
 
-        toast.success("Bank disconnected", {
-          description: "All associated data has been removed.",
-        });
+      toast.success("Bank disconnected", {
+        description: "All associated data has been removed.",
+      });
 
-        await onSuccess?.();
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
+      await onSuccess?.();
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
 
-        toast.error("Failed to disconnect institution", {
-          description: error.message || "Please try again.",
-        });
+      toast.error("Failed to disconnect institution", {
+        description: error.message || "Please try again.",
+      });
 
-        onError?.(error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [deleteMutation, onSuccess, onError]
-  );
+      onError?.(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
     disconnect,

@@ -3,7 +3,6 @@
 import {
   createContext,
   useContext,
-  useCallback,
   useState,
   useEffect,
   type ReactNode,
@@ -83,13 +82,13 @@ export function ExtendedViewProvider({
     }
   }, [isExtended, isHydrated]);
 
-  const toggleExtended = useCallback(() => {
+  const toggleExtended = () => {
     setIsExtended((prev) => !prev);
-  }, []);
+  };
 
-  const setExtended = useCallback((value: boolean) => {
+  const setExtended = (value: boolean) => {
     setIsExtended(value);
-  }, []);
+  };
 
   return (
     <ExtendedViewContext.Provider
