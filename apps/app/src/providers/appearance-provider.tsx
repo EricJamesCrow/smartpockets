@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -23,7 +23,7 @@ export function useAppearance() {
 export function AppearanceProvider({ children }: { children: React.ReactNode }) {
   const prefs = useQuery(api.userPreferences.get);
   const { setTheme } = useTheme();
-  const hasAppliedInitialTheme = useRef(false);
+  const [hasAppliedInitialTheme, setHasAppliedInitialTheme] = useState(false);
 
   useEffect(() => {
     // Wait for preferences to load
@@ -32,9 +32,9 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
     const appearance = prefs?.appearance;
 
     // Apply theme from DB (only on initial load)
-    if (appearance?.theme && !hasAppliedInitialTheme.current) {
+    if (appearance?.theme && !hasAppliedInitialTheme) {
       setTheme(appearance.theme);
-      hasAppliedInitialTheme.current = true;
+      setHasAppliedInitialTheme(true);
     }
 
     // Apply brand color (always sync with DB)
