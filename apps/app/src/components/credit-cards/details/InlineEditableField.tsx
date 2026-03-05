@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { cx } from "@/utils/cx";
 
 type FieldType = "text" | "number" | "currency" | "percentage" | "date" | "url";
@@ -33,7 +34,7 @@ export function InlineEditableField({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const savingRef = useRef(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const displayValue = formatDisplay
     ? formatDisplay(value)
@@ -85,21 +86,17 @@ export function InlineEditableField({
   };
 
   const handleSave = async () => {
-    if (savingRef.current) return;
-    savingRef.current = true;
+    if (saving) return;
 
     const validated = validate(draft);
     if (validated === null) {
       setError(getValidationMessage(type));
-      savingRef.current = false;
       return;
     }
 
-    // If value unchanged from current, just close without saving
     // eslint-disable-next-line eqeqeq
     if (validated == value) {
       setIsEditing(false);
-      savingRef.current = false;
       return;
     }
 
@@ -112,7 +109,6 @@ export function InlineEditableField({
       setError("Failed to save. Please try again.");
     } finally {
       setSaving(false);
-      savingRef.current = false;
     }
   };
 
@@ -134,38 +130,22 @@ export function InlineEditableField({
   const handleContextMenu = (e: React.MouseEvent) => {
     if (!isOverridden || !onRevert) return;
     e.preventDefault();
-
-    // Create and show context menu
-    const menu = document.createElement("div");
-    menu.className =
-      "fixed z-50 rounded-lg border border-secondary bg-primary shadow-lg py-1 text-sm";
-    menu.style.left = `${e.clientX}px`;
-    menu.style.top = `${e.clientY}px`;
-
-    const hasPlaidValue = plaidValue != null && plaidValue !== "";
-
-    const item = document.createElement("button");
-    item.className =
-      "w-full px-3 py-1.5 text-left hover:bg-secondary text-primary cursor-pointer";
-    item.textContent = hasPlaidValue ? "Revert" : "Clear";
-    item.onclick = async () => {
-      document.removeEventListener("click", cleanup);
-      document.body.removeChild(menu);
-      await onRevert();
-    };
-    menu.appendChild(item);
-
-    const cleanup = (e: MouseEvent) => {
-      if (!menu.contains(e.target as Node)) {
-        if (document.body.contains(menu)) {
-          document.body.removeChild(menu);
-        }
-        document.removeEventListener("click", cleanup);
-      }
-    };
-    document.addEventListener("click", cleanup);
-    document.body.appendChild(menu);
+    setContextMenu({ x: e.clientX, y: e.clientY });
   };
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = () => setContextMenu(null);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setContextMenu(null);
+    };
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [contextMenu]);
 
   if (isEditing) {
     return (
@@ -177,7 +157,7 @@ export function InlineEditableField({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={() => {
-            if (!savingRef.current) {
+            if (!saving) {
               if (!draft.trim()) {
                 handleCancel();
               } else {
@@ -224,6 +204,25 @@ export function InlineEditableField({
         />
       )}
       <span className="text-sm font-medium text-primary">{displayValue}</span>
+      {contextMenu &&
+        createPortal(
+          <div
+            className="fixed z-50 rounded-lg border border-secondary bg-primary py-1 text-sm shadow-lg"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button
+              type="button"
+              className="w-full cursor-pointer px-3 py-1.5 text-left text-primary hover:bg-secondary"
+              onClick={async () => {
+                setContextMenu(null);
+                await onRevert?.();
+              }}
+            >
+              {plaidValue != null && plaidValue !== "" ? "Revert" : "Clear"}
+            </button>
+          </div>,
+          document.body
+        )}
     </span>
   );
 }
