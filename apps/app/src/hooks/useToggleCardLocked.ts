@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -56,54 +56,45 @@ export function useToggleCardLocked(
 
   const toggleLockMutation = useMutation(api.creditCards.mutations.toggleLock);
 
-  const lock = useCallback(
-    async (cardId: Id<"creditCards">) => {
-      setIsLoading(true);
-      setError(null);
+  const lock = async (cardId: Id<"creditCards">) => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const result = await toggleLockMutation({ cardId, isLocked: true });
-        onSuccess?.(result);
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
-        onError?.(error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [toggleLockMutation, onSuccess, onError]
-  );
+    try {
+      const result = await toggleLockMutation({ cardId, isLocked: true });
+      onSuccess?.(result);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      onError?.(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const unlock = useCallback(
-    async (cardId: Id<"creditCards">) => {
-      setIsLoading(true);
-      setError(null);
+  const unlock = async (cardId: Id<"creditCards">) => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const result = await toggleLockMutation({ cardId, isLocked: false });
-        onSuccess?.(result);
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
-        onError?.(error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [toggleLockMutation, onSuccess, onError]
-  );
+    try {
+      const result = await toggleLockMutation({ cardId, isLocked: false });
+      onSuccess?.(result);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      onError?.(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const toggle = useCallback(
-    async (cardId: Id<"creditCards">, currentlyLocked: boolean) => {
-      if (currentlyLocked) {
-        await unlock(cardId);
-      } else {
-        await lock(cardId);
-      }
-    },
-    [lock, unlock]
-  );
+  const toggle = async (cardId: Id<"creditCards">, currentlyLocked: boolean) => {
+    if (currentlyLocked) {
+      await unlock(cardId);
+    } else {
+      await lock(cardId);
+    }
+  };
 
   return {
     lock,

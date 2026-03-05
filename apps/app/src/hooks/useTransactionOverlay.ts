@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 
@@ -33,47 +33,38 @@ export function useTransactionOverlay(plaidTransactionId: string | null) {
     api.transactionOverlays.mutations.toggleHidden
   );
 
-  const upsertField = useCallback(
-    async (
-      field: "notes" | "userCategory" | "userDate" | "userMerchantName",
-      value: string | null
-    ) => {
-      if (!plaidTransactionId) return;
-      setSavingField(field);
-      try {
-        await upsertFieldMutation({ plaidTransactionId, field, value });
-      } finally {
-        setSavingField(null);
-      }
-    },
-    [plaidTransactionId, upsertFieldMutation]
-  );
+  const upsertField = async (
+    field: "notes" | "userCategory" | "userDate" | "userMerchantName",
+    value: string | null
+  ) => {
+    if (!plaidTransactionId) return;
+    setSavingField(field);
+    try {
+      await upsertFieldMutation({ plaidTransactionId, field, value });
+    } finally {
+      setSavingField(null);
+    }
+  };
 
-  const toggleReviewed = useCallback(
-    async (isReviewed: boolean) => {
-      if (!plaidTransactionId) return;
-      setSavingField("isReviewed");
-      try {
-        await toggleReviewedMutation({ plaidTransactionId, isReviewed });
-      } finally {
-        setSavingField(null);
-      }
-    },
-    [plaidTransactionId, toggleReviewedMutation]
-  );
+  const toggleReviewed = async (isReviewed: boolean) => {
+    if (!plaidTransactionId) return;
+    setSavingField("isReviewed");
+    try {
+      await toggleReviewedMutation({ plaidTransactionId, isReviewed });
+    } finally {
+      setSavingField(null);
+    }
+  };
 
-  const toggleHidden = useCallback(
-    async (isHidden: boolean) => {
-      if (!plaidTransactionId) return;
-      setSavingField("isHidden");
-      try {
-        await toggleHiddenMutation({ plaidTransactionId, isHidden });
-      } finally {
-        setSavingField(null);
-      }
-    },
-    [plaidTransactionId, toggleHiddenMutation]
-  );
+  const toggleHidden = async (isHidden: boolean) => {
+    if (!plaidTransactionId) return;
+    setSavingField("isHidden");
+    try {
+      await toggleHiddenMutation({ plaidTransactionId, isHidden });
+    } finally {
+      setSavingField(null);
+    }
+  };
 
   return {
     overlay,

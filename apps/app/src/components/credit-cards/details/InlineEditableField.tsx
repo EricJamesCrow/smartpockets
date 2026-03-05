@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cx } from "@/utils/cx";
 
@@ -42,11 +42,11 @@ export function InlineEditableField({
       ? String(value)
       : placeholder;
 
-  const startEditing = useCallback(() => {
+  const startEditing = () => {
     setDraft(value != null ? String(value) : "");
     setError(null);
     setIsEditing(true);
-  }, [value]);
+  };
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

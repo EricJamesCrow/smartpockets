@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -58,31 +58,28 @@ export function WalletsContent() {
   );
 
   // Handle drag end - reorder wallets
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const { active, over } = event;
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
 
-      if (over && active.id !== over.id && wallets) {
-        const oldIndex = wallets.findIndex((w) => w._id === active.id);
-        const newIndex = wallets.findIndex((w) => w._id === over.id);
+    if (over && active.id !== over.id && wallets) {
+      const oldIndex = wallets.findIndex((w) => w._id === active.id);
+      const newIndex = wallets.findIndex((w) => w._id === over.id);
 
-        if (oldIndex !== -1 && newIndex !== -1) {
-          // Optimistically reorder (Convex will handle real update)
-          const reorderedIds = arrayMove(
-            wallets.map((w) => w._id),
-            oldIndex,
-            newIndex
-          );
+      if (oldIndex !== -1 && newIndex !== -1) {
+        // Optimistically reorder (Convex will handle real update)
+        const reorderedIds = arrayMove(
+          wallets.map((w) => w._id),
+          oldIndex,
+          newIndex
+        );
 
-          // Persist new order
-          await updateSortOrder({
-            walletIds: reorderedIds as Id<"wallets">[],
-          });
-        }
+        // Persist new order
+        await updateSortOrder({
+          walletIds: reorderedIds as Id<"wallets">[],
+        });
       }
-    },
-    [wallets, updateSortOrder]
-  );
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">

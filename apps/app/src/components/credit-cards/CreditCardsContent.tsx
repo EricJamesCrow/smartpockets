@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
@@ -84,28 +84,25 @@ function CreditCardsContentInner() {
   const isLoading = cardsData === undefined;
 
   // Clear wallet filter and navigate to all cards
-  const handleClearWallet = useCallback(() => {
+  const handleClearWallet = () => {
     router.push("/credit-cards");
-  }, [router]);
+  };
 
   // Open Add Cards slideout
-  const handleOpenAddCards = useCallback(() => {
+  const handleOpenAddCards = () => {
     setIsAddCardsOpen(true);
-  }, []);
+  };
 
-  const handlePlaidLinkSuccess = useCallback(() => {
+  const handlePlaidLinkSuccess = () => {
     router.refresh();
-  }, [router]);
+  };
 
-  const creditCardProducts = useMemo(() => ["transactions", "liabilities"], []);
-  const creditCardAccountFilters = useMemo(
-    () => ({
-      credit: {
-        account_subtypes: ["credit card"],
-      },
-    }),
-    []
-  );
+  const creditCardProducts = ["transactions", "liabilities"];
+  const creditCardAccountFilters = {
+    credit: {
+      account_subtypes: ["credit card"],
+    },
+  };
 
   return (
     <div className="flex h-full flex-col">

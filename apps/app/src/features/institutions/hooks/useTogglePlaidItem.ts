@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { toast } from "sonner";
@@ -47,39 +47,36 @@ export function useTogglePlaidItem(
 
   const toggleMutation = useMutation(api.plaidComponent.togglePlaidItemActive);
 
-  const toggle = useCallback(
-    async (itemId: string) => {
-      setIsLoading(true);
-      setError(null);
+  const toggle = async (itemId: string) => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const result = await toggleMutation({ itemId });
+    try {
+      const result = await toggleMutation({ itemId });
 
-        toast.success(
-          result.isActive ? "Institution enabled" : "Institution disabled",
-          {
-            description: result.isActive
-              ? "This institution will sync and appear in your data."
-              : "This institution is now paused and hidden from your data.",
-          }
-        );
+      toast.success(
+        result.isActive ? "Institution enabled" : "Institution disabled",
+        {
+          description: result.isActive
+            ? "This institution will sync and appear in your data."
+            : "This institution is now paused and hidden from your data.",
+        }
+      );
 
-        onSuccess?.(result);
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
+      onSuccess?.(result);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
 
-        toast.error("Failed to toggle institution", {
-          description: error.message,
-        });
+      toast.error("Failed to toggle institution", {
+        description: error.message,
+      });
 
-        onError?.(error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [toggleMutation, onSuccess, onError]
-  );
+      onError?.(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
     toggle,
