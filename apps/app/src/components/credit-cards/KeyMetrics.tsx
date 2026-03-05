@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { cx } from "@repo/ui/utils";
 import {
   formatDisplayCurrency,
@@ -21,15 +20,11 @@ interface KeyMetricsProps {
  */
 export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
   // Calculate pending charges total
-  const pendingTotal = useMemo(() => {
-    return transactions
-      .filter((txn) => txn.status === "Pending")
-      .reduce((sum, txn) => sum + txn.amount, 0);
-  }, [transactions]);
+  const pendingTotal = transactions
+    .filter((txn) => txn.status === "Pending")
+    .reduce((sum, txn) => sum + txn.amount, 0);
 
-  const pendingCount = useMemo(() => {
-    return transactions.filter((txn) => txn.status === "Pending").length;
-  }, [transactions]);
+  const pendingCount = transactions.filter((txn) => txn.status === "Pending").length;
 
   // Calculate available credit percentage
   const availablePercent =

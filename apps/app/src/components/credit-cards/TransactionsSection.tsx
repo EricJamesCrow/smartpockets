@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -155,24 +155,24 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
   }, [sortedTransactions, currentPage]);
 
   // Reset to page 1 when filters change
-  const handleFiltersChange = useCallback((newFilters: TransactionFiltersState) => {
+  const handleFiltersChange = (newFilters: TransactionFiltersState) => {
     setFilters(newFilters);
     setCurrentPage(1);
-  }, []);
+  };
 
   // Handle sort change
-  const handleSortChange = useCallback((descriptor: SortDescriptor) => {
+  const handleSortChange = (descriptor: SortDescriptor) => {
     setSortDescriptor(descriptor);
     setCurrentPage(1);
-  }, []);
+  };
 
   // Export handler - stub for future CSV export feature
-  const handleExport = useCallback(() => {
+  const handleExport = () => {
     // CSV export will be implemented when file download utilities are added
-  }, []);
+  };
 
   // Convert credit-card Transaction to DetailPanelTransaction for the panel
-  const handleSelectTransaction = useCallback((transaction: Transaction) => {
+  const handleSelectTransaction = (transaction: Transaction) => {
     setSelectedTransaction({
       transactionId: transaction.id,
       date: transaction.date,
@@ -186,7 +186,7 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
       isRecurring: transaction.isRecurring,
       recurringFrequency: transaction.recurringFrequency,
     });
-  }, []);
+  };
 
   return (
     <motion.div

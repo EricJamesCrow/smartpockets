@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useSession, useUser } from "@clerk/nextjs";
 import type { SessionWithActivitiesResource } from "@clerk/types";
 import { LogOut01, Monitor04, Phone01 } from "@untitledui/icons";
@@ -124,7 +124,7 @@ export default function PasswordPage() {
     const [sessions, setSessions] = useState<SessionWithActivitiesResource[]>([]);
     const [sessionsLoading, setSessionsLoading] = useState(true);
 
-    const fetchSessions = useCallback(async () => {
+    const fetchSessions = async () => {
         if (!user) return;
         try {
             const userSessions = await user.getSessions();
@@ -134,7 +134,7 @@ export default function PasswordPage() {
         } finally {
             setSessionsLoading(false);
         }
-    }, [user]);
+    };
 
     useEffect(() => {
         fetchSessions();

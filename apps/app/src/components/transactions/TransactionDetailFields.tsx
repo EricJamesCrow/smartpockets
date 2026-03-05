@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { Key } from "react-aria-components";
 import { parseDate } from "@internationalized/date";
 import type { DateValue } from "@internationalized/date";
@@ -63,49 +63,43 @@ export function TransactionDetailFields({
   const currentDate = overlay?.userDate ?? transaction.date;
   const currentNotes = notes ?? overlay?.notes ?? "";
 
-  const handleCopy = useCallback(async () => {
+  const handleCopy = async () => {
     await navigator.clipboard.writeText(transaction.name);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-  }, [transaction.name]);
+  };
 
-  const handleCategoryChange = useCallback(
-    (key: Key | null) => {
-      if (key !== null) {
-        void upsertField("userCategory", key as string);
-      }
-    },
-    [upsertField]
-  );
+  const handleCategoryChange = (key: Key | null) => {
+    if (key !== null) {
+      void upsertField("userCategory", key as string);
+    }
+  };
 
-  const handleDateChange = useCallback((value: DateValue | null) => {
+  const handleDateChange = (value: DateValue | null) => {
     setPendingDate(value);
-  }, []);
+  };
 
-  const handleDateApply = useCallback(() => {
+  const handleDateApply = () => {
     if (pendingDate) {
       void upsertField("userDate", pendingDate.toString());
       setPendingDate(null);
     }
-  }, [pendingDate, upsertField]);
+  };
 
-  const handleDateCancel = useCallback(() => {
+  const handleDateCancel = () => {
     setPendingDate(null);
-  }, []);
+  };
 
-  const handleNotesChange = useCallback(
-    (value: string) => {
-      setNotes(value);
-    },
-    []
-  );
+  const handleNotesChange = (value: string) => {
+    setNotes(value);
+  };
 
-  const handleNotesBlur = useCallback(() => {
+  const handleNotesBlur = () => {
     if (notes === undefined && overlay === undefined) return;
     const value = notes ?? overlay?.notes ?? "";
     void upsertField("notes", value || null);
     setNotes(undefined); // Reset dirty flag — prevents debounce effect from double-firing
-  }, [notes, overlay, upsertField]);
+  };
 
   // Debounced auto-save for notes
   useEffect(() => {

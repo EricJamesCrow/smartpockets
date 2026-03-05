@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -100,31 +100,28 @@ export function PinnedWalletsSidebar() {
   );
 
   // Handle drag end - reorder pinned wallets
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const { active, over } = event;
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
 
-      if (over && active.id !== over.id && pinnedWallets) {
-        const oldIndex = pinnedWallets.findIndex((w) => w._id === active.id);
-        const newIndex = pinnedWallets.findIndex((w) => w._id === over.id);
+    if (over && active.id !== over.id && pinnedWallets) {
+      const oldIndex = pinnedWallets.findIndex((w) => w._id === active.id);
+      const newIndex = pinnedWallets.findIndex((w) => w._id === over.id);
 
-        if (oldIndex !== -1 && newIndex !== -1) {
-          // Get reordered IDs
-          const reorderedIds = arrayMove(
-            pinnedWallets.map((w) => w._id),
-            oldIndex,
-            newIndex
-          );
+      if (oldIndex !== -1 && newIndex !== -1) {
+        // Get reordered IDs
+        const reorderedIds = arrayMove(
+          pinnedWallets.map((w) => w._id),
+          oldIndex,
+          newIndex
+        );
 
-          // Persist new order
-          await updatePinnedSortOrder({
-            walletIds: reorderedIds as Id<"wallets">[],
-          });
-        }
+        // Persist new order
+        await updatePinnedSortOrder({
+          walletIds: reorderedIds as Id<"wallets">[],
+        });
       }
-    },
-    [pinnedWallets, updatePinnedSortOrder]
-  );
+    }
+  };
 
   // Don't render section if no pinned wallets or loading
   if (!pinnedWallets || pinnedWallets.length === 0) {
