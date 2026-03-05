@@ -138,7 +138,8 @@ export default function PasswordPage() {
 
     useEffect(() => {
         fetchSessions();
-    }, [fetchSessions]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once on mount/user change, not on every fetchSessions recreation
+    }, [user]);
 
     const handlePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
