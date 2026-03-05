@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { Key } from "react-aria-components";
 import { parseDate } from "@internationalized/date";
 import type { DateValue } from "@internationalized/date";
@@ -56,7 +56,6 @@ export function TransactionDetailFields({
   const [copied, setCopied] = useState(false);
   const [notes, setNotes] = useState<string | undefined>(undefined);
   const [pendingDate, setPendingDate] = useState<DateValue | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Resolved values (overlay wins over transaction defaults)
   const currentCategory = (overlay?.userCategory ??
@@ -97,25 +96,24 @@ export function TransactionDetailFields({
   const handleNotesChange = useCallback(
     (value: string) => {
       setNotes(value);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        void upsertField("notes", value || null);
-      }, 500);
     },
-    [upsertField]
+    []
   );
 
   const handleNotesBlur = useCallback(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = null;
-    }
-    // Skip blur save if user hasn't typed and overlay is still loading
-    // to avoid clearing existing notes with a spurious null write
     if (notes === undefined && overlay === undefined) return;
     const value = notes ?? overlay?.notes ?? "";
     void upsertField("notes", value || null);
   }, [notes, overlay, upsertField]);
+
+  // Debounced auto-save for notes
+  useEffect(() => {
+    if (notes === undefined) return;
+    const timer = setTimeout(() => {
+      void upsertField("notes", notes || null);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [notes, upsertField]);
 
   // DatePicker value: use pending selection if active, otherwise current date
   const datePickerValue = pendingDate ?? parseDate(currentDate);
