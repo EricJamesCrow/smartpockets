@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
@@ -347,6 +348,21 @@ function ProviderLink({
   onClear: () => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = () => setContextMenu(null);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setContextMenu(null);
+    };
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [contextMenu]);
 
   if (editing) {
     return (
@@ -367,54 +383,14 @@ function ProviderLink({
     );
   }
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-
-    const menu = document.createElement("div");
-    menu.className =
-      "fixed z-50 rounded-lg border border-secondary bg-primary shadow-lg py-1 text-sm";
-    menu.style.left = `${e.clientX}px`;
-    menu.style.top = `${e.clientY}px`;
-
-    const editItem = document.createElement("button");
-    editItem.className =
-      "w-full px-3 py-1.5 text-left hover:bg-secondary text-primary cursor-pointer";
-    editItem.textContent = "Edit link";
-    editItem.onclick = () => {
-      document.removeEventListener("click", cleanup);
-      document.body.removeChild(menu);
-      setEditing(true);
-    };
-    menu.appendChild(editItem);
-
-    const removeItem = document.createElement("button");
-    removeItem.className =
-      "w-full px-3 py-1.5 text-left hover:bg-secondary text-utility-error-700 cursor-pointer";
-    removeItem.textContent = "Remove link";
-    removeItem.onclick = async () => {
-      document.removeEventListener("click", cleanup);
-      document.body.removeChild(menu);
-      await onClear();
-    };
-    menu.appendChild(removeItem);
-
-    const cleanup = (e: MouseEvent) => {
-      if (!menu.contains(e.target as Node)) {
-        if (document.body.contains(menu)) {
-          document.body.removeChild(menu);
-        }
-        document.removeEventListener("click", cleanup);
-      }
-    };
-    document.addEventListener("click", cleanup);
-    document.body.appendChild(menu);
-  };
-
   return (
     <span
       className="inline-flex items-center gap-1"
       onDoubleClick={() => setEditing(true)}
-      onContextMenu={handleContextMenu}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY });
+      }}
     >
       <a
         href={url}
@@ -436,6 +412,35 @@ function ProviderLink({
         </svg>
         Provider Dashboard
       </a>
+      {contextMenu &&
+        createPortal(
+          <div
+            className="fixed z-50 rounded-lg border border-secondary bg-primary py-1 text-sm shadow-lg"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button
+              type="button"
+              className="w-full cursor-pointer px-3 py-1.5 text-left text-primary hover:bg-secondary"
+              onClick={() => {
+                setContextMenu(null);
+                setEditing(true);
+              }}
+            >
+              Edit link
+            </button>
+            <button
+              type="button"
+              className="w-full cursor-pointer px-3 py-1.5 text-left text-utility-error-700 hover:bg-secondary"
+              onClick={async () => {
+                setContextMenu(null);
+                await onClear();
+              }}
+            >
+              Remove link
+            </button>
+          </div>,
+          document.body
+        )}
     </span>
   );
 }
