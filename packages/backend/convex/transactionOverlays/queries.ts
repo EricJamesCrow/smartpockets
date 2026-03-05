@@ -18,6 +18,7 @@ const overlayFields = {
   userCategory: v.optional(v.string()),
   userDate: v.optional(v.string()),
   userMerchantName: v.optional(v.string()),
+  userTime: v.optional(v.string()),
 };
 
 /**
@@ -79,6 +80,7 @@ export const getByTransactionIds = query({
         userCategory?: string;
         userDate?: string;
         userMerchantName?: string;
+        userTime?: string;
       }
     > = {};
 
@@ -99,6 +101,7 @@ export const getByTransactionIds = query({
           userCategory: doc.userCategory,
           userDate: doc.userDate,
           userMerchantName: doc.userMerchantName,
+          userTime: doc.userTime,
         };
       }
     }

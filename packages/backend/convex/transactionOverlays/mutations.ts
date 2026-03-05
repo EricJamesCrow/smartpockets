@@ -28,7 +28,8 @@ export const upsertField = mutation({
       v.literal("notes"),
       v.literal("userCategory"),
       v.literal("userDate"),
-      v.literal("userMerchantName")
+      v.literal("userMerchantName"),
+      v.literal("userTime")
     ),
     value: v.union(v.string(), v.null()),
   },
