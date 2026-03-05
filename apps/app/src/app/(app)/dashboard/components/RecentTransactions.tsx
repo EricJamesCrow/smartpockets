@@ -40,11 +40,7 @@ function groupByDate<T extends { date: string }>(
     }
 
     const group = groups.get(label);
-    if (group) {
-      group.push(tx);
-    } else {
-      groups.set(label, [tx]);
-    }
+    groups.set(label, group ? [...group, tx] : [tx]);
   }
 
   return groups;
