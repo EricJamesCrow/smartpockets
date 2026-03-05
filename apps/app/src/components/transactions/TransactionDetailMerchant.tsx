@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { MerchantLogo } from "@/components/credit-cards/MerchantLogo";
 import { formatTransactionAmount } from "@/utils/transaction-helpers";
 import type { DetailPanelTransaction } from "./TransactionDetailPanel";
@@ -10,7 +9,7 @@ interface TransactionDetailMerchantProps {
 }
 
 /**
- * Merchant section: logo, display name, formatted amount, and optional source card badge.
+ * Merchant section: logo, display name, and formatted amount.
  */
 export function TransactionDetailMerchant({
   transaction,
@@ -37,14 +36,6 @@ export function TransactionDetailMerchant({
         <p className={`mt-0.5 text-2xl font-bold tabular-nums ${amountColor}`}>
           {amountText}
         </p>
-        {transaction.sourceInfo && (
-          <Badge type="pill-color" size="sm" color="gray" className="mt-1">
-            {transaction.sourceInfo.displayName}
-            {transaction.sourceInfo.lastFour
-              ? ` ••${transaction.sourceInfo.lastFour}`
-              : ""}
-          </Badge>
-        )}
       </div>
     </div>
   );
