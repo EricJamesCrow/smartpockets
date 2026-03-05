@@ -13,23 +13,23 @@ export function mapPlaidCategory(category?: string): TransactionCategory {
   const categoryUpper = category.toUpperCase();
 
   const mapping: Record<string, TransactionCategory> = {
-    FOOD_AND_DRINK: "Dining",
+    FOOD_AND_DRINK: "Food & Drink",
     TRAVEL: "Travel",
     TRANSPORTATION: "Transportation",
     ENTERTAINMENT: "Entertainment",
-    GENERAL_MERCHANDISE: "Shopping",
-    GENERAL_SERVICES: "Other",
-    GOVERNMENT_AND_NON_PROFIT: "Other",
-    HOME_IMPROVEMENT: "Shopping",
+    GENERAL_MERCHANDISE: "General Merchandise",
+    GENERAL_SERVICES: "General Services",
+    GOVERNMENT_AND_NON_PROFIT: "Government & Nonprofit",
+    HOME_IMPROVEMENT: "Home Improvement",
     MEDICAL: "Healthcare",
-    PERSONAL_CARE: "Healthcare",
-    RENT_AND_UTILITIES: "Utilities",
-    TRANSFER_IN: "Transfers",
-    TRANSFER_OUT: "Transfers",
-    LOAN_PAYMENTS: "Payments",
-    BANK_FEES: "Fees",
+    PERSONAL_CARE: "Personal Care",
+    RENT_AND_UTILITIES: "Rent & Utilities",
+    TRANSFER_IN: "Transfer In",
+    TRANSFER_OUT: "Transfer Out",
+    LOAN_PAYMENTS: "Loan Payments",
+    BANK_FEES: "Bank Fees",
     INCOME: "Income",
-    RECREATION: "Entertainment",
+    RECREATION: "Recreation",
   };
 
   return mapping[categoryUpper] ?? "Other";

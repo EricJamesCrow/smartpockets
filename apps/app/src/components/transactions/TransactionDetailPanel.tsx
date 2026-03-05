@@ -7,6 +7,9 @@ import { TransactionDetailHeader } from "./TransactionDetailHeader";
 import { TransactionDetailMerchant } from "./TransactionDetailMerchant";
 import { TransactionDetailFields } from "./TransactionDetailFields";
 import { TransactionDetailActions } from "./TransactionDetailActions";
+import { TransactionDetailSourceCard } from "./TransactionDetailSourceCard";
+import { TransactionDetailAttachments } from "./TransactionDetailAttachments";
+import { toast } from "sonner";
 
 /**
  * Unified transaction type for the detail panel.
@@ -65,6 +68,21 @@ export function TransactionDetailPanel({
 
   if (!transaction) return null;
 
+  const handleHide = () => {
+    void toggleHidden(true);
+    onClose();
+
+    toast("Transaction hidden", {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          void toggleHidden(false);
+        },
+      },
+      duration: 5000,
+    });
+  };
+
   const isReviewed = overlay?.isReviewed ?? false;
   const isHidden = overlay?.isHidden ?? false;
 
@@ -89,8 +107,10 @@ export function TransactionDetailPanel({
 
             <SlideoutMenu.Content>
               <div className="flex flex-col gap-6 py-2">
+                {/* 1. Merchant (logo, name, amount) */}
                 <TransactionDetailMerchant transaction={transaction} />
 
+                {/* 2. Fields (statement, date+time, category, notes) */}
                 <TransactionDetailFields
                   transaction={transaction}
                   overlay={overlay}
@@ -98,7 +118,23 @@ export function TransactionDetailPanel({
                   upsertField={upsertField}
                 />
 
-                <TransactionDetailActions />
+                {/* 3. Source Card */}
+                {transaction.sourceInfo && (
+                  <TransactionDetailSourceCard
+                    sourceInfo={transaction.sourceInfo}
+                  />
+                )}
+
+                {/* 4. Attachments */}
+                <TransactionDetailAttachments
+                  plaidTransactionId={transaction.transactionId}
+                />
+
+                {/* 5. Other Options (hide) */}
+                <TransactionDetailActions
+                  onHide={handleHide}
+                  isHiding={savingField === "isHidden"}
+                />
               </div>
             </SlideoutMenu.Content>
           </>

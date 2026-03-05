@@ -9,9 +9,8 @@ import { ButtonUtility } from "@repo/ui/untitledui/base/buttons/button-utility";
 import { Select } from "@repo/ui/untitledui/base/select/select";
 import { DatePicker } from "@repo/ui/untitledui/application/date-picker/date-picker";
 import { TextArea } from "@repo/ui/untitledui/base/textarea/textarea";
-import { TagGroup, TagList, Tag } from "@repo/ui/untitledui/base/tags/tags";
-import { FileUpload } from "@repo/ui/untitledui/application/file-upload/file-upload-base";
-import { Copy01, ScissorsCut01, Tag01, Attachment01 } from "@untitledui/icons";
+import { Copy01, ScissorsCut01 } from "@untitledui/icons";
+import { InlineEditableField } from "@/components/credit-cards/details/InlineEditableField";
 import {
   TRANSACTION_CATEGORIES,
   type TransactionCategory,
@@ -26,12 +25,13 @@ interface TransactionDetailFieldsProps {
         userCategory?: string;
         userDate?: string;
         userMerchantName?: string;
+        userTime?: string;
       }
     | null
     | undefined;
   savingField: string | null;
   upsertField: (
-    field: "notes" | "userCategory" | "userDate" | "userMerchantName",
+    field: "notes" | "userCategory" | "userDate" | "userMerchantName" | "userTime",
     value: string | null
   ) => Promise<void>;
 }
@@ -41,11 +41,35 @@ const categoryItems = TRANSACTION_CATEGORIES.map((cat) => ({
   label: cat,
 }));
 
+function extractTimeFromDatetime(datetime?: string): string | null {
+  if (!datetime) return null;
+  try {
+    const date = new Date(datetime);
+    if (isNaN(date.getTime())) return null;
+    const hours = date.getUTCHours().toString().padStart(2, "0");
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  } catch {
+    return null;
+  }
+}
+
+function formatTime12hr(time24: string | number | null | undefined): string {
+  if (time24 == null || time24 === "") return "—";
+  const str = String(time24);
+  const [hoursStr, minutesStr] = str.split(":");
+  const hours = parseInt(hoursStr ?? "0", 10);
+  const minutes = minutesStr ?? "00";
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+  return `${displayHour}:${minutes} ${ampm}`;
+}
+
 /**
  * Editable fields section of the transaction detail panel.
  *
  * Includes: original statement (copy), date picker, category dropdown,
- * split placeholder, notes textarea, and deferred tag/attachment placeholders.
+ * split placeholder, and notes textarea.
  */
 export function TransactionDetailFields({
   transaction,
@@ -110,6 +134,19 @@ export function TransactionDetailFields({
     return () => clearTimeout(timer);
   }, [notes, upsertField]);
 
+  // Time: only show when datetime exists from Plaid
+  const plaidTime = extractTimeFromDatetime(transaction.datetime);
+  const currentTime = overlay?.userTime ?? plaidTime;
+  const hasTime = plaidTime !== null;
+
+  const handleTimeSave = async (newValue: string | number) => {
+    await upsertField("userTime", String(newValue));
+  };
+
+  const handleTimeRevert = async () => {
+    await upsertField("userTime", null);
+  };
+
   // DatePicker value: use pending selection if active, otherwise current date
   const datePickerValue = pendingDate ?? parseDate(currentDate);
 
@@ -137,20 +174,41 @@ export function TransactionDetailFields({
         </div>
       </div>
 
-      {/* Date */}
-      <div>
-        <label className="text-xs font-semibold uppercase tracking-wider text-tertiary">
-          Date
-        </label>
-        <div className="mt-1">
-          <DatePicker
-            value={datePickerValue}
-            onChange={handleDateChange}
-            onApply={handleDateApply}
-            onCancel={handleDateCancel}
-            isDisabled={savingField === "userDate"}
-          />
+      {/* Date + Time row */}
+      <div className="flex items-start gap-4">
+        <div className="flex-1">
+          <label className="text-xs font-semibold uppercase tracking-wider text-tertiary">
+            Date
+          </label>
+          <div className="mt-1">
+            <DatePicker
+              value={datePickerValue}
+              onChange={handleDateChange}
+              onApply={handleDateApply}
+              onCancel={handleDateCancel}
+              isDisabled={savingField === "userDate"}
+            />
+          </div>
         </div>
+        {hasTime && (
+          <div className="w-28 shrink-0">
+            <label className="text-xs font-semibold uppercase tracking-wider text-tertiary">
+              Time
+            </label>
+            <div className="mt-1">
+              <InlineEditableField
+                value={currentTime}
+                plaidValue={plaidTime}
+                isOverridden={overlay?.userTime != null}
+                type="text"
+                onSave={handleTimeSave}
+                onRevert={handleTimeRevert}
+                formatDisplay={formatTime12hr}
+                placeholder="—"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Category */}
@@ -190,44 +248,6 @@ export function TransactionDetailFields({
           onChange={handleNotesChange}
           onBlur={handleNotesBlur}
           isDisabled={savingField === "notes"}
-        />
-      </div>
-
-      {/* Deferred: Tags */}
-      <div className="pointer-events-none opacity-50">
-        <div className="mb-2 flex items-center gap-2">
-          <Tag01 className="size-4 text-tertiary" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-tertiary">
-            Tags
-          </span>
-        </div>
-        <TagGroup label="Transaction tags" size="sm">
-          <TagList>
-            <Tag id="food" isDisabled>
-              Food
-            </Tag>
-            <Tag id="recurring" isDisabled>
-              Recurring
-            </Tag>
-            <Tag id="business" isDisabled>
-              Business
-            </Tag>
-          </TagList>
-        </TagGroup>
-      </div>
-
-      {/* Deferred: Attachments */}
-      <div className="pointer-events-none opacity-50">
-        <div className="mb-2 flex items-center gap-2">
-          <Attachment01 className="size-4 text-tertiary" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-tertiary">
-            Attachments
-          </span>
-        </div>
-        <FileUpload.DropZone
-          isDisabled
-          hint="PNG, JPG or PDF (max. 5MB)"
-          accept="image/*,.pdf"
         />
       </div>
     </div>
