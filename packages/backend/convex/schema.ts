@@ -24,7 +24,8 @@ const schema = defineEntSchema(
             .edges("statementSnapshots", { ref: true })
             .edges("promoRates", { ref: true })
             .edges("installmentPlans", { ref: true })
-            .edges("transactionOverlays", { ref: true }),
+            .edges("transactionOverlays", { ref: true })
+            .edges("transactionAttachments", { ref: true }),
 
         // === ORG LAYER ===
         organizations: defineEnt({
@@ -250,9 +251,22 @@ const schema = defineEntSchema(
             userCategory: v.optional(v.string()),
             userDate: v.optional(v.string()),
             userMerchantName: v.optional(v.string()),
+            userTime: v.optional(v.string()),
         })
             .edge("user")
             .index("by_plaidTransactionId", ["plaidTransactionId"])
+            .index("by_user_and_transaction", ["userId", "plaidTransactionId"]),
+
+        // === TRANSACTION ATTACHMENTS ===
+        transactionAttachments: defineEnt({
+            plaidTransactionId: v.string(),
+            storageId: v.id("_storage"),
+            fileName: v.string(),
+            mimeType: v.string(),
+            fileSize: v.number(),
+        })
+            .edge("user")
+            .index("by_transaction", ["plaidTransactionId"])
             .index("by_user_and_transaction", ["userId", "plaidTransactionId"]),
     },
     { schemaValidation: false },

@@ -40,6 +40,8 @@ import type * as statementSnapshots_actions from "../statementSnapshots/actions.
 import type * as statementSnapshots_internalQueries from "../statementSnapshots/internalQueries.js";
 import type * as statementSnapshots_mutations from "../statementSnapshots/mutations.js";
 import type * as statementSnapshots_queries from "../statementSnapshots/queries.js";
+import type * as transactionAttachments_mutations from "../transactionAttachments/mutations.js";
+import type * as transactionAttachments_queries from "../transactionAttachments/queries.js";
 import type * as transactionOverlays_index from "../transactionOverlays/index.js";
 import type * as transactionOverlays_mutations from "../transactionOverlays/mutations.js";
 import type * as transactionOverlays_queries from "../transactionOverlays/queries.js";
@@ -93,6 +95,8 @@ declare const fullApi: ApiFromModules<{
   "statementSnapshots/internalQueries": typeof statementSnapshots_internalQueries;
   "statementSnapshots/mutations": typeof statementSnapshots_mutations;
   "statementSnapshots/queries": typeof statementSnapshots_queries;
+  "transactionAttachments/mutations": typeof transactionAttachments_mutations;
+  "transactionAttachments/queries": typeof transactionAttachments_queries;
   "transactionOverlays/index": typeof transactionOverlays_index;
   "transactionOverlays/mutations": typeof transactionOverlays_mutations;
   "transactionOverlays/queries": typeof transactionOverlays_queries;

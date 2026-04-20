@@ -34,7 +34,7 @@ export function useTransactionOverlay(plaidTransactionId: string | null) {
   );
 
   const upsertField = async (
-    field: "notes" | "userCategory" | "userDate" | "userMerchantName",
+    field: "notes" | "userCategory" | "userDate" | "userMerchantName" | "userTime",
     value: string | null
   ) => {
     if (!plaidTransactionId) return;

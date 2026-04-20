@@ -448,36 +448,48 @@ export interface PlaidTransactionItem {
  * Transaction category types
  */
 export type TransactionCategory =
-  | "Dining"
-  | "Gas"
-  | "Groceries"
-  | "Shopping"
+  | "Bank Fees"
   | "Entertainment"
-  | "Travel"
-  | "Utilities"
+  | "Food & Drink"
+  | "General Merchandise"
+  | "General Services"
+  | "Government & Nonprofit"
   | "Healthcare"
-  | "Transportation"
-  | "Subscription"
-  | "Fees"
-  | "Transfers"
-  | "Payments"
+  | "Home Improvement"
   | "Income"
+  | "Loan Payments"
+  | "Personal Care"
+  | "Recreation"
+  | "Rent & Utilities"
+  | "Shopping"
+  | "Transfer In"
+  | "Transfer Out"
+  | "Transportation"
+  | "Travel"
   | "Other";
 
 /**
  * All available transaction categories
  */
 export const TRANSACTION_CATEGORIES: TransactionCategory[] = [
-  "Dining",
-  "Gas",
-  "Groceries",
-  "Shopping",
+  "Bank Fees",
   "Entertainment",
-  "Travel",
-  "Utilities",
+  "Food & Drink",
+  "General Merchandise",
+  "General Services",
+  "Government & Nonprofit",
   "Healthcare",
+  "Home Improvement",
+  "Income",
+  "Loan Payments",
+  "Personal Care",
+  "Recreation",
+  "Rent & Utilities",
+  "Shopping",
+  "Transfer In",
+  "Transfer Out",
   "Transportation",
-  "Subscription",
+  "Travel",
   "Other",
 ];
 
@@ -519,20 +531,24 @@ export interface Transaction {
  */
 export function getCategoryColor(category: TransactionCategory): string {
   const colors: Record<TransactionCategory, string> = {
-    Dining: "bg-utility-orange-50 text-utility-orange-700 ring-utility-orange-200",
-    Gas: "bg-utility-blue-50 text-utility-blue-700 ring-utility-blue-200",
-    Groceries: "bg-utility-success-50 text-utility-success-700 ring-utility-success-200",
-    Shopping: "bg-utility-purple-50 text-utility-purple-700 ring-utility-purple-200",
+    "Bank Fees": "bg-utility-error-50 text-utility-error-700 ring-utility-error-200",
     Entertainment: "bg-utility-pink-50 text-utility-pink-700 ring-utility-pink-200",
-    Travel: "bg-utility-blue-light-50 text-utility-blue-light-700 ring-utility-blue-light-200",
-    Utilities: "bg-utility-warning-50 text-utility-warning-700 ring-utility-warning-200",
+    "Food & Drink": "bg-utility-orange-50 text-utility-orange-700 ring-utility-orange-200",
+    "General Merchandise": "bg-utility-purple-50 text-utility-purple-700 ring-utility-purple-200",
+    "General Services": "bg-utility-gray-50 text-utility-gray-700 ring-utility-gray-200",
+    "Government & Nonprofit": "bg-utility-gray-50 text-utility-gray-700 ring-utility-gray-200",
     Healthcare: "bg-utility-error-50 text-utility-error-700 ring-utility-error-200",
-    Transportation: "bg-utility-indigo-50 text-utility-indigo-700 ring-utility-indigo-200",
-    Subscription: "bg-utility-purple-50 text-utility-purple-700 ring-utility-purple-200",
-    Fees: "bg-utility-error-50 text-utility-error-700 ring-utility-error-200",
-    Transfers: "bg-utility-gray-50 text-utility-gray-700 ring-utility-gray-200",
-    Payments: "bg-utility-success-50 text-utility-success-700 ring-utility-success-200",
+    "Home Improvement": "bg-utility-warning-50 text-utility-warning-700 ring-utility-warning-200",
     Income: "bg-utility-success-50 text-utility-success-700 ring-utility-success-200",
+    "Loan Payments": "bg-utility-success-50 text-utility-success-700 ring-utility-success-200",
+    "Personal Care": "bg-utility-orange-50 text-utility-orange-700 ring-utility-orange-200",
+    Recreation: "bg-utility-pink-50 text-utility-pink-700 ring-utility-pink-200",
+    "Rent & Utilities": "bg-utility-warning-50 text-utility-warning-700 ring-utility-warning-200",
+    Shopping: "bg-utility-purple-50 text-utility-purple-700 ring-utility-purple-200",
+    "Transfer In": "bg-utility-blue-50 text-utility-blue-700 ring-utility-blue-200",
+    "Transfer Out": "bg-utility-gray-50 text-utility-gray-700 ring-utility-gray-200",
+    Transportation: "bg-utility-indigo-50 text-utility-indigo-700 ring-utility-indigo-200",
+    Travel: "bg-utility-blue-light-50 text-utility-blue-light-700 ring-utility-blue-light-200",
     Other: "bg-utility-gray-50 text-utility-gray-700 ring-utility-gray-200",
   };
   return colors[category] || colors.Other;
@@ -545,20 +561,24 @@ export function getCategoryBadgeColor(
   category: TransactionCategory
 ): "gray" | "brand" | "error" | "warning" | "success" | "blue" | "indigo" | "purple" | "pink" | "orange" {
   const colorMap: Record<TransactionCategory, "gray" | "brand" | "error" | "warning" | "success" | "blue" | "indigo" | "purple" | "pink" | "orange"> = {
-    Dining: "orange",
-    Gas: "blue",
-    Groceries: "success",
-    Shopping: "purple",
+    "Bank Fees": "error",
     Entertainment: "pink",
-    Travel: "blue",
-    Utilities: "warning",
+    "Food & Drink": "orange",
+    "General Merchandise": "purple",
+    "General Services": "gray",
+    "Government & Nonprofit": "gray",
     Healthcare: "error",
-    Transportation: "indigo",
-    Subscription: "purple",
-    Fees: "error",
-    Transfers: "gray",
-    Payments: "success",
+    "Home Improvement": "warning",
     Income: "success",
+    "Loan Payments": "success",
+    "Personal Care": "orange",
+    Recreation: "pink",
+    "Rent & Utilities": "warning",
+    Shopping: "purple",
+    "Transfer In": "blue",
+    "Transfer Out": "gray",
+    Transportation: "indigo",
+    Travel: "blue",
     Other: "gray",
   };
   return colorMap[category] || "gray";
@@ -599,25 +619,24 @@ function mapPlaidCategory(category?: string): TransactionCategory {
 
   const categoryUpper = category.toUpperCase();
 
-  // Map Plaid primary categories to our categories
   const mapping: Record<string, TransactionCategory> = {
-    FOOD_AND_DRINK: "Dining",
+    FOOD_AND_DRINK: "Food & Drink",
     TRAVEL: "Travel",
     TRANSPORTATION: "Transportation",
     ENTERTAINMENT: "Entertainment",
-    GENERAL_MERCHANDISE: "Shopping",
-    GENERAL_SERVICES: "Other",
-    GOVERNMENT_AND_NON_PROFIT: "Other",
-    HOME_IMPROVEMENT: "Shopping",
+    GENERAL_MERCHANDISE: "General Merchandise",
+    GENERAL_SERVICES: "General Services",
+    GOVERNMENT_AND_NON_PROFIT: "Government & Nonprofit",
+    HOME_IMPROVEMENT: "Home Improvement",
     MEDICAL: "Healthcare",
-    PERSONAL_CARE: "Healthcare",
-    RENT_AND_UTILITIES: "Utilities",
-    TRANSFER_IN: "Transfers",
-    TRANSFER_OUT: "Transfers",
-    LOAN_PAYMENTS: "Payments",
-    BANK_FEES: "Fees",
+    PERSONAL_CARE: "Personal Care",
+    RENT_AND_UTILITIES: "Rent & Utilities",
+    TRANSFER_IN: "Transfer In",
+    TRANSFER_OUT: "Transfer Out",
+    LOAN_PAYMENTS: "Loan Payments",
+    BANK_FEES: "Bank Fees",
     INCOME: "Income",
-    RECREATION: "Entertainment",
+    RECREATION: "Recreation",
   };
 
   return mapping[categoryUpper] ?? "Other";
