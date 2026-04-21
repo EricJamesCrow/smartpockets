@@ -53,6 +53,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         {
           encryptionKey: string;
+          mode?: "reauth" | "account_select";
           plaidClientId: string;
           plaidEnv: string;
           plaidItemId: string;

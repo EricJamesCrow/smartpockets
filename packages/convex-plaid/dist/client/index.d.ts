@@ -180,6 +180,7 @@ export declare class Plaid {
      */
     createUpdateLinkToken(ctx: ActionCtx, args: {
         plaidItemId: string;
+        mode?: "reauth" | "account_select";
     }): Promise<CreateUpdateLinkTokenResult>;
     /**
      * Complete re-authentication after user has gone through update Link flow.
@@ -613,7 +614,15 @@ export declare class Plaid {
                 city?: string;
                 country?: string;
                 postalCode?: string;
-                region?: string;
+                region? /**
+                 * Get the public queries/mutations API for use in query/mutation handlers.
+                 *
+                 * @example
+                 * ```typescript
+                 * // In a query handler
+                 * const items = await ctx.runQuery(plaid.api.getItemsByUser, { userId });
+                 * ```
+                 */: string;
                 street?: string;
             };
             updatedAt: number;

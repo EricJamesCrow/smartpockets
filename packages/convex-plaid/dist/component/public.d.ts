@@ -161,9 +161,9 @@ export declare const getAccountsByUser: import("convex/server").RegisteredQuery<
     type: string;
     subtype: string | undefined;
     balances: {
-        limit?: number | undefined;
         available?: number | undefined;
         current?: number | undefined;
+        limit?: number | undefined;
         isoCurrencyCode: string;
     };
     createdAt: number;
@@ -187,9 +187,9 @@ export declare const getAccountsByItem: import("convex/server").RegisteredQuery<
     type: string;
     subtype: string | undefined;
     balances: {
-        limit?: number | undefined;
         available?: number | undefined;
         current?: number | undefined;
+        limit?: number | undefined;
         isoCurrencyCode: string;
     };
     createdAt: number;
@@ -450,8 +450,8 @@ export declare const getStudentLoanLiabilitiesByUser: import("convex/server").Re
     ytdPrincipalPaid: number | undefined;
     isOverdue: boolean | undefined;
     loanStatus: {
-        endDate?: string | undefined;
         type?: string | undefined;
+        endDate?: string | undefined;
     } | undefined;
     repaymentPlan: {
         type?: string | undefined;
@@ -501,8 +501,8 @@ export declare const getStudentLoanLiabilityByAccount: import("convex/server").R
     ytdPrincipalPaid: number | undefined;
     isOverdue: boolean | undefined;
     loanStatus: {
-        endDate?: string | undefined;
         type?: string | undefined;
+        endDate?: string | undefined;
     } | undefined;
     repaymentPlan: {
         type?: string | undefined;
@@ -578,8 +578,8 @@ export declare const togglePlaidItemActive: import("convex/server").RegisteredMu
  * before allowing this mutation.
  */
 export declare const setPlaidItemActive: import("convex/server").RegisteredMutation<"public", {
-    isActive: boolean;
     itemId: string;
+    isActive: boolean;
 }, Promise<null>>;
 /**
  * Get all recurring streams for a user.
@@ -739,7 +739,7 @@ export declare const getSyncLogsByItem: import("convex/server").RegisteredQuery<
     startedAt: number;
     completedAt: number | undefined;
     durationMs: number | undefined;
-    status: "started" | "success" | "error" | "rate_limited" | "circuit_open";
+    status: "error" | "started" | "success" | "rate_limited" | "circuit_open";
     result: {
         transactionsAdded?: number | undefined;
         transactionsModified?: number | undefined;
@@ -773,7 +773,7 @@ export declare const getSyncLogsByUser: import("convex/server").RegisteredQuery<
     startedAt: number;
     completedAt: number | undefined;
     durationMs: number | undefined;
-    status: "started" | "success" | "error" | "rate_limited" | "circuit_open";
+    status: "error" | "started" | "success" | "rate_limited" | "circuit_open";
     result: {
         transactionsAdded?: number | undefined;
         transactionsModified?: number | undefined;

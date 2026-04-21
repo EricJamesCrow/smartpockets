@@ -285,6 +285,7 @@ export class Plaid {
     async createUpdateLinkToken(ctx, args) {
         return await ctx.runAction(this.component.actions.createUpdateLinkToken, {
             plaidItemId: args.plaidItemId,
+            mode: args.mode,
             plaidClientId: this.config.PLAID_CLIENT_ID,
             plaidSecret: this.config.PLAID_SECRET,
             plaidEnv: this.config.PLAID_ENV,

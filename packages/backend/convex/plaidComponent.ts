@@ -162,6 +162,13 @@ export const fetchLiabilitiesAction = action({
 export const createUpdateLinkTokenAction = action({
   args: {
     plaidItemId: v.string(),
+    // W4: "reauth" (default) opens update mode for expired credentials.
+    // "account_select" opens update mode with account-selection enabled,
+    // used by the NEW_ACCOUNTS_AVAILABLE flow so the user can add newly-
+    // available accounts at the institution.
+    mode: v.optional(
+      v.union(v.literal("reauth"), v.literal("account_select"))
+    ),
   },
   returns: v.object({
     linkToken: v.string(),
