@@ -12,6 +12,8 @@ import { CreditCardStatementCard } from "./credit-cards/CreditCardStatementCard"
 import { CreditCardStatementCardSkeleton } from "./credit-cards/CreditCardStatementCardSkeleton";
 import { DeferredInterestTimeline } from "./promos/DeferredInterestTimeline";
 import { DeferredInterestTimelineSkeleton } from "./promos/DeferredInterestTimelineSkeleton";
+import { InstallmentPlansList } from "./promos/InstallmentPlansList";
+import { InstallmentPlansListSkeleton } from "./promos/InstallmentPlansListSkeleton";
 import { RawTextMessage } from "./shared/RawTextMessage";
 import { TransactionDetailCard } from "./transactions/TransactionDetailCard";
 import { TransactionDetailCardSkeleton } from "./transactions/TransactionDetailCardSkeleton";
@@ -46,7 +48,7 @@ export const toolResultRegistry: Record<ReadToolName, RegistryEntry> = {
     list_credit_cards: { Component: CreditCardStatementCard as AnyEntry["Component"], Skeleton: CreditCardStatementCardSkeleton },
     get_credit_card_detail: { Component: CreditCardStatementCard as AnyEntry["Component"], Skeleton: CreditCardStatementCardSkeleton },
     list_deferred_interest_promos: { Component: DeferredInterestTimeline as AnyEntry["Component"], Skeleton: DeferredInterestTimelineSkeleton },
-    list_installment_plans: { Component: FallbackToRaw },
+    list_installment_plans: { Component: InstallmentPlansList as AnyEntry["Component"], Skeleton: InstallmentPlansListSkeleton },
     get_spend_by_category: { Component: SpendByCategoryChart as AnyEntry["Component"], Skeleton: SpendByCategoryChartSkeleton },
     get_spend_over_time: { Component: SpendOverTimeChart as AnyEntry["Component"], Skeleton: SpendOverTimeChartSkeleton },
     get_upcoming_statements: { Component: CreditCardStatementCard as AnyEntry["Component"], Skeleton: CreditCardStatementCardSkeleton },
