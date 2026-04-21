@@ -14,9 +14,12 @@
  * are stable across the migration.
  */
 import { v } from "convex/values";
+import type { GenericActionCtx } from "convex/server";
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { DataModel, Id } from "../_generated/dataModel";
 import { internalAction } from "../_generated/server";
+
+type WorkflowCtx = GenericActionCtx<DataModel>;
 
 type TemplateKey =
   | "welcome-onboarding"
@@ -29,7 +32,7 @@ type TemplateKey =
   | "item-error-persistent";
 
 async function runStandardWorkflow(
-  ctx: Parameters<Parameters<typeof internalAction>[0]["handler"]>[0],
+  ctx: WorkflowCtx,
   emailEventId: Id<"emailEvents">,
   templateKey: TemplateKey,
   subjectFn: (payload: Record<string, unknown>) => string,

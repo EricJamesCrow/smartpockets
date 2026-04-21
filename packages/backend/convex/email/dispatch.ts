@@ -1,9 +1,12 @@
 import { v } from "convex/values";
+import type { GenericActionCtx } from "convex/server";
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { DataModel, Id } from "../_generated/dataModel";
 import { internalAction } from "../_generated/server";
 import { idempotencyKey } from "../notifications/hashing";
 import { workflow } from "./workflow";
+
+type DispatchCtx = GenericActionCtx<DataModel>;
 
 const DispatchResult = v.object({
   status: v.union(v.literal("queued"), v.literal("skipped_duplicate")),
@@ -20,17 +23,7 @@ function isUniqueConstraintError(err: unknown): boolean {
 }
 
 async function queueOrSkip(
-  ctx: {
-    runQuery: (ref: unknown, args: Record<string, unknown>) => Promise<unknown>;
-    runMutation: (ref: unknown, args: Record<string, unknown>) => Promise<unknown>;
-    scheduler: {
-      runAfter: (
-        ms: number,
-        ref: unknown,
-        args: Record<string, unknown>,
-      ) => Promise<string>;
-    };
-  },
+  ctx: DispatchCtx,
   params: {
     idempotencyKey: string;
     userId: Id<"users">;

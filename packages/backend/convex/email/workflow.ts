@@ -15,9 +15,10 @@
  * instance id that the row's `workflowId` field records.
  */
 
-type StartableCtx = {
-  scheduler: { runAfter: (ms: number, ref: unknown, args: Record<string, unknown>) => Promise<string> };
-};
+import type { GenericActionCtx } from "convex/server";
+import type { DataModel } from "../_generated/dataModel";
+
+type StartableCtx = GenericActionCtx<DataModel>;
 
 export const workflow = {
   async start(
@@ -30,7 +31,8 @@ export const workflow = {
     // component provides exactly-once, resumable semantics; the scheduler
     // is at-least-once but bodies are idempotent by design (Strategy
     // C-prime + preCheck re-reads the row).
-    const id = await ctx.scheduler.runAfter(0, ref as never, args as never);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const id = await ctx.scheduler.runAfter(0, ref as any, args as any);
     return String(id);
   },
   async status(
