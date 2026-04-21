@@ -26,4 +26,17 @@ crons.daily(
   internal.statementSnapshots.actions.generateDailySnapshots
 );
 
+/**
+ * Agent Proposal TTL (W2)
+ * Every 5 minutes, expire any `agentProposals` row whose
+ * `awaitingExpiresAt` is in the past and whose state is still
+ * `awaiting_confirmation`. Transitions to `timed_out` and inserts a
+ * system message into the thread for user visibility.
+ */
+crons.cron(
+  "Expire stale proposals",
+  "*/5 * * * *",
+  (internal as any).agent.proposals.expireStaleInternal
+);
+
 export default crons;
