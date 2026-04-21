@@ -31,7 +31,13 @@ const schema = defineEntSchema(
             .edges("agentThreads", { ref: true })
             .edges("agentProposals", { ref: true })
             .edges("agentUsage", { ref: true })
-            .edges("reminders", { ref: true }),
+            .edges("reminders", { ref: true })
+            .edges("promoCountdowns", { ref: true })
+            .edges("statementReminders", { ref: true })
+            .edges("anomalies", { ref: true })
+            .edges("anomalyScanState", { ref: true })
+            .edges("detectedSubscriptions", { ref: true })
+            .edges("cashflowForecasts", { ref: true }),
 
         // === ORG LAYER ===
         organizations: defineEnt({
@@ -150,6 +156,8 @@ const schema = defineEntSchema(
             .edges("statementSnapshots", { ref: true })
             .edges("promoRates", { ref: true })
             .edges("installmentPlans", { ref: true })
+            .edges("promoCountdowns", { ref: true })
+            .edges("statementReminders", { ref: true })
             .index("by_accountId", ["accountId"])
             .index("by_plaidItemId", ["plaidItemId"])
             .index("by_user_active", ["userId", "isActive"])
@@ -462,6 +470,118 @@ const schema = defineEntSchema(
         })
             .index("by_version", ["version"])
             .index("by_activatedAt", ["activatedAt"]),
+
+        // === INTELLIGENCE (W6) ===
+        promoCountdowns: defineEnt({
+            promoRateId: v.id("promoRates"),
+            daysToExpiration: v.number(),
+            effectiveDate: v.string(),
+            sourceField: v.union(
+                v.literal("override"),
+                v.literal("plaid"),
+                v.literal("manual"),
+            ),
+            originalExpirationDate: v.string(),
+            isDeferredInterest: v.boolean(),
+            remainingBalance: v.number(),
+            accruedDeferredInterest: v.optional(v.number()),
+            lastRefreshedAt: v.number(),
+        })
+            .edge("user")
+            .edge("creditCard")
+            .index("by_user_daysToExpiration", ["userId", "daysToExpiration"])
+            .index("by_promoRateId", ["promoRateId"]),
+
+        statementReminders: defineEnt({
+            statementClosingDate: v.string(),
+            daysToClose: v.number(),
+            nextPaymentDueDate: v.optional(v.string()),
+            minimumPaymentAmount: v.optional(v.number()),
+            lastStatementBalance: v.optional(v.number()),
+            lastRefreshedAt: v.number(),
+        })
+            .edge("user")
+            .edge("creditCard")
+            .index("by_user_daysToClose", ["userId", "daysToClose"])
+            .index("by_creditCardId", ["creditCardId"]),
+
+        anomalies: defineEnt({
+            plaidTransactionId: v.string(),
+            ruleType: v.union(
+                v.literal("amount_spike_3x"),
+                v.literal("new_merchant_threshold"),
+                v.literal("duplicate_charge_24h"),
+            ),
+            score: v.number(),
+            evidenceJson: v.string(),
+            merchantName: v.string(),
+            amount: v.number(),
+            transactionDate: v.string(),
+            detectedAt: v.number(),
+            userStatus: v.union(
+                v.literal("pending"),
+                v.literal("acknowledged"),
+                v.literal("dismissed_false_positive"),
+            ),
+            userStatusUpdatedAt: v.optional(v.number()),
+        })
+            .edge("user")
+            .index("by_user_detectedAt", ["userId", "detectedAt"])
+            .index("by_plaidTransactionId_ruleType", ["plaidTransactionId", "ruleType"]),
+
+        anomalyScanState: defineEnt({
+            lastScannedAt: v.number(),
+            lastScannedTransactionDate: v.string(),
+            skippedNullMerchantCount: v.number(),
+        })
+            .edge("user")
+            .index("by_userId", ["userId"]),
+
+        detectedSubscriptions: defineEnt({
+            normalizedMerchant: v.string(),
+            amountBucket: v.number(),
+            frequency: v.union(
+                v.literal("weekly"),
+                v.literal("biweekly"),
+                v.literal("monthly"),
+                v.literal("quarterly"),
+                v.literal("annual"),
+            ),
+            averageAmount: v.number(),
+            nextPredictedDate: v.optional(v.string()),
+            source: v.union(v.literal("plaid"), v.literal("catchup")),
+            plaidStreamId: v.optional(v.string()),
+            sampleTransactionIds: v.array(v.string()),
+            firstSeenDate: v.string(),
+            lastSeenDate: v.string(),
+            occurrenceCount: v.number(),
+            userStatus: v.union(
+                v.literal("pending"),
+                v.literal("confirmed"),
+                v.literal("dismissed"),
+            ),
+            userStatusUpdatedAt: v.optional(v.number()),
+            nickname: v.optional(v.string()),
+            isActive: v.boolean(),
+        })
+            .edge("user")
+            .index("by_user_userStatus", ["userId", "userStatus"])
+            .index(
+                "by_user_normalizedMerchant_amountBucket",
+                ["userId", "normalizedMerchant", "amountBucket"],
+            ),
+
+        cashflowForecasts: defineEnt({
+            horizonStartDate: v.string(),
+            horizonEndDate: v.string(),
+            startingBalance: v.number(),
+            projectedNetCash: v.number(),
+            endingBalance: v.number(),
+            lineItemsJson: v.string(),
+            generatedAt: v.number(),
+        })
+            .edge("user")
+            .index("by_userId", ["userId"]),
 
         // === REMINDERS (W2 ships table; W5 owns CRUD) ===
         reminders: defineEnt({
