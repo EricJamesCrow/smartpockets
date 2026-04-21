@@ -476,20 +476,31 @@ const SendBody = z.object({
 const appOrigin = process.env.APP_ORIGIN ?? "";
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
-  const allow = appOrigin && origin === appOrigin ? origin : appOrigin || origin;
-  return {
-    "Access-Control-Allow-Origin": allow,
+  const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Allow-Credentials": "true",
     Vary: "Origin",
   };
+  if (appOrigin && origin === appOrigin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
+}
+
+function isTrustedAgentOrigin(request: Request): boolean {
+  const origin = request.headers.get("Origin");
+  if (!origin) return true;
+  return Boolean(appOrigin && origin === appOrigin);
 }
 
 http.route({
   path: "/api/agent/send",
   method: "OPTIONS",
   handler: httpAction(async (_ctx, request) => {
+    if (!isTrustedAgentOrigin(request)) {
+      return new Response("Forbidden", { status: 403, headers: corsHeaders(request) });
+    }
     return new Response(null, { status: 204, headers: corsHeaders(request) });
   }),
 });
@@ -499,6 +510,9 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     const cors = corsHeaders(request);
+    if (!isTrustedAgentOrigin(request)) {
+      return new Response("Forbidden", { status: 403, headers: cors });
+    }
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return new Response("Unauthorized", { status: 401, headers: cors });
 

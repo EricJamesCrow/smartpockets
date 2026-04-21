@@ -71,10 +71,14 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
   ) as Doc<"agentMessages">[] | undefined;
 
   useEffect(() => {
-    const systemRow = messages
+    const latestSystemRow = messages
       ?.filter((m) => m.role === "system")
-      .find((m) => /temporarily unavailable|offline/i.test(m.text ?? ""));
-    if (systemRow) setBanner({ kind: "llm_down" });
+      .sort((a, b) => (b._creationTime ?? 0) - (a._creationTime ?? 0))[0];
+    if (/temporarily unavailable|offline/i.test(latestSystemRow?.text ?? "")) {
+      setBanner({ kind: "llm_down" });
+    } else {
+      setBanner((current) => (current?.kind === "llm_down" ? null : current));
+    }
   }, [messages]);
 
   const routeError = (err: unknown) => {
