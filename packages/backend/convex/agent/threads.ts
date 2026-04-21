@@ -1,8 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "../functions";
-
-// W2.08 replaces the literal with `import { PROMPT_VERSION } from "./system"`.
-const PROMPT_VERSION = "2026.04.20-1";
+import { PROMPT_VERSION } from "./system";
 
 // Public query consumed by W1 for the reactive message stream.
 export const listMessages = query({
