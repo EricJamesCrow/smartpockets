@@ -144,7 +144,7 @@ Dispatch flow:
 6. On `state === 'output-error'`, render a shared `<ToolErrorRow toolName={toolName} errorText={part.errorText} />`.
 7. Unknown tool name falls through to `<RawTextMessage text={JSON.stringify(part, null, 2)} />` so the thread never breaks on a streamed-but-unregistered tool.
 
-Tool output schema (every tool; confirmed in §5 as a W2 contract):
+Tool output schema (every read tool; confirmed in §5 as a W2 contract):
 
 ```ts
 type ToolOutput<TPreview = unknown> = {
@@ -153,6 +153,8 @@ type ToolOutput<TPreview = unknown> = {
   window?: { from: string; to: string };
 };
 ```
+
+**Reconciliation M9 (2026-04-20):** W2 wraps every tool call in a `ToolEnvelope<T>` (W2 §5.6). The envelope shape nests cleanly: `ToolEnvelope<ToolOutput<TPreview>>`. W2's `buildToolsForAgent` helper unwraps on success and feeds the `ToolOutput` directly to the AI SDK tool result; on envelope error, W2 feeds the error message back as a tool-error result. W3 components receive the **unwrapped** `ToolOutput` in props (not the envelope), so no W3 code changes. Canonical contract in [specs/00-contracts.md](00-contracts.md) §4. Propose tools use a distinct `ProposalToolOutput` shape; W3 dispatches off `toolName.startsWith("propose_")` and treats those separately.
 
 Reactive data layer: every component receives `output.ids` and subscribes via `useQuery` (cached variant) to the relevant Convex query. The `preview` payload renders while the query resolves; on `ids` change, the component re-renders with live rows. Aggregates re-bucket client-side from the live rows, matching the `preview.buckets` shape so the render is visually identical.
 
@@ -474,6 +476,22 @@ Plan-phase tasks will add a lint rule or a pre-commit check that flags imports o
 - `AprBreakdown`: self-fetching via `cardId`. Safe to wrap.
 
 No source code changes required to wrap any of the four; the chat wrappers pass the right IDs and constrain the container width.
+
+---
+
+## 10. Reconciliation appendix (2026-04-20)
+
+Cross-spec reconciliation pass closed the following W3 items. Canonical source: [specs/00-contracts.md](00-contracts.md).
+
+| ID | Issue | Resolution |
+|---|---|---|
+| M6 | `scope` field on proposal payload | W2 adds `scope: v.union(v.literal("single"), v.literal("bulk"))` to `agentProposals` schema. `ProposalConfirmCard` in §4.3 reads `scope` directly from the W2-provided proposal (via `get_proposal`), does not derive from `affectedIds.length`. |
+| M7 | Proposal state enum count | Align to W2's 9-state enum: `proposed`, `awaiting_confirmation`, `confirmed`, `executing`, `executed`, `cancelled`, `timed_out`, `reverted`, `failed`. `ProposalConfirmCard` renders for `awaiting_confirmation`, `executing`, `executed` (with Undo if in-window), `cancelled`, `timed_out`, `reverted`, `failed`. No `confirmed` or `proposed` rendering (both are transient). See contracts §3. |
+| M9 | `ToolEnvelope` / `ToolOutput` layering | §4.1 updated inline. W2 owns unwrap; W3 receives `ToolOutput` only. Canonical in contracts §4. |
+| M11 | `get_proposal` tool dependency made explicit | §5 item 5 already states the assumption. W2 brainstorm amendment added the tool (registry item 25). No W3 change needed; `/plan` treats the assumption as satisfied. |
+| M12 | `cancel_proposal` and `execute_confirmed_proposal` ownership | Both in W2's tool registry. `ProposalConfirmCard` §4.3 `sendMessage` toolHint pattern correctly targets them. No change. |
+
+No W3 contract moves. W3 `/plan` proceeds once W2 brainstorm is approved (which it is after its reconciliation amendment lands).
 
 ---
 

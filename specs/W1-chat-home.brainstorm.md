@@ -251,6 +251,8 @@ Accessibility: the proposal card is focusable and carries `role="dialog"` (or eq
 
 ```ts
 // Shape, not final. Specifies the guard; does not ship code.
+// Reconciliation M1 (2026-04-20): "dev" added to cover W3's preview harness
+// at /dev/tool-results/*. Canonical list lives in specs/00-contracts.md §1.4.
 const RESERVED_SLUGS = new Set([
   "overview",
   "credit-cards",
@@ -259,6 +261,7 @@ const RESERVED_SLUGS = new Set([
   "settings",
   "sign-in",
   "sign-up",
+  "dev",
 ]);
 
 if (RESERVED_SLUGS.has(params.threadId)) notFound();
@@ -371,7 +374,7 @@ W1 depends on W2's agent backend contract. Every item below is an assumption; th
 | CA-10 | `api.agent.proposals.cancel` | Mutation; `args: { proposalId }`; returns `{ cancelled: boolean }`. | W2 or W5 |
 | CA-11 | Thread ownership check | Every W2 query and action that takes `threadId` calls an `assertThreadAccess` helper that throws if `identity.subject !== thread.userId`. W1 relies on this guardrail; does not duplicate it. | W2 |
 | CA-12 | Typed error codes | Streaming actions and tool results propagate structured errors using a discriminated union: `{ kind: "rate_limited", retryAfterSeconds } | { kind: "budget_exhausted" } | { kind: "llm_down" } | { kind: "reconsent_required", plaidItemId }`. W1 `ChatBanner` and `ReconsentModal` map 1-to-1 to these kinds. | W2 |
-| CA-13 | Thread ID shape | `@convex-dev/agent` thread IDs are opaque strings with a format that does not collide with any SmartPockets reserved slug (Section 9). W2 research confirms. | W2 |
+| CA-13 | Thread ID shape | Route param is `Id<"agentThreads">` (Convex Ents ID, base-32-with-prefix), NOT the opaque `componentThreadId` from `@convex-dev/agent`. Ents IDs cannot collide with reserved slugs. Per reconciliation M8 in [specs/00-contracts.md](00-contracts.md) §1.3. | W2 |
 | CA-14 | Cached `useQuery` pattern | Sidebar thread list uses `useQuery` from `convex-helpers/react/cache/hooks`, not raw `convex/react`. AGENTS.md enforced. W2 queries must be cache-safe (stable return shape, no `now()` in return). | W2 |
 
 The `/plan` phase translates each CA-N into a "Verify contract" checklist entry; implementation tasks then reference the CA-number instead of restating the contract.
@@ -492,6 +495,21 @@ For `specs/W1-chat-home.plan.md` to be written in the `/plan` phase. The exact t
 1. Eric reviews this brainstorm. Blocks before `/plan`.
 2. On approval, `/plan` produces three files: `specs/W1-chat-home.md` (authoritative spec), `specs/W1-chat-home.plan.md` (tasks plus Plan Handoff Header), `specs/W1-chat-home.research.md` (external findings with citations). Every task tagged Claude Code or Codex per Section 6.
 3. Before `/plan` emits the first task, it cross-reads W2's brainstorm (if present) to reconcile CA-1 through CA-14. If W2 has not brainstormed yet, `/plan` records assumptions and blocks on W2.
+
+---
+
+## 24. Reconciliation appendix (2026-04-20)
+
+Cross-spec reconciliation pass closed the following W1 items. Canonical source: [specs/00-contracts.md](00-contracts.md).
+
+| ID | Issue | Resolution |
+|---|---|---|
+| M1 | `RESERVED_SLUGS` missed `dev` (W3 preview harness) | Section 9 updated inline to include `dev`. Canonical list in contracts §1.4. |
+| M8 | Thread ID shape ambiguity | CA-13 updated: routes on `Id<"agentThreads">`, not the component-owned opaque string. See contracts §1.3. |
+| M7 | Proposal state enum mismatch | Proposal state references (this doc §3 D4, §7 streaming diagram, CA-8) consume W2's 9-state enum verbatim. Canonical in contracts §3. |
+| M11 | `ProposalConfirmCard` needs `get_proposal` tool | CB-1 / CB-3 consume `api.agent.proposals.get` (a.k.a. `get_proposal` in the agent registry). Added to W2's 25-tool registry per contracts §2.3. |
+
+No other W1 contracts move. W1 `/plan` may proceed once W2 and W3 brainstorms are approved.
 
 ---
 
