@@ -78,13 +78,11 @@ export const createLinkTokenAction = action({
 /**
  * Exchange public token for access token and create plaidItem.
  *
- * W4 additions:
- * - Clears `newAccountsAvailableAt` on update-mode exchange (where the item
- *   already existed and was flagged).
- * - Schedules the W7 welcome-onboarding dispatch on first Plaid link per
- *   contracts §13. First link detection: `priorLinkCount === 1` AND the item's
- *   _creationTime is within the last 60s (distinguishes update-mode exchanges
- *   for a user whose only item was updated, not newly-created).
+ * Thin wrapper. The real onboarding path that UI calls is
+ * `onboardNewConnectionAction` below, which performs the W4 welcome-
+ * onboarding dispatch + any update-mode `newAccountsAvailableAt` clearing.
+ * This entry point is kept for alternate callers that exchange a token
+ * without running the full onboard chain.
  */
 export const exchangePublicTokenAction = action({
   args: {
@@ -97,55 +95,7 @@ export const exchangePublicTokenAction = action({
     plaidItemId: v.string(),
   }),
   handler: async (ctx, args) => {
-    const result = await getPlaid().exchangePublicToken(ctx, args);
-
-    // Fetch the item we just exchanged (Convex _id as string).
-    const item = await ctx.runQuery(components.plaid.public.getItem, {
-      plaidItemId: result.plaidItemId,
-    });
-
-    // Clear newAccountsAvailableAt if this was an update-mode exchange for
-    // an existing item that had the flag set.
-    if (item && (item as any).newAccountsAvailableAt != null) {
-      await ctx.runMutation(
-        components.plaid.private.clearNewAccountsAvailableInternal,
-        { plaidItemId: result.plaidItemId },
-      );
-    }
-
-    // Welcome-onboarding trigger per contracts §13. First-link detection:
-    // countActivePlaidItems includes the just-created item, so the pre-link
-    // count is (priorLinkCount - 1). An item with _creationTime within the
-    // last 60s is newly-created (net-new link), not an update-mode exchange.
-    try {
-      const priorLinkCount = await ctx.runQuery(
-        internal.users.countActivePlaidItems,
-        { userId: args.userId },
-      );
-      const isFirstLinkEver =
-        priorLinkCount === 1 &&
-        item != null &&
-        Date.now() - (item as any)._creationTime < 60_000;
-      if (isFirstLinkEver) {
-        const institutionName = (item as any).institutionName ?? "your bank";
-        await ctx.scheduler.runAfter(
-          0,
-          internal.email.dispatch.dispatchWelcomeOnboarding,
-          {
-            userId: args.userId,
-            variant: "plaid-linked",
-            firstLinkedInstitutionName: institutionName,
-          },
-        );
-      }
-    } catch (error) {
-      console.error(
-        "[exchangePublicTokenAction] welcome dispatch check failed:",
-        error,
-      );
-    }
-
-    return result;
+    return await getPlaid().exchangePublicToken(ctx, args);
   },
 });
 
@@ -238,8 +188,11 @@ export const createUpdateLinkTokenAction = action({
 /**
  * Complete re-authentication after user has gone through update Link flow.
  *
- * W4 addition: clears error-tracking fields (firstErrorAt, lastDispatchedAt)
- * on successful recovery so subsequent error transitions start fresh.
+ * W4 additions:
+ * - Clears error-tracking fields (firstErrorAt, lastDispatchedAt) on
+ *   successful recovery so subsequent error transitions start fresh.
+ * - Clears `newAccountsAvailableAt` (update-mode Link with mode="account_select"
+ *   completes via this action, not exchangePublicToken).
  */
 export const completeReauthAction = action({
   args: {
@@ -252,6 +205,10 @@ export const completeReauthAction = action({
     const result = await getPlaid().completeReauth(ctx, args);
     await ctx.runMutation(
       components.plaid.private.clearErrorTrackingInternal,
+      { plaidItemId: args.plaidItemId },
+    );
+    await ctx.runMutation(
+      components.plaid.private.clearNewAccountsAvailableInternal,
       { plaidItemId: args.plaidItemId },
     );
     return result;
@@ -338,6 +295,42 @@ export const onboardNewConnectionAction = action({
       });
 
       const { plaidItemId, itemId } = exchangeResult;
+
+      // W4: welcome-onboarding trigger per contracts §13 (moved here from
+      // exchangePublicTokenAction because onboardNewConnectionAction is the
+      // actual path the host app uses). First-link detection: the newly-
+      // created item's _creationTime is within the last 60s AND priorLinkCount
+      // (which includes the just-created item) === 1.
+      try {
+        const newItem = await ctx.runQuery(components.plaid.public.getItem, {
+          plaidItemId,
+        });
+        const priorLinkCount = await ctx.runQuery(
+          internal.users.countActivePlaidItems,
+          { userId: args.userId },
+        );
+        const isFirstLinkEver =
+          priorLinkCount === 1 &&
+          newItem != null &&
+          Date.now() - newItem._creationTime < 60_000;
+        if (isFirstLinkEver) {
+          const institutionName = newItem.institutionName ?? "your bank";
+          await ctx.scheduler.runAfter(
+            0,
+            internal.email.dispatch.dispatchWelcomeOnboarding,
+            {
+              userId: args.userId,
+              variant: "plaid-linked",
+              firstLinkedInstitutionName: institutionName,
+            },
+          );
+        }
+      } catch (error) {
+        console.error(
+          "[onboardNewConnectionAction] welcome dispatch check failed:",
+          error,
+        );
+      }
 
       // Step 2: Fetch accounts
       console.log("📍 Step 2/4.5: Fetch accounts");

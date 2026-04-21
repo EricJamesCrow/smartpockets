@@ -169,9 +169,17 @@ export declare const completeSyncWithVersion: import("convex/server").Registered
 /**
  * Release sync lock on error without updating cursor.
  * Uses O(1) lookup via ctx.db.normalizeId() + ctx.db.get().
+ *
+ * W4: when transitioning into an error-class status ("error" or
+ * "needs_reauth"), stamp the error-tracking fields the 6-hour persistent-
+ * error cron filters on: `firstErrorAt` (monotonic; first-write-wins),
+ * `errorAt = now`, and `errorCode` (from the optional arg, falling back
+ * to a "SYNC_ERROR" sentinel so the cron can still emit a best-effort
+ * dispatch with a visible label).
  */
 export declare const releaseSyncLock: import("convex/server").RegisteredMutation<"internal", {
     syncError?: string | undefined;
+    errorCode?: string | undefined;
     status: string;
     syncVersion: number;
     plaidItemId: string;

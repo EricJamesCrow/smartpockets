@@ -29,10 +29,16 @@ const aprValidator = v.object({
 // PLAID ITEMS QUERIES
 // =============================================================================
 /**
- * Validator for plaidItem return type (excludes accessToken for security)
+ * Validator for plaidItem return type (excludes accessToken for security).
+ *
+ * W4 additions: `_creationTime` (Convex system field; used by the host-app
+ * first-link-ever welcome-dispatch trigger), `newAccountsAvailableAt` (used
+ * by update-mode Link clearing + UI banner), `firstErrorAt` /
+ * `lastDispatchedAt` (used by the 6-hour persistent-error cron).
  */
 const plaidItemReturnValidator = v.object({
     _id: v.string(),
+    _creationTime: v.number(),
     userId: v.string(),
     itemId: v.string(),
     institutionId: v.optional(v.string()),
@@ -59,6 +65,10 @@ const plaidItemReturnValidator = v.object({
     consecutiveFailures: v.optional(v.number()),
     lastFailureAt: v.optional(v.number()),
     nextRetryAt: v.optional(v.number()),
+    // W4: new-accounts + error-tracking flags
+    newAccountsAvailableAt: v.optional(v.number()),
+    firstErrorAt: v.optional(v.number()),
+    lastDispatchedAt: v.optional(v.number()),
 });
 /**
  * Get all plaidItems for a user.
@@ -78,6 +88,7 @@ export const getItemsByUser = query({
         // Explicitly map fields to avoid complex type inference
         return items.map((item) => ({
             _id: String(item._id),
+            _creationTime: item._creationTime,
             userId: item.userId,
             itemId: item.itemId,
             institutionId: item.institutionId,
@@ -100,6 +111,9 @@ export const getItemsByUser = query({
             consecutiveFailures: item.consecutiveFailures,
             lastFailureAt: item.lastFailureAt,
             nextRetryAt: item.nextRetryAt,
+            newAccountsAvailableAt: item.newAccountsAvailableAt,
+            firstErrorAt: item.firstErrorAt,
+            lastDispatchedAt: item.lastDispatchedAt,
         }));
     },
 });
@@ -123,6 +137,7 @@ export const getItem = query({
         // Explicitly return fields to avoid complex type inference
         return {
             _id: String(item._id),
+            _creationTime: item._creationTime,
             userId: item.userId,
             itemId: item.itemId,
             institutionId: item.institutionId,
@@ -145,6 +160,9 @@ export const getItem = query({
             consecutiveFailures: item.consecutiveFailures,
             lastFailureAt: item.lastFailureAt,
             nextRetryAt: item.nextRetryAt,
+            newAccountsAvailableAt: item.newAccountsAvailableAt,
+            firstErrorAt: item.firstErrorAt,
+            lastDispatchedAt: item.lastDispatchedAt,
         };
     },
 });
@@ -168,6 +186,7 @@ export const getItemByPlaidItemId = query({
             return null;
         return {
             _id: String(item._id),
+            _creationTime: item._creationTime,
             userId: item.userId,
             itemId: item.itemId,
             institutionId: item.institutionId,
@@ -190,6 +209,9 @@ export const getItemByPlaidItemId = query({
             consecutiveFailures: item.consecutiveFailures,
             lastFailureAt: item.lastFailureAt,
             nextRetryAt: item.nextRetryAt,
+            newAccountsAvailableAt: item.newAccountsAvailableAt,
+            firstErrorAt: item.firstErrorAt,
+            lastDispatchedAt: item.lastDispatchedAt,
         };
     },
 });
@@ -213,6 +235,7 @@ export const getAllActiveItems = query({
         // Explicitly map fields to avoid complex type inference
         return activeItems.map((item) => ({
             _id: String(item._id),
+            _creationTime: item._creationTime,
             userId: item.userId,
             itemId: item.itemId,
             institutionId: item.institutionId,
@@ -235,6 +258,9 @@ export const getAllActiveItems = query({
             consecutiveFailures: item.consecutiveFailures,
             lastFailureAt: item.lastFailureAt,
             nextRetryAt: item.nextRetryAt,
+            newAccountsAvailableAt: item.newAccountsAvailableAt,
+            firstErrorAt: item.firstErrorAt,
+            lastDispatchedAt: item.lastDispatchedAt,
         }));
     },
 });

@@ -32,19 +32,26 @@ export const runPersistentErrorCheckInternal = internalAction({
     );
 
     for (const item of items) {
-      // Skip items missing required tracking fields. These would never have
-      // gone through the W4 error-tracking code paths (e.g., legacy rows
-      // that entered error before firstErrorAt was added).
-      if (
-        item.firstErrorAt == null ||
-        item.errorAt == null ||
-        item.errorCode == null
-      ) {
+      // Legacy items (rows that entered error before W4's error-tracking was
+      // wired) may lack `firstErrorAt`. Stamp it on first observation and
+      // defer dispatch to the next cron run; gives ~6h buffer before the
+      // first email fires, which matches how fresh errors would behave.
+      if (item.firstErrorAt == null) {
+        await ctx.runMutation(
+          components.plaid.private.markFirstErrorAtInternal,
+          { plaidItemId: item.plaidItemId },
+        );
         console.warn(
-          `[plaid/persistentError] skipping ${item.plaidItemId}: missing tracking fields`,
+          `[plaid/persistentError] stamping firstErrorAt for legacy item ${item.plaidItemId}; deferring dispatch to next cron run`,
         );
         continue;
       }
+
+      // For errorAt / errorCode fall back to sentinels rather than skip, so
+      // the cron still dispatches a best-effort alert. errorAt defaults to
+      // firstErrorAt; errorCode defaults to "SYNC_ERROR".
+      const lastSeenErrorAt = item.errorAt ?? item.firstErrorAt;
+      const errorCode = item.errorCode ?? "SYNC_ERROR";
 
       await ctx.scheduler.runAfter(
         0,
@@ -54,8 +61,8 @@ export const runPersistentErrorCheckInternal = internalAction({
           plaidItemId: item.plaidItemId,
           institutionName: item.institutionName ?? "your bank",
           firstErrorAt: item.firstErrorAt,
-          lastSeenErrorAt: item.errorAt,
-          errorCode: item.errorCode,
+          lastSeenErrorAt,
+          errorCode,
         },
       );
 

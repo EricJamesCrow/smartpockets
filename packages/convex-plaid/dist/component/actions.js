@@ -404,12 +404,15 @@ export const syncTransactions = action({
                 errorCode: plaidError.code,
                 errorMessage: plaidError.message,
             });
-            // Release lock with error status
+            // Release lock with error status. W4: pass errorCode through so the
+            // 6-hour persistent-error cron (which reads plaidItems.errorCode) has
+            // the data it needs to dispatch a best-effort alert.
             await ctx.runMutation(internal.private.releaseSyncLock, {
                 plaidItemId: args.plaidItemId,
                 syncVersion,
                 status: requiresReauth(plaidError) ? "needs_reauth" : "error",
                 syncError: plaidError.message,
+                errorCode: plaidError.code,
             });
             throw error;
         }
