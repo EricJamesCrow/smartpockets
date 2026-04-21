@@ -31,7 +31,8 @@ const schema = defineEntSchema(
             .edges("agentThreads", { ref: true })
             .edges("agentProposals", { ref: true })
             .edges("agentUsage", { ref: true })
-            .edges("reminders", { ref: true }),
+            .edges("reminders", { ref: true })
+            .edges("auditLog", { ref: true }),
 
         // === ORG LAYER ===
         organizations: defineEnt({
@@ -255,6 +256,7 @@ const schema = defineEntSchema(
             isHidden: v.optional(v.boolean()),
             notes: v.optional(v.string()),
             userCategory: v.optional(v.string()),
+            userCategoryDetailed: v.optional(v.string()),
             userDate: v.optional(v.string()),
             userMerchantName: v.optional(v.string()),
             userTime: v.optional(v.string()),
@@ -488,6 +490,27 @@ const schema = defineEntSchema(
             .edge("user")
             .index("by_user_due", ["userId", "isDone", "dueAt"])
             .index("by_user_dismissed", ["userId", "dismissedAt"]),
+
+        // === AUDIT LOG (W5) ===
+        // Per-execution record written by executeWriteTool. Also the source of
+        // the opaque `rev_<base32>` reversal token handed back to the agent.
+        auditLog: defineEnt({
+            threadId: v.id("agentThreads"),
+            proposalId: v.id("agentProposals"),
+            toolName: v.string(),
+            inputArgsJson: v.string(),
+            affectedIdsJson: v.string(),
+            executedAt: v.number(),
+            reversalPayloadJson: v.string(),
+            reversedAt: v.optional(v.number()),
+            reversalOfAuditId: v.optional(v.id("auditLog")),
+            chunkIndex: v.optional(v.number()),
+            chunkCount: v.optional(v.number()),
+        })
+            .edge("user")
+            .index("by_user_executedAt", ["userId", "executedAt"])
+            .index("by_proposal", ["proposalId"])
+            .index("by_reversalOf", ["reversalOfAuditId"]),
     },
     { schemaValidation: false },
 );
