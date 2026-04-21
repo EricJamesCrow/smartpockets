@@ -2259,4 +2259,44 @@ export const markItemErrorDispatchedInternal = internalMutation({
         return null;
     },
 });
+/**
+ * List plaidItems in error status that:
+ *   - have lastSyncedAt older than olderThanLastSyncedAt (or undefined)
+ *   - have lastDispatchedAt older than dispatchedBefore (or undefined)
+ *
+ * Used by the host-app 6-hour persistent-error cron per W4 spec §8.2.
+ * Returns a subset payload (not the full plaidItem doc) to cap component-
+ * boundary surface area.
+ */
+export const listErrorItemsInternal = internalQuery({
+    args: {
+        olderThanLastSyncedAt: v.number(),
+        dispatchedBefore: v.number(),
+    },
+    returns: v.array(v.object({
+        plaidItemId: v.string(),
+        userId: v.string(),
+        institutionName: v.union(v.string(), v.null()),
+        firstErrorAt: v.union(v.number(), v.null()),
+        errorAt: v.union(v.number(), v.null()),
+        errorCode: v.union(v.string(), v.null()),
+    })),
+    handler: async (ctx, args) => {
+        const items = await ctx.db
+            .query("plaidItems")
+            .withIndex("by_status", (q) => q.eq("status", "error"))
+            .collect();
+        return items
+            .filter((i) => (i.lastSyncedAt ?? 0) < args.olderThanLastSyncedAt)
+            .filter((i) => (i.lastDispatchedAt ?? 0) < args.dispatchedBefore)
+            .map((i) => ({
+            plaidItemId: String(i._id),
+            userId: i.userId,
+            institutionName: i.institutionName ?? null,
+            firstErrorAt: i.firstErrorAt ?? null,
+            errorAt: i.errorAt ?? null,
+            errorCode: i.errorCode ?? null,
+        }));
+    },
+});
 //# sourceMappingURL=private.js.map

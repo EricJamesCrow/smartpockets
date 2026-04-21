@@ -39,4 +39,17 @@ crons.cron(
   (internal as any).agent.proposals.expireStaleInternal
 );
 
+/**
+ * W4: Plaid Persistent Error Check (6-hour interval per contracts §14).
+ *
+ * Scans for plaidItems in error status with stale sync (>24h) that have
+ * not been dispatched in the last 72h, then schedules
+ * dispatchItemErrorPersistent and stamps lastDispatchedAt.
+ */
+crons.interval(
+  "Plaid Persistent Error Check",
+  { hours: 6 },
+  internal.plaid.persistentError.runPersistentErrorCheckInternal
+);
+
 export default crons;

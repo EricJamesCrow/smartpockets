@@ -22,6 +22,7 @@ import type * as email_resend from "../email/resend.js";
 import type * as email_send from "../email/send.js";
 import type * as email_templates from "../email/templates.js";
 import type * as plaid_errorTaxonomy from "../plaid/errorTaxonomy.js";
+import type * as plaid_persistentError from "../plaid/persistentError.js";
 import type * as functions from "../functions.js";
 import type * as http from "../http.js";
 import type * as installmentPlans_mutations from "../installmentPlans/mutations.js";
@@ -79,6 +80,7 @@ declare const fullApi: ApiFromModules<{
   "email/send": typeof email_send;
   "email/templates": typeof email_templates;
   "plaid/errorTaxonomy": typeof plaid_errorTaxonomy;
+  "plaid/persistentError": typeof plaid_persistentError;
   functions: typeof functions;
   http: typeof http;
   "installmentPlans/mutations": typeof installmentPlans_mutations;
@@ -471,6 +473,19 @@ export declare const components: {
         "internal",
         { plaidItemId: string },
         null
+      >;
+      listErrorItemsInternal: FunctionReference<
+        "query",
+        "internal",
+        { olderThanLastSyncedAt: number; dispatchedBefore: number },
+        Array<{
+          plaidItemId: string;
+          userId: string;
+          institutionName: string | null;
+          firstErrorAt: number | null;
+          errorAt: number | null;
+          errorCode: string | null;
+        }>
       >;
     };
     public: {

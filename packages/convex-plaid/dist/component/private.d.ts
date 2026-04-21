@@ -883,4 +883,24 @@ export declare const clearErrorTrackingInternal: import("convex/server").Registe
 export declare const markItemErrorDispatchedInternal: import("convex/server").RegisteredMutation<"internal", {
     plaidItemId: string;
 }, Promise<null>>;
+/**
+ * List plaidItems in error status that:
+ *   - have lastSyncedAt older than olderThanLastSyncedAt (or undefined)
+ *   - have lastDispatchedAt older than dispatchedBefore (or undefined)
+ *
+ * Used by the host-app 6-hour persistent-error cron per W4 spec §8.2.
+ * Returns a subset payload (not the full plaidItem doc) to cap component-
+ * boundary surface area.
+ */
+export declare const listErrorItemsInternal: import("convex/server").RegisteredQuery<"internal", {
+    olderThanLastSyncedAt: number;
+    dispatchedBefore: number;
+}, Promise<{
+    plaidItemId: string;
+    userId: string;
+    institutionName: string | null;
+    firstErrorAt: number | null;
+    errorAt: number | null;
+    errorCode: string | null;
+}[]>>;
 //# sourceMappingURL=private.d.ts.map
