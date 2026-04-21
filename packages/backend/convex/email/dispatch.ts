@@ -14,6 +14,11 @@ function utcDateBucket(date = new Date()): string {
   return date.toISOString().slice(0, 10);
 }
 
+function isUniqueConstraintError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return /unique/i.test(err.message);
+}
+
 async function queueOrSkip(
   ctx: {
     runQuery: (ref: unknown, args: Record<string, unknown>) => Promise<unknown>;
@@ -38,6 +43,8 @@ async function queueOrSkip(
   status: "queued" | "skipped_duplicate";
   emailEventId: Id<"emailEvents">;
 }> {
+  // Fast path: short-circuit on a committed duplicate. The unique
+  // constraint is the correctness boundary for concurrent dispatches.
   const existing = (await ctx.runQuery(
     internal.email.queries.getByIdempotencyKey,
     { idempotencyKey: params.idempotencyKey },
@@ -51,17 +58,33 @@ async function queueOrSkip(
     userId: params.userId,
   })) as string;
 
-  const emailEventId = (await ctx.runMutation(
-    internal.email.mutations.insertPending,
-    {
-      idempotencyKey: params.idempotencyKey,
-      userId: params.userId,
-      email,
-      templateKey: params.templateKey,
-      cadence: params.cadence,
-      payloadJson: params.payload,
-    },
-  )) as Id<"emailEvents">;
+  // Correctness path: insert-and-catch. If a concurrent dispatch
+  // committed the row between the get above and this insert, the
+  // unique constraint on idempotencyKey throws; we re-resolve and
+  // return skipped_duplicate so retrying crons/webhooks do not surface
+  // false failures (contracts §10.2).
+  let emailEventId: Id<"emailEvents">;
+  try {
+    emailEventId = (await ctx.runMutation(
+      internal.email.mutations.insertPending,
+      {
+        idempotencyKey: params.idempotencyKey,
+        userId: params.userId,
+        email,
+        templateKey: params.templateKey,
+        cadence: params.cadence,
+        payloadJson: params.payload,
+      },
+    )) as Id<"emailEvents">;
+  } catch (err) {
+    if (!isUniqueConstraintError(err)) throw err;
+    const raced = (await ctx.runQuery(
+      internal.email.queries.getByIdempotencyKey,
+      { idempotencyKey: params.idempotencyKey },
+    )) as Id<"emailEvents"> | null;
+    if (!raced) throw err;
+    return { status: "skipped_duplicate", emailEventId: raced };
+  }
 
   const workflowId = await workflow.start(ctx, params.workflowRef, {
     emailEventId,
