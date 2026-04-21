@@ -50,8 +50,10 @@ export interface EmailBrandConfig {
  */
 export const defaultEmailConfig: EmailBrandConfig = {
     companyName: "SmartPockets",
-    // TODO: Host the SP logo image and update this URL
-    logoUrl: "",
+    // Served from apps/web static at smartpockets.com/email-assets/logo.png.
+    // Asset lands in the same PR as this change; update to Vercel Blob or
+    // Convex Blob if we ever need global CDN over static marketing CDN.
+    logoUrl: "https://smartpockets.com/email-assets/logo.png",
     logoAlt: "SmartPockets",
     supportEmail: "support@smartpockets.com",
     websiteUrl: "https://smartpockets.com",

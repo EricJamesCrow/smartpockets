@@ -28,6 +28,14 @@ import { SubscriptionCancelled } from "@repo/email/templates/subscription-cancel
 import { TrialStarting } from "@repo/email/templates/trial-starting";
 import { TrialEnding } from "@repo/email/templates/trial-ending";
 import { TrialEnded } from "@repo/email/templates/trial-ended";
+import { WelcomeOnboarding } from "@repo/email/templates/welcome-onboarding";
+import { WeeklyDigest } from "@repo/email/templates/weekly-digest";
+import { PromoWarning } from "@repo/email/templates/promo-warning";
+import { StatementClosing } from "@repo/email/templates/statement-closing";
+import { AnomalyAlert } from "@repo/email/templates/anomaly-alert";
+import { ReconsentRequired } from "@repo/email/templates/reconsent-required";
+import { ItemErrorPersistent } from "@repo/email/templates/item-error-persistent";
+import { SubscriptionDetected } from "@repo/email/templates/subscription-detected";
 
 /**
  * Template type union for type-safe template selection
@@ -54,7 +62,15 @@ export type TemplateType =
   | "subscription-cancelled"
   | "trial-starting"
   | "trial-ending"
-  | "trial-ended";
+  | "trial-ended"
+  | "welcome-onboarding"
+  | "weekly-digest"
+  | "promo-warning"
+  | "statement-closing"
+  | "anomaly-alert"
+  | "reconsent-required"
+  | "item-error-persistent"
+  | "subscription-detected";
 
 /**
  * Template component factory
@@ -84,6 +100,14 @@ const templateFactory: Record<TemplateType, (props: any) => React.ReactElement> 
   "trial-starting": (props) => React.createElement(TrialStarting, props),
   "trial-ending": (props) => React.createElement(TrialEnding, props),
   "trial-ended": (props) => React.createElement(TrialEnded, props),
+  "welcome-onboarding": (props) => React.createElement(WelcomeOnboarding, props),
+  "weekly-digest": (props) => React.createElement(WeeklyDigest, props),
+  "promo-warning": (props) => React.createElement(PromoWarning, props),
+  "statement-closing": (props) => React.createElement(StatementClosing, props),
+  "anomaly-alert": (props) => React.createElement(AnomalyAlert, props),
+  "reconsent-required": (props) => React.createElement(ReconsentRequired, props),
+  "item-error-persistent": (props) => React.createElement(ItemErrorPersistent, props),
+  "subscription-detected": (props) => React.createElement(SubscriptionDetected, props),
 };
 
 /**

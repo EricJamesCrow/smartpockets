@@ -7,6 +7,7 @@ const schema = defineEntSchema(
         // === USERS ===
         users: defineEnt({
             name: v.string(),
+            email: v.optional(v.string()),
             connectedAccounts: v.optional(
                 v.array(
                     v.object({
@@ -26,6 +27,7 @@ const schema = defineEntSchema(
             .edges("installmentPlans", { ref: true })
             .edges("transactionOverlays", { ref: true })
             .edges("transactionAttachments", { ref: true })
+            .edges("notificationPreferences", { ref: true })
             .edges("agentThreads", { ref: true })
             .edges("agentProposals", { ref: true })
             .edges("agentUsage", { ref: true })
@@ -272,6 +274,85 @@ const schema = defineEntSchema(
             .edge("user")
             .index("by_transaction", ["plaidTransactionId"])
             .index("by_user_and_transaction", ["userId", "plaidTransactionId"]),
+
+        // === NOTIFICATION PREFERENCES (W7) ===
+        notificationPreferences: defineEnt({
+            weeklyDigestEnabled: v.boolean(),
+            promoWarningEnabled: v.boolean(),
+            statementReminderEnabled: v.boolean(),
+            anomalyAlertEnabled: v.boolean(),
+            subscriptionDetectedEnabled: v.boolean(),
+            welcomeOnboardingEnabled: v.boolean(),
+            masterUnsubscribed: v.boolean(),
+            updatedAt: v.number(),
+        }).edge("user"),
+
+        // === EMAIL EVENTS (W7) ===
+        // Unified log for sends, dev captures, and inbound Resend webhooks.
+        // `idempotencyKey` is a unique Ents field enforcing Strategy C-prime
+        // dedup at DB insert time. Webhook-event rows use synthetic keys of
+        // the form `webhook:<resendEmailId>:<source>` so they never collide
+        // with application sends.
+        //
+        // userId is a plain optional field (not an Ents edge) because
+        // Convex Ents does not support `optional: true` on edges and
+        // webhook rows intentionally arrive before we know the user
+        // (we resolve via resendEmailId sibling lookup when needed).
+        emailEvents: defineEnt({
+            userId: v.optional(v.id("users")),
+            email: v.string(),
+            templateKey: v.string(),
+            cadence: v.optional(v.number()),
+            source: v.union(
+                v.literal("send"),
+                v.literal("dev-capture"),
+                v.literal("webhook-sent"),
+                v.literal("webhook-delivered"),
+                v.literal("webhook-bounced"),
+                v.literal("webhook-complained"),
+                v.literal("webhook-opened"),
+                v.literal("webhook-clicked"),
+                v.literal("webhook-delayed"),
+                v.literal("webhook-failed"),
+            ),
+            resendEmailId: v.optional(v.string()),
+            workflowId: v.optional(v.string()),
+            payloadJson: v.any(),
+            errorMessage: v.optional(v.string()),
+            status: v.union(
+                v.literal("pending"),
+                v.literal("running"),
+                v.literal("sent"),
+                v.literal("skipped_pref"),
+                v.literal("skipped_dedup"),
+                v.literal("skipped_suppression"),
+                v.literal("failed"),
+            ),
+            attemptCount: v.number(),
+            createdAt: v.number(),
+            processedAt: v.optional(v.number()),
+        })
+            .field("idempotencyKey", v.string(), { unique: true })
+            .index("by_user_created", ["userId", "createdAt"])
+            .index("by_resendEmailId", ["resendEmailId"])
+            .index("by_template_created", ["templateKey", "createdAt"])
+            .index("by_status_created", ["status", "createdAt"])
+            .index("by_workflowId", ["workflowId"])
+            .index("by_user_template_status", ["userId", "templateKey", "status"]),
+
+        // === EMAIL SUPPRESSIONS (W7) ===
+        // Keyed by email so Clerk email-change events do not reset
+        // suppression. userId is an optional plain field; webhook
+        // handlers may resolve it later via resendEmailId sibling lookup.
+        emailSuppressions: defineEnt({
+            userId: v.optional(v.id("users")),
+            reason: v.union(v.literal("hard_bounce"), v.literal("complaint")),
+            firstEventAt: v.number(),
+            lastEventAt: v.number(),
+            eventCount: v.number(),
+        })
+            .field("email", v.string(), { unique: true })
+            .index("by_user", ["userId"]),
 
         // === AGENT THREADS (W2) ===
         agentThreads: defineEnt({

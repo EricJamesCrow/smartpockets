@@ -18,6 +18,7 @@ import { query as viewerQuery } from "./functions";
 import { v } from "convex/values";
 import { Plaid } from "@crowdevelopment/convex-plaid";
 import { components } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 
 // =============================================================================
@@ -319,7 +320,7 @@ export const onboardNewConnectionAction = action({
             0,
             internal.email.dispatch.dispatchWelcomeOnboarding,
             {
-              userId: args.userId,
+              userId: args.userId as Id<"users">,
               variant: "plaid-linked",
               firstLinkedInstitutionName: institutionName,
             },

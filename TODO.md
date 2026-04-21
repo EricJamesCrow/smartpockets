@@ -36,14 +36,19 @@
 ### 4. Transactional Emails
 
 - [x] Apply SmartPockets branding to email templates (green palette, company name, text logo fallback)
-- [x] Set up Resend domain (`mail.smartpockets.com`) — DNS pending verification
+- [x] Set up Resend domain (`mail.smartpockets.com`) DNS pending verification
 - [x] Update Convex env vars (`EMAIL_DOMAIN`, `RESEND_API_KEY`) for dev
 - [x] Remove stale `INNGEST_EVENT_KEY` from Convex dev
-- [ ] Update Convex env vars for production once PR merges
+- [x] W7 stack shipped: 8 agentic templates, dispatch API, workflows,
+      preferences page, unsubscribe route, suppression, crons
+      (see docs/W7-email-rollout.md for prod preconditions)
+- [ ] Update Convex env vars for production (`RESEND_WEBHOOK_SECRET`,
+      `EMAIL_UNSUBSCRIBE_SIGNING_KEY`) once W7 PRs merge
 - [ ] Remove stale `INNGEST_EVENT_KEY` from Convex production
-- [ ] Host SP logo image and update `logoUrl` in email-config.ts
-- [ ] Test each email end-to-end (verification, password reset, magic link, invite)
-- [ ] Set up Resend webhook for delivery tracking (`RESEND_WEBHOOK_SECRET`)
+- [ ] Drop SP logo PNGs in apps/web/public/email-assets/
+- [ ] Register Resend webhook at prod convex.site/resend-webhook
+- [ ] Run internal.email.internal.backfillEmailsFromClerk once in prod
+- [ ] Smoke send weekly-digest to verify end-to-end
 
 ### 5. Clerk Pro Setup
 

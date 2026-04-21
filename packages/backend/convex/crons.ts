@@ -26,6 +26,10 @@ crons.daily(
   internal.statementSnapshots.actions.generateDailySnapshots
 );
 
+// =============================================================================
+// W2 agent crons
+// =============================================================================
+
 /**
  * Agent Proposal TTL (W2)
  * Every 5 minutes, expire any `agentProposals` row whose
@@ -39,6 +43,10 @@ crons.cron(
   (internal as any).agent.proposals.expireStaleInternal
 );
 
+// =============================================================================
+// W4 Plaid crons
+// =============================================================================
+
 /**
  * W4: Plaid Persistent Error Check (6-hour interval per contracts §14).
  *
@@ -50,6 +58,53 @@ crons.interval(
   "Plaid Persistent Error Check",
   { hours: 6 },
   internal.plaid.persistentError.runPersistentErrorCheckInternal
+);
+
+// =============================================================================
+// W7 email crons
+// =============================================================================
+
+/**
+ * Weekly digest: every Sunday at 09:00 UTC. Iterates users, assembles
+ * payload from W6 intelligence tables, calls dispatchWeeklyDigest per
+ * user. The workflow's zero-signal skip handles empty-payload users.
+ */
+crons.weekly(
+  "Weekly digest",
+  { dayOfWeek: "sunday", hourUTC: 9, minuteUTC: 0 },
+  internal.email.crons.dispatchWeeklyDigestForAllUsers
+);
+
+/**
+ * Welcome signup-only fallback: hourly. Dispatches
+ * welcome-onboarding variant "signup-only" for users created >= 48h
+ * ago who never received a welcome (either variant).
+ */
+crons.hourly(
+  "Welcome signup fallback",
+  { minuteUTC: 15 },
+  internal.email.crons.dispatchWelcomeSignupFallback
+);
+
+/**
+ * Cleanup old email events: daily at 03:30 UTC. Enforces per-source
+ * retention windows from spike §4.4.
+ */
+crons.daily(
+  "Cleanup old email events",
+  { hourUTC: 3, minuteUTC: 30 },
+  internal.email.crons.cleanupOldEmailEvents
+);
+
+/**
+ * Reconcile stuck workflows: hourly. Transitions rows stuck in
+ * `running` for over an hour to `failed` so they stop appearing
+ * in-flight forever.
+ */
+crons.hourly(
+  "Reconcile stuck email workflows",
+  { minuteUTC: 45 },
+  internal.email.crons.reconcileStuckWorkflows
 );
 
 export default crons;
