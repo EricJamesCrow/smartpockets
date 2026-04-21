@@ -3,6 +3,7 @@ import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { WebhookEvent } from "@clerk/backend";
 import { Webhook } from "svix";
+import { z } from "zod";
 import { transformWebhookData } from "./paymentAttemptTypes";
 import { verifyPlaidWebhook, shouldSkipVerification } from "./lib/plaidWebhookVerification";
 
@@ -302,6 +303,70 @@ http.route({
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
     }
+  }),
+});
+
+// ============================================================================
+// Agent HTTP Action (W2) — POST /api/agent/send
+// ============================================================================
+
+const SendBody = z.object({
+  threadId: z.string().optional(),
+  prompt: z.string().min(1).max(8192),
+});
+
+http.route({
+  path: "/api/agent/send",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return new Response("Unauthorized", { status: 401 });
+
+    const viewer = await ctx.runQuery(internal.users.getByExternalId, {
+      externalId: identity.subject,
+    });
+    if (!viewer) return new Response("No viewer", { status: 401 });
+
+    let body: z.infer<typeof SendBody>;
+    try {
+      body = SendBody.parse(await request.json());
+    } catch (err) {
+      return Response.json(
+        { error: "validation_failed", reason: String(err) },
+        { status: 400 },
+      );
+    }
+
+    // `internal.agent.*` resolves after `npx convex dev --once` regenerates
+    // `_generated/api.d.ts` with the new agent module. The cast is temporary.
+    const agentApi = (internal as any).agent;
+    const budget = await ctx.runQuery(agentApi.budgets.checkHeadroom, {
+      userId: viewer._id,
+      threadId: body.threadId,
+    });
+    if (!budget.ok) {
+      return Response.json(
+        { error: "budget_exhausted", reason: budget.reason },
+        { status: 429 },
+      );
+    }
+
+    const { threadId, messageId } = await ctx.runMutation(
+      agentApi.threads.appendUserTurn,
+      {
+        userId: viewer._id,
+        threadId: body.threadId,
+        prompt: body.prompt,
+      },
+    );
+
+    await ctx.scheduler.runAfter(0, agentApi.runtime.runAgentTurn, {
+      userId: viewer._id,
+      threadId,
+      userMessageId: messageId,
+    });
+
+    return Response.json({ threadId, messageId });
   }),
 });
 

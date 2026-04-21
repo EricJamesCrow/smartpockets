@@ -1,6 +1,6 @@
 import { UserJSON } from "@clerk/backend";
 import { Validator, v } from "convex/values";
-import { internalMutation, mutation, query } from "./functions";
+import { internalMutation, internalQuery, mutation, query } from "./functions";
 
 /**
  * Get the current authenticated user
@@ -194,5 +194,33 @@ export const search = query({
                 _id: u._id,
                 name: u.name,
             }));
+    },
+});
+
+/**
+ * Internal: resolve viewer by Clerk externalId. Used by the agent HTTP action
+ * after `ctx.auth.getUserIdentity()` to translate the JWT subject to an
+ * `Id<"users">` that propagates through the agent trust boundary.
+ */
+export const getByExternalId = internalQuery({
+    args: { externalId: v.string() },
+    returns: v.union(
+        v.object({
+            _id: v.id("users"),
+            _creationTime: v.number(),
+            name: v.string(),
+            externalId: v.string(),
+        }),
+        v.null(),
+    ),
+    handler: async (ctx, { externalId }) => {
+        const user = await ctx.table("users").get("externalId", externalId);
+        if (!user) return null;
+        return {
+            _id: user._id,
+            _creationTime: user._creationTime,
+            name: user.name,
+            externalId: user.externalId,
+        };
     },
 });
