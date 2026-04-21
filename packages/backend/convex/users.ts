@@ -13,6 +13,7 @@ export const current = query({
             _creationTime: v.number(),
             name: v.string(),
             externalId: v.string(),
+            email: v.optional(v.string()),
             connectedAccounts: v.optional(
                 v.array(
                     v.object({
@@ -34,6 +35,7 @@ export const current = query({
             _creationTime: viewer._creationTime,
             name: viewer.name,
             externalId: viewer.externalId,
+            email: viewer.email,
             connectedAccounts: viewer.connectedAccounts,
         };
     },
@@ -89,6 +91,13 @@ export const upsertFromClerk = internalMutation({
             externalId: account.id,
         }));
 
+        const primary = (data.email_addresses || []).find(
+            (e: any) => e.id === data.primary_email_address_id,
+        );
+        const primaryEmail: string | undefined = primary?.email_address
+            ? String(primary.email_address).toLowerCase()
+            : undefined;
+
         // Look up existing user by Clerk ID
         const existingUser = await ctx.table("users").get("externalId", data.id);
 
@@ -96,11 +105,13 @@ export const upsertFromClerk = internalMutation({
             await ctx.table("users").insert({
                 name: `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || "User",
                 externalId: data.id,
+                email: primaryEmail,
                 connectedAccounts,
             });
         } else {
             await existingUser.patch({
                 name: `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim() || "User",
+                email: primaryEmail,
                 connectedAccounts,
             });
         }
