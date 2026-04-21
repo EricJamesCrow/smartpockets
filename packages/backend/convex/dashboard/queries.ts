@@ -308,7 +308,13 @@ export const getAlerts = query({
 });
 
 /**
- * Get connected banks with nested accounts
+ * Get connected banks with nested accounts.
+ *
+ * W4: return shape extended with { state, recommendedAction, reasonCode }
+ * derived by the component's getItemHealthByUser query. Filters
+ * status=deleting rows automatically. Legacy `status` field preserved so
+ * existing callers (ConnectedBanks.tsx, Settings > Institutions) can
+ * migrate incrementally.
  */
 export const getConnectedBanks = query({
   args: {},
@@ -319,6 +325,21 @@ export const getConnectedBanks = query({
       institutionName: v.string(),
       status: v.string(),
       lastSyncedAt: v.optional(v.number()),
+      // W4: health fields
+      state: v.union(
+        v.literal("syncing"),
+        v.literal("ready"),
+        v.literal("error"),
+        v.literal("re-consent-required"),
+      ),
+      recommendedAction: v.union(
+        v.literal("reconnect"),
+        v.literal("reconnect_for_new_accounts"),
+        v.literal("wait"),
+        v.literal("contact_support"),
+        v.null(),
+      ),
+      reasonCode: v.string(),
       accounts: v.array(
         v.object({
           accountId: v.string(),
@@ -334,26 +355,39 @@ export const getConnectedBanks = query({
   async handler(ctx) {
     const viewer = ctx.viewerX();
 
-    // Get all Plaid items
-    const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
-      userId: viewer.externalId,
-    });
+    // Fetch health (non-deleting items only) and accounts in parallel per item.
+    const healths = await ctx.runQuery(
+      components.plaid.public.getItemHealthByUser,
+      { userId: viewer.externalId },
+    );
 
     const banks = await Promise.all(
-      userItems.map(async (item) => {
-        // Get accounts for this item
+      healths.map(async (h: any) => {
         const accounts = await ctx.runQuery(
           components.plaid.public.getAccountsByItem,
-          { plaidItemId: item._id }
+          { plaidItemId: h.plaidItemId },
         );
 
+        // Derive legacy `status` from the rich state for back-compat.
+        const legacyStatus =
+          h.state === "re-consent-required"
+            ? "needs_reauth"
+            : h.state === "error"
+              ? "error"
+              : h.state === "syncing"
+                ? "syncing"
+                : "active";
+
         return {
-          itemId: item._id,
-          institutionId: item.institutionId,
-          institutionName: item.institutionName || "Unknown Bank",
-          status: item.status,
-          lastSyncedAt: item.lastSyncedAt,
-          accounts: accounts.map((acc) => ({
+          itemId: h.plaidItemId,
+          institutionId: h.institutionId ?? undefined,
+          institutionName: h.institutionName || "Unknown Bank",
+          status: legacyStatus,
+          lastSyncedAt: h.lastSyncedAt ?? undefined,
+          state: h.state,
+          recommendedAction: h.recommendedAction,
+          reasonCode: h.reasonCode,
+          accounts: accounts.map((acc: any) => ({
             accountId: acc.accountId,
             name: acc.name,
             type: acc.type,
@@ -362,7 +396,7 @@ export const getConnectedBanks = query({
             mask: acc.mask,
           })),
         };
-      })
+      }),
     );
 
     return banks;
