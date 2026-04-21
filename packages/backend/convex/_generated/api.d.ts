@@ -46,6 +46,8 @@ import type * as intelligence_statementReminders_helpers from "../intelligence/s
 import type * as intelligence_statementReminders_queries from "../intelligence/statementReminders/queries.js";
 import type * as intelligence_statementReminders_scan from "../intelligence/statementReminders/scan.js";
 import type * as intelligence_subscriptions_normalize from "../intelligence/subscriptions/normalize.js";
+import type * as intelligence_subscriptions_queries from "../intelligence/subscriptions/queries.js";
+import type * as intelligence_subscriptions_scan from "../intelligence/subscriptions/scan.js";
 import type * as items_index from "../items/index.js";
 import type * as items_mutations from "../items/mutations.js";
 import type * as items_queries from "../items/queries.js";
@@ -123,6 +125,8 @@ declare const fullApi: ApiFromModules<{
   "intelligence/statementReminders/queries": typeof intelligence_statementReminders_queries;
   "intelligence/statementReminders/scan": typeof intelligence_statementReminders_scan;
   "intelligence/subscriptions/normalize": typeof intelligence_subscriptions_normalize;
+  "intelligence/subscriptions/queries": typeof intelligence_subscriptions_queries;
+  "intelligence/subscriptions/scan": typeof intelligence_subscriptions_scan;
   "items/index": typeof items_index;
   "items/mutations": typeof items_mutations;
   "items/queries": typeof items_queries;

@@ -104,6 +104,22 @@ crons.hourly(
   internal.intelligence.anomalies.scan.scanAllUsersInternal,
 );
 
+/**
+ * W6.8: Subscription detection daily scan (07:05 UTC).
+ * Plaid step ingests MATURE outflow streams into detectedSubscriptions with
+ * `source: "plaid"`; catchup step groups the last 180 days of transactions
+ * by normalized merchant + $0.50 bucket and upserts rows with
+ * `source: "catchup"` when ≥3 occurrences fall inside a frequency tolerance
+ * band. Plaid-sourced rows win on conflict. Dispatches one
+ * subscription-detected digest per user-per-day if any new catchup rows
+ * were inserted.
+ */
+crons.daily(
+  "Subscription detection daily scan",
+  { hourUTC: 7, minuteUTC: 5 },
+  internal.intelligence.subscriptions.scan.scanAllUsersInternal,
+);
+
 // =============================================================================
 // W7 email crons
 // =============================================================================
