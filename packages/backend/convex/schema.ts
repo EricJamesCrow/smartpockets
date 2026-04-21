@@ -25,7 +25,11 @@ const schema = defineEntSchema(
             .edges("promoRates", { ref: true })
             .edges("installmentPlans", { ref: true })
             .edges("transactionOverlays", { ref: true })
-            .edges("transactionAttachments", { ref: true }),
+            .edges("transactionAttachments", { ref: true })
+            .edges("agentThreads", { ref: true })
+            .edges("agentProposals", { ref: true })
+            .edges("agentUsage", { ref: true })
+            .edges("reminders", { ref: true }),
 
         // === ORG LAYER ===
         organizations: defineEnt({
@@ -268,6 +272,141 @@ const schema = defineEntSchema(
             .edge("user")
             .index("by_transaction", ["plaidTransactionId"])
             .index("by_user_and_transaction", ["userId", "plaidTransactionId"]),
+
+        // === AGENT THREADS (W2) ===
+        agentThreads: defineEnt({
+            title: v.optional(v.string()),
+            isArchived: v.boolean(),
+            lastTurnAt: v.number(),
+            promptVersion: v.string(),
+            summaryText: v.optional(v.string()),
+            summaryUpToMessageId: v.optional(v.id("agentMessages")),
+            componentThreadId: v.string(),
+            readCallCount: v.number(),
+        })
+            .edge("user")
+            .edges("agentMessages", { ref: true })
+            .edges("agentProposals", { ref: true })
+            .index("by_user_lastTurnAt", ["userId", "lastTurnAt"])
+            .index("by_componentThreadId", ["componentThreadId"]),
+
+        // === AGENT MESSAGES (W2) ===
+        agentMessages: defineEnt({
+            role: v.union(
+                v.literal("user"),
+                v.literal("assistant"),
+                v.literal("system"),
+                v.literal("tool"),
+            ),
+            text: v.optional(v.string()),
+            toolCallsJson: v.optional(v.string()),
+            toolName: v.optional(v.string()),
+            toolResultJson: v.optional(v.string()),
+            proposalId: v.optional(v.id("agentProposals")),
+            tokensIn: v.optional(v.number()),
+            tokensOut: v.optional(v.number()),
+            modelId: v.optional(v.string()),
+            createdAt: v.number(),
+            isStreaming: v.boolean(),
+        })
+            .edge("agentThread")
+            .index("by_thread_createdAt", ["agentThreadId", "createdAt"]),
+
+        // === AGENT PROPOSALS (W2) ===
+        agentProposals: defineEnt({
+            toolName: v.string(),
+            argsJson: v.string(),
+            summaryText: v.string(),
+            affectedCount: v.number(),
+            sampleJson: v.string(),
+            scope: v.union(v.literal("single"), v.literal("bulk")),
+            state: v.union(
+                v.literal("proposed"),
+                v.literal("awaiting_confirmation"),
+                v.literal("confirmed"),
+                v.literal("executing"),
+                v.literal("executed"),
+                v.literal("cancelled"),
+                v.literal("timed_out"),
+                v.literal("reverted"),
+                v.literal("failed"),
+            ),
+            awaitingExpiresAt: v.number(),
+            executedAt: v.optional(v.number()),
+            undoExpiresAt: v.optional(v.number()),
+            revertedAt: v.optional(v.number()),
+            workflowId: v.optional(v.string()),
+            errorJson: v.optional(v.string()),
+        })
+            .field("contentHash", v.string(), { unique: true })
+            .edge("user")
+            .edge("agentThread")
+            .edges("agentProposalRows", { ref: true })
+            .index("by_thread_state", ["agentThreadId", "state"])
+            .index("by_user_awaiting", ["userId", "state", "awaitingExpiresAt"])
+            .index("by_undo_window", ["userId", "state", "undoExpiresAt"]),
+
+        // === AGENT PROPOSAL ROWS (W2) ===
+        agentProposalRows: defineEnt({
+            targetTable: v.string(),
+            targetId: v.string(),
+            beforeJson: v.string(),
+            afterJson: v.string(),
+            executedAt: v.optional(v.number()),
+            errorJson: v.optional(v.string()),
+        })
+            .edge("agentProposal")
+            .index("by_proposal_targetId", ["agentProposalId", "targetId"]),
+
+        // === AGENT USAGE (W2) ===
+        agentUsage: defineEnt({
+            periodStart: v.number(),
+            tokensIn: v.number(),
+            tokensOut: v.number(),
+            usdMicrocents: v.number(),
+            modelId: v.string(),
+            toolCallCount: v.number(),
+        })
+            .edge("user")
+            .index("by_user_period", ["userId", "periodStart", "modelId"]),
+
+        // === PROMPT VERSIONS (W2) ===
+        promptVersions: defineEnt({
+            version: v.string(),
+            systemPromptMd: v.string(),
+            modelDefault: v.string(),
+            modelClassifier: v.string(),
+            activatedAt: v.number(),
+            notes: v.optional(v.string()),
+        })
+            .index("by_version", ["version"])
+            .index("by_activatedAt", ["activatedAt"]),
+
+        // === REMINDERS (W2 ships table; W5 owns CRUD) ===
+        reminders: defineEnt({
+            title: v.string(),
+            dueAt: v.number(),
+            notes: v.optional(v.string()),
+            isDone: v.boolean(),
+            doneAt: v.optional(v.number()),
+            dismissedAt: v.optional(v.number()),
+            relatedResourceType: v.union(
+                v.literal("creditCard"),
+                v.literal("promoRate"),
+                v.literal("installmentPlan"),
+                v.literal("transaction"),
+                v.literal("none"),
+            ),
+            relatedResourceId: v.optional(v.string()),
+            triggerLeadDays: v.optional(v.number()),
+            channels: v.array(
+                v.union(v.literal("chat"), v.literal("email")),
+            ),
+            createdByAgent: v.boolean(),
+        })
+            .edge("user")
+            .index("by_user_due", ["userId", "isDone", "dueAt"])
+            .index("by_user_dismissed", ["userId", "dismissedAt"]),
     },
     { schemaValidation: false },
 );
