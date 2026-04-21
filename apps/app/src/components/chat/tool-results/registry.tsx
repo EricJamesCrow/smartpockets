@@ -14,6 +14,8 @@ import { DeferredInterestTimeline } from "./promos/DeferredInterestTimeline";
 import { DeferredInterestTimelineSkeleton } from "./promos/DeferredInterestTimelineSkeleton";
 import { InstallmentPlansList } from "./promos/InstallmentPlansList";
 import { InstallmentPlansListSkeleton } from "./promos/InstallmentPlansListSkeleton";
+import { RemindersList } from "./reminders/RemindersList";
+import { RemindersListSkeleton } from "./reminders/RemindersListSkeleton";
 import { RawTextMessage } from "./shared/RawTextMessage";
 import { TransactionDetailCard } from "./transactions/TransactionDetailCard";
 import { TransactionDetailCardSkeleton } from "./transactions/TransactionDetailCardSkeleton";
@@ -52,7 +54,7 @@ export const toolResultRegistry: Record<ReadToolName, RegistryEntry> = {
     get_spend_by_category: { Component: SpendByCategoryChart as AnyEntry["Component"], Skeleton: SpendByCategoryChartSkeleton },
     get_spend_over_time: { Component: SpendOverTimeChart as AnyEntry["Component"], Skeleton: SpendOverTimeChartSkeleton },
     get_upcoming_statements: { Component: CreditCardStatementCard as AnyEntry["Component"], Skeleton: CreditCardStatementCardSkeleton },
-    list_reminders: { Component: FallbackToRaw },
+    list_reminders: { Component: RemindersList as AnyEntry["Component"], Skeleton: RemindersListSkeleton },
     search_merchants: { Component: FallbackToRaw },
     get_plaid_health: { Component: FallbackToRaw },
     get_proposal: { Component: FallbackToRaw },
