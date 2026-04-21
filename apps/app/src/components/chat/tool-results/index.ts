@@ -1,3 +1,5 @@
+"use client";
+
 export { proposalFallback, toolResultRegistry } from "./registry";
 export type {
     AgentProposalId,

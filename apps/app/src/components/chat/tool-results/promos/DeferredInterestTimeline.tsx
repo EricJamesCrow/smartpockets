@@ -27,7 +27,7 @@ type Preview = {
     summary?: string;
 };
 
-// TODO: extract helper in promo-tracker cleanup PR — see
+// TODO: extract helper in promo-tracker cleanup PR - see
 // apps/app/src/components/credit-cards/details/PromoTracker.tsx:20 for the
 // original definition.
 function getUrgencyClasses(monthsRemaining: number): { marker: string; ring: string } {
