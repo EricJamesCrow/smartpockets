@@ -90,6 +90,20 @@ crons.daily(
   internal.intelligence.statementReminders.scan.scanAllInternal,
 );
 
+/**
+ * W6.5: Anomaly detection hourly scan.
+ * Fans out per user with any active plaidItem. For each user, advances a
+ * per-user watermark (`anomalyScanState.lastScannedTransactionDate`) and
+ * applies three pure rules to new transactions: amount_spike_3x,
+ * new_merchant_threshold, duplicate_charge_24h. Dispatches one email per
+ * new anomaly (W7 workflow coalesces into a 15-min batch).
+ */
+crons.hourly(
+  "Anomaly detection scan",
+  { minuteUTC: 20 },
+  internal.intelligence.anomalies.scan.scanAllUsersInternal,
+);
+
 // =============================================================================
 // W7 email crons
 // =============================================================================
