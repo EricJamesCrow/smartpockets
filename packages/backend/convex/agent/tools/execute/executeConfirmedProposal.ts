@@ -16,7 +16,6 @@ export const executeConfirmedProposal = agentMutation({
   args: {
     threadId: v.id("agentThreads"),
     proposalId: v.id("agentProposals"),
-    confirmDestructive: v.optional(v.boolean()),
   },
   returns: v.union(
     v.object({
@@ -33,11 +32,10 @@ export const executeConfirmedProposal = agentMutation({
       error: v.string(),
     }),
   ),
-  handler: async (ctx, { threadId, proposalId, confirmDestructive }) => {
+  handler: async (ctx, { threadId, proposalId }) => {
     const result = await executeWriteTool(ctx, {
       proposalId,
       threadId,
-      confirmDestructive,
     });
     if (result.state === "failed") {
       return result;

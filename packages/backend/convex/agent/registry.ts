@@ -361,7 +361,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
   // ===== EXECUTE / CANCEL / UNDO / INTROSPECT / PLAID (5) =====
   execute_confirmed_proposal: {
     description:
-      "Execute a proposal the user has already confirmed. W5 body; user must say 'execute' or 'go ahead'.",
+      "Execute a proposal the user has already confirmed. W5 body; user must say 'execute' or 'go ahead'. Destructive confirmation (W5.11) is captured by the trusted `confirm` mutation on the proposal row, never via tool args.",
     llmInputSchema: z.object({
       proposalId: z.string(),
     }),

@@ -420,6 +420,10 @@ const schema = defineEntSchema(
             revertedAt: v.optional(v.number()),
             workflowId: v.optional(v.string()),
             errorJson: v.optional(v.string()),
+            // W5.11 destructive gating: set by the trusted `confirm` mutation
+            // when the user confirms a destructive proposal from W3's second-
+            // click modal. Never settable via LLM tool args.
+            userConfirmedDestructive: v.optional(v.boolean()),
         })
             .field("contentHash", v.string(), { unique: true })
             .edge("user")
