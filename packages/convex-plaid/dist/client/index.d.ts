@@ -325,6 +325,7 @@ export declare class Plaid {
             plaidItemId: string;
         }, {
             _id: string;
+            _creationTime: number;
             activatedAt?: number;
             circuitState?: string;
             consecutiveFailures?: number;
@@ -334,12 +335,15 @@ export declare class Plaid {
             errorAt?: number;
             errorCode?: string;
             errorMessage?: string;
+            firstErrorAt?: number;
             institutionId?: string;
             institutionName?: string;
             isActive?: boolean;
             itemId: string;
+            lastDispatchedAt?: number;
             lastFailureAt?: number;
             lastSyncedAt?: number;
+            newAccountsAvailableAt?: number;
             nextRetryAt?: number;
             products: Array<string>;
             reauthAt?: number;
@@ -352,6 +356,7 @@ export declare class Plaid {
             userId: string;
         }, {
             _id: string;
+            _creationTime: number;
             activatedAt?: number;
             circuitState?: string;
             consecutiveFailures?: number;
@@ -361,12 +366,15 @@ export declare class Plaid {
             errorAt?: number;
             errorCode?: string;
             errorMessage?: string;
+            firstErrorAt?: number;
             institutionId?: string;
             institutionName?: string;
             isActive?: boolean;
             itemId: string;
+            lastDispatchedAt?: number;
             lastFailureAt?: number;
             lastSyncedAt?: number;
+            newAccountsAvailableAt?: number;
             nextRetryAt?: number;
             products: Array<string>;
             reauthAt?: number;

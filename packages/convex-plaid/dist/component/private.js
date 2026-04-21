@@ -432,6 +432,13 @@ export const completeSyncWithVersion = internalMutation({
 /**
  * Release sync lock on error without updating cursor.
  * Uses O(1) lookup via ctx.db.normalizeId() + ctx.db.get().
+ *
+ * W4: when transitioning into an error-class status ("error" or
+ * "needs_reauth"), stamp the error-tracking fields the 6-hour persistent-
+ * error cron filters on: `firstErrorAt` (monotonic; first-write-wins),
+ * `errorAt = now`, and `errorCode` (from the optional arg, falling back
+ * to a "SYNC_ERROR" sentinel so the cron can still emit a best-effort
+ * dispatch with a visible label).
  */
 export const releaseSyncLock = internalMutation({
     args: {
@@ -439,6 +446,7 @@ export const releaseSyncLock = internalMutation({
         syncVersion: v.number(),
         status: v.string(),
         syncError: v.optional(v.string()),
+        errorCode: v.optional(v.string()),
     },
     returns: v.null(),
     handler: async (ctx, args) => {
@@ -451,11 +459,21 @@ export const releaseSyncLock = internalMutation({
             if (item.status === "deleting") {
                 return null;
             }
-            await ctx.db.patch(item._id, {
+            const patch = {
                 status: args.status,
                 syncError: args.syncError,
                 syncStartedAt: undefined,
-            });
+            };
+            if (args.status === "error" || args.status === "needs_reauth") {
+                const now = Date.now();
+                if (item.firstErrorAt == null)
+                    patch.firstErrorAt = now;
+                patch.errorAt = now;
+                patch.errorCode = args.errorCode ?? "SYNC_ERROR";
+                if (args.syncError != null)
+                    patch.errorMessage = args.syncError;
+            }
+            await ctx.db.patch(item._id, patch);
         }
         return null;
     },

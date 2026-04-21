@@ -247,6 +247,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             plaidItemId: string;
         }, {
             _id: string;
+            _creationTime: number;
             activatedAt?: number;
             circuitState?: string;
             consecutiveFailures?: number;
@@ -256,12 +257,15 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             errorAt?: number;
             errorCode?: string;
             errorMessage?: string;
+            firstErrorAt?: number;
             institutionId?: string;
             institutionName?: string;
             isActive?: boolean;
             itemId: string;
+            lastDispatchedAt?: number;
             lastFailureAt?: number;
             lastSyncedAt?: number;
+            newAccountsAvailableAt?: number;
             nextRetryAt?: number;
             products: Array<string>;
             reauthAt?: number;
@@ -274,6 +278,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             userId: string;
         }, Array<{
             _id: string;
+            _creationTime: number;
             activatedAt?: number;
             circuitState?: string;
             consecutiveFailures?: number;
@@ -283,12 +288,15 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             errorAt?: number;
             errorCode?: string;
             errorMessage?: string;
+            firstErrorAt?: number;
             institutionId?: string;
             institutionName?: string;
             isActive?: boolean;
             itemId: string;
+            lastDispatchedAt?: number;
             lastFailureAt?: number;
             lastSyncedAt?: number;
+            newAccountsAvailableAt?: number;
             nextRetryAt?: number;
             products: Array<string>;
             reauthAt?: number;

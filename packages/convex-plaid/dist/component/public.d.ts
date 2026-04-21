@@ -18,6 +18,7 @@ export declare const getItemsByUser: import("convex/server").RegisteredQuery<"pu
     userId: string;
 }, Promise<{
     _id: string;
+    _creationTime: number;
     userId: string;
     itemId: string;
     institutionId: string | undefined;
@@ -40,6 +41,9 @@ export declare const getItemsByUser: import("convex/server").RegisteredQuery<"pu
     consecutiveFailures: number | undefined;
     lastFailureAt: number | undefined;
     nextRetryAt: number | undefined;
+    newAccountsAvailableAt: number | undefined;
+    firstErrorAt: number | undefined;
+    lastDispatchedAt: number | undefined;
 }[]>>;
 /**
  * Get a single plaidItem by component document ID.
@@ -52,6 +56,7 @@ export declare const getItem: import("convex/server").RegisteredQuery<"public", 
     plaidItemId: string;
 }, Promise<{
     _id: string;
+    _creationTime: number;
     userId: string;
     itemId: string;
     institutionId: string | undefined;
@@ -74,6 +79,9 @@ export declare const getItem: import("convex/server").RegisteredQuery<"public", 
     consecutiveFailures: number | undefined;
     lastFailureAt: number | undefined;
     nextRetryAt: number | undefined;
+    newAccountsAvailableAt: number | undefined;
+    firstErrorAt: number | undefined;
+    lastDispatchedAt: number | undefined;
 } | null>>;
 /**
  * Get a single plaidItem by Plaid's item_id.
@@ -87,6 +95,7 @@ export declare const getItemByPlaidItemId: import("convex/server").RegisteredQue
     itemId: string;
 }, Promise<{
     _id: string;
+    _creationTime: number;
     userId: string;
     itemId: string;
     institutionId: string | undefined;
@@ -109,6 +118,9 @@ export declare const getItemByPlaidItemId: import("convex/server").RegisteredQue
     consecutiveFailures: number | undefined;
     lastFailureAt: number | undefined;
     nextRetryAt: number | undefined;
+    newAccountsAvailableAt: number | undefined;
+    firstErrorAt: number | undefined;
+    lastDispatchedAt: number | undefined;
 } | null>>;
 /**
  * Get all active plaidItems across all users.
@@ -119,6 +131,7 @@ export declare const getItemByPlaidItemId: import("convex/server").RegisteredQue
  */
 export declare const getAllActiveItems: import("convex/server").RegisteredQuery<"public", {}, Promise<{
     _id: string;
+    _creationTime: number;
     userId: string;
     itemId: string;
     institutionId: string | undefined;
@@ -141,6 +154,9 @@ export declare const getAllActiveItems: import("convex/server").RegisteredQuery<
     consecutiveFailures: number | undefined;
     lastFailureAt: number | undefined;
     nextRetryAt: number | undefined;
+    newAccountsAvailableAt: number | undefined;
+    firstErrorAt: number | undefined;
+    lastDispatchedAt: number | undefined;
 }[]>>;
 /**
  * Get all accounts for a user.
