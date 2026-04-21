@@ -10,17 +10,26 @@ import { workflow } from "./workflow";
 type DispatchCtx = GenericActionCtx<DataModel>;
 
 // Workflow.define produces an internal mutation reference; dispatch
-// actions hand a reference to workflow.start.
-type EmailWorkflowRef = FunctionReference<
-  "mutation",
-  "internal",
-  { emailEventId: Id<"emailEvents"> }
->;
+// actions hand a reference to workflow.start. The args are wrapped by
+// @convex-dev/workflow (WorkflowArgs<T>) so we accept any such ref
+// rather than spelling out the wrapper type.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EmailWorkflowRef = FunctionReference<"mutation", "internal", any, any, string | undefined>;
 
 const DispatchResult = v.object({
   status: v.union(v.literal("queued"), v.literal("skipped_duplicate")),
   emailEventId: v.id("emailEvents"),
 });
+
+/**
+ * Explicit return type for every dispatch handler. Breaks the circular
+ * inference between internal.email.dispatch.* (this file's exports)
+ * and internal.email.workflows.* (referenced in the handler body).
+ */
+type DispatchReturn = Promise<{
+  status: "queued" | "skipped_duplicate";
+  emailEventId: Id<"emailEvents">;
+}>;
 
 function utcDateBucket(date = new Date()): string {
   return date.toISOString().slice(0, 10);
@@ -113,7 +122,7 @@ export const dispatchWelcomeOnboarding = internalAction({
     firstLinkedInstitutionName: v.optional(v.string()),
   },
   returns: DispatchResult,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): DispatchReturn => {
     const key = await idempotencyKey({
       userId: args.userId,
       scope: "welcome-class",
@@ -178,7 +187,7 @@ const WeeklyDigestArgs = v.object({
 export const dispatchWeeklyDigest = internalAction({
   args: WeeklyDigestArgs.fields,
   returns: DispatchResult,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): DispatchReturn => {
     const dateBucket = utcDateBucket(new Date(args.weekStart));
     const key = await idempotencyKey({
       userId: args.userId,
@@ -219,7 +228,7 @@ export const dispatchPromoWarning = internalAction({
     ),
   },
   returns: DispatchResult,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): DispatchReturn => {
     const dateBucket = utcDateBucket();
     const key = await idempotencyKey({
       userId: args.userId,
@@ -259,7 +268,7 @@ export const dispatchStatementReminder = internalAction({
     ),
   },
   returns: DispatchResult,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): DispatchReturn => {
     const dateBucket = utcDateBucket();
     const key = await idempotencyKey({
       userId: args.userId,
@@ -289,7 +298,7 @@ export const dispatchAnomalyAlert = internalAction({
     anomalyId: v.string(),
   },
   returns: DispatchResult,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): DispatchReturn => {
     const key = await idempotencyKey({
       userId: args.userId,
       scope: "anomaly-alert",
@@ -329,7 +338,7 @@ export const dispatchSubscriptionDigest = internalAction({
     ),
   },
   returns: DispatchResult,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): DispatchReturn => {
     const key = await idempotencyKey({
       userId: args.userId,
       scope: "subscription-detected",
@@ -361,7 +370,7 @@ export const dispatchReconsentRequired = internalAction({
     ),
   },
   returns: DispatchResult,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): DispatchReturn => {
     const dateBucket = utcDateBucket();
     const key = await idempotencyKey({
       userId: args.userId,
@@ -393,7 +402,7 @@ export const dispatchItemErrorPersistent = internalAction({
     errorCode: v.string(),
   },
   returns: DispatchResult,
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): DispatchReturn => {
     const dateBucket = utcDateBucket();
     const key = await idempotencyKey({
       userId: args.userId,

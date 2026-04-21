@@ -14,6 +14,7 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { components, internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
 
 const STALE_SYNC_MS = 24 * 3600 * 1000;
 const DISPATCH_COOLDOWN_MS = 72 * 3600 * 1000;
@@ -57,7 +58,7 @@ export const runPersistentErrorCheckInternal = internalAction({
         0,
         internal.email.dispatch.dispatchItemErrorPersistent,
         {
-          userId: item.userId,
+          userId: item.userId as Id<"users">,
           plaidItemId: item.plaidItemId,
           institutionName: item.institutionName ?? "your bank",
           firstErrorAt: item.firstErrorAt,

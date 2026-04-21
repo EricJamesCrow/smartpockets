@@ -41,7 +41,8 @@ function extractRecipient(event: unknown): string {
   const data = (event as { data?: { to?: string | string[] } }).data;
   const to = data?.to;
   if (!to) return "";
-  return (Array.isArray(to) ? to[0] : to).toLowerCase();
+  const first = Array.isArray(to) ? to[0] : to;
+  return first ? first.toLowerCase() : "";
 }
 
 /**

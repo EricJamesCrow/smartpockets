@@ -270,7 +270,7 @@ http.route({
               0,
               internal.email.dispatch.dispatchReconsentRequired,
               {
-                userId: plaidItem.userId,
+                userId: plaidItem.userId as Id<"users">,
                 plaidItemId: plaidItem._id,
                 institutionName: plaidItem.institutionName ?? "your bank",
                 reason: "ITEM_LOGIN_REQUIRED",
@@ -303,7 +303,7 @@ http.route({
             0,
             internal.email.dispatch.dispatchReconsentRequired,
             {
-              userId: plaidItem.userId,
+              userId: plaidItem.userId as Id<"users">,
               plaidItemId: plaidItem._id,
               institutionName: plaidItem.institutionName ?? "your bank",
               reason: "PENDING_EXPIRATION",
@@ -415,7 +415,7 @@ http.route({
       return new Response("server misconfigured", { status: 500 });
     }
 
-    const verified = verifyUnsubscribeToken(token, signingKey);
+    const verified = await verifyUnsubscribeToken(token, signingKey);
     if (!verified.ok) {
       return new Response(`invalid signature: ${verified.reason}`, { status: 400 });
     }

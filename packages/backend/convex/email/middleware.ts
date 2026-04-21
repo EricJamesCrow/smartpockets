@@ -121,7 +121,7 @@ export const buildUnsubscribeHeaders = internalMutation({
       return [{ name: "List-Unsubscribe", value: `<${mailto}>` }];
     }
 
-    const token = signUnsubscribeToken(
+    const token = await signUnsubscribeToken(
       { userId, templateKey },
       signingKey,
     );
