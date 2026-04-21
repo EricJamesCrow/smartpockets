@@ -106,6 +106,92 @@ export const countOpenForThreadInternal = internalQuery({
   },
 });
 
+// Internal: look up a proposal by its content hash. Used by Strategy C-prime
+// dedup in the write-tool wrapper after a unique-constraint throw.
+export const getByContentHash = internalQuery({
+  args: { contentHash: v.string() },
+  returns: v.any(),
+  handler: async (ctx, { contentHash }) => {
+    const rows = await ctx.table("agentProposals");
+    return rows.find((p: { contentHash: string }) => p.contentHash === contentHash) ?? null;
+  },
+});
+
+// Internal: fetch a proposal by id (no viewer scoping, used by workflow steps).
+export const getById = internalQuery({
+  args: { proposalId: v.id("agentProposals") },
+  returns: v.any(),
+  handler: async (ctx, { proposalId }) => {
+    return await ctx.table("agentProposals").get(proposalId);
+  },
+});
+
+// Internal state transitions used by the W5 write-tool wrapper and later by
+// the bulk-execute workflow. CAS-safe: callers must read current state and
+// only invoke the matching transition.
+
+export const markExecuting = internalMutation({
+  args: { proposalId: v.id("agentProposals") },
+  returns: v.null(),
+  handler: async (ctx, { proposalId }) => {
+    const p = await ctx.table("agentProposals").getX(proposalId);
+    if (p.state !== "confirmed") {
+      throw new Error(`proposal_invalid_state: expected confirmed, got ${p.state}`);
+    }
+    await p.patch({ state: "executing" });
+    return null;
+  },
+});
+
+export const markExecuted = internalMutation({
+  args: {
+    proposalId: v.id("agentProposals"),
+    undoExpiresAt: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { proposalId, undoExpiresAt }) => {
+    const p = await ctx.table("agentProposals").getX(proposalId);
+    if (p.state !== "executing") {
+      throw new Error(`proposal_invalid_state: expected executing, got ${p.state}`);
+    }
+    await p.patch({
+      state: "executed",
+      executedAt: Date.now(),
+      undoExpiresAt,
+    });
+    return null;
+  },
+});
+
+export const markFailed = internalMutation({
+  args: {
+    proposalId: v.id("agentProposals"),
+    errorJson: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { proposalId, errorJson }) => {
+    const p = await ctx.table("agentProposals").getX(proposalId);
+    if (p.state !== "executing" && p.state !== "confirmed") {
+      throw new Error(`proposal_invalid_state: expected executing|confirmed, got ${p.state}`);
+    }
+    await p.patch({ state: "failed", errorJson });
+    return null;
+  },
+});
+
+export const markReverted = internalMutation({
+  args: { proposalId: v.id("agentProposals") },
+  returns: v.null(),
+  handler: async (ctx, { proposalId }) => {
+    const p = await ctx.table("agentProposals").getX(proposalId);
+    if (p.state !== "executed") {
+      throw new Error(`proposal_invalid_state: expected executed, got ${p.state}`);
+    }
+    await p.patch({ state: "reverted", revertedAt: Date.now() });
+    return null;
+  },
+});
+
 // TTL cron handler. Scans all awaiting proposals; at MVP volumes (< 1k rows)
 // the full-table scan is acceptable. Post-M3 follow-up: add
 // `by_state_awaitingExpiresAt` index and switch to range query.
