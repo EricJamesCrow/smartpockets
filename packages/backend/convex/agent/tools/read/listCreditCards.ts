@@ -1,20 +1,25 @@
 import { v } from "convex/values";
 import { agentQuery } from "../../functions";
 
-// W2.11 stub; real body to follow.
 export const listCreditCards = agentQuery({
   args: {
-    
     includeInactive: v.optional(v.boolean()),
   },
   returns: v.any(),
-  handler: async () => ({
-    ids: [],
-    preview: {
-      cards: [],
-      live: true,
-      capturedAt: new Date().toISOString(),
-    },
-    window: undefined,
-  }),
+  handler: async (ctx, { includeInactive }) => {
+    const viewer = ctx.viewerX();
+    const cards = await viewer.edge("creditCards");
+    const filtered = includeInactive
+      ? cards
+      : cards.filter((c: { isActive: boolean }) => c.isActive);
+    return {
+      ids: filtered.map((c: { _id: string }) => c._id),
+      preview: {
+        cards: filtered,
+        live: true,
+        capturedAt: new Date().toISOString(),
+      },
+      window: undefined,
+    };
+  },
 });

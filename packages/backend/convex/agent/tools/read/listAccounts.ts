@@ -1,8 +1,7 @@
 import { v } from "convex/values";
 import { agentQuery } from "../../functions";
+import { api } from "../../../_generated/api";
 
-// W2.11 stub; real body reads plaidComponent accounts. Deferred until
-// `npx convex dev --once` regenerates api types with the agent module.
 export const listAccounts = agentQuery({
   args: {
     type: v.optional(
@@ -16,13 +15,21 @@ export const listAccounts = agentQuery({
     ),
   },
   returns: v.any(),
-  handler: async () => ({
-    ids: [],
-    preview: {
-      accounts: [],
-      live: true,
-      capturedAt: new Date().toISOString(),
-    },
-    window: undefined,
-  }),
+  handler: async (ctx, { type }) => {
+    const viewer = ctx.viewerX();
+    const accounts = (await ctx.runQuery(
+      api.plaidComponent.getAccountsByUserId,
+      { userId: viewer.externalId },
+    )) as Array<{ accountId: string; type: string }>;
+    const filtered = type ? accounts.filter((a) => a.type === type) : accounts;
+    return {
+      ids: filtered.map((a) => a.accountId),
+      preview: {
+        accounts: filtered,
+        live: true,
+        capturedAt: new Date().toISOString(),
+      },
+      window: undefined,
+    };
+  },
 });
