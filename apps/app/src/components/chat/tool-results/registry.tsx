@@ -14,6 +14,8 @@ import { DeferredInterestTimeline } from "./promos/DeferredInterestTimeline";
 import { DeferredInterestTimelineSkeleton } from "./promos/DeferredInterestTimelineSkeleton";
 import { InstallmentPlansList } from "./promos/InstallmentPlansList";
 import { InstallmentPlansListSkeleton } from "./promos/InstallmentPlansListSkeleton";
+import { ProposalConfirmCard } from "./proposals/ProposalConfirmCard";
+import { ProposalConfirmCardSkeleton } from "./proposals/ProposalConfirmCardSkeleton";
 import { RemindersList } from "./reminders/RemindersList";
 import { RemindersListSkeleton } from "./reminders/RemindersListSkeleton";
 import { RawTextMessage } from "./shared/RawTextMessage";
@@ -57,12 +59,28 @@ export const toolResultRegistry: Record<ReadToolName, RegistryEntry> = {
     list_reminders: { Component: RemindersList as AnyEntry["Component"], Skeleton: RemindersListSkeleton },
     search_merchants: { Component: FallbackToRaw },
     get_plaid_health: { Component: FallbackToRaw },
-    get_proposal: { Component: FallbackToRaw },
+    get_proposal: {
+        Component: function GetProposalRenderer(props: ToolResultComponentProps) {
+            const output = props.output as ProposalToolOutput | null;
+            const proposalId = output?.proposalId ?? props.proposalId;
+            if (!proposalId) return <ProposalConfirmCardSkeleton />;
+            return <ProposalConfirmCard proposalId={proposalId} />;
+        },
+        Skeleton: ProposalConfirmCardSkeleton,
+    },
 };
 
 /**
  * Renders every `propose_*` tool result. The dispatcher keys the propose-tool
- * prefix to this fallback; Task 11 swaps the body to `ProposalConfirmCard`.
+ * prefix to this fallback and extracts proposalId from the ProposalToolOutput
+ * payload. Per M12 reconciliation, the card drives all three actions
+ * (Confirm / Cancel / Undo) through `sendMessage` + `toolHint` rather than
+ * direct Convex mutations.
  */
-export const proposalFallback: FC<ToolResultComponentProps<unknown, ProposalToolOutput>> =
-    FallbackToRaw;
+export const proposalFallback: FC<ToolResultComponentProps<unknown, ProposalToolOutput>> = (
+    props,
+) => {
+    const proposalId = props.output?.proposalId ?? props.proposalId;
+    if (!proposalId) return <ProposalConfirmCardSkeleton />;
+    return <ProposalConfirmCard proposalId={proposalId} />;
+};
