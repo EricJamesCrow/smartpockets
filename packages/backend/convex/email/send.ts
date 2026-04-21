@@ -156,3 +156,52 @@ export const sendTextEmail = internalAction({
     }
   },
 });
+
+/**
+ * Low-level Resend send with headers and dev-capture gating.
+ *
+ * Called by the W7 workflow layer after rendering + header build.
+ *
+ * Dev-mode three-state gate (specs/W7-email.md §14):
+ *   EMAIL_DEV_LIVE unset  => dev-capture, no network
+ *   EMAIL_DEV_LIVE=true   => live Resend send
+ *   EMAIL_DEV_OVERRIDE_TO => live send with rewritten recipient
+ *
+ * Production is detected via CONVEX_DEPLOYMENT prefix (prod:*). When
+ * the env is ambiguous we default to capture so a misconfigured env
+ * can never silently send.
+ */
+export const sendResendRaw = internalAction({
+  args: {
+    to: v.string(),
+    subject: v.string(),
+    html: v.string(),
+    headers: v.array(v.object({ name: v.string(), value: v.string() })),
+  },
+  returns: v.object({
+    emailId: v.string(),
+    mode: v.union(v.literal("live"), v.literal("dev-capture")),
+  }),
+  handler: async (ctx, { to, subject, html, headers }) => {
+    const deploymentId = process.env.CONVEX_DEPLOYMENT ?? "";
+    const isProd = deploymentId.startsWith("prod:");
+    const devLive = process.env.EMAIL_DEV_LIVE === "true";
+    const shouldCapture = !isProd && !devLive;
+
+    if (shouldCapture) {
+      const synthetic = `devcap_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      console.log(`[Email] dev-capture (${synthetic}) to=${to} subject=${subject}`);
+      return { emailId: synthetic, mode: "dev-capture" as const };
+    }
+
+    const effectiveTo = process.env.EMAIL_DEV_OVERRIDE_TO ?? to;
+    const emailId = await resend.sendEmail(ctx, {
+      from: EMAIL_CONFIG.from.default,
+      to: [effectiveTo],
+      subject,
+      html,
+      headers,
+    });
+    return { emailId: emailId as string, mode: "live" as const };
+  },
+});
