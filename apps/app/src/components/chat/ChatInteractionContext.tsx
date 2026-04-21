@@ -20,6 +20,7 @@ import {
     type ReactNode,
 } from "react";
 import { useConvex } from "convex/react";
+import { useAuth } from "@clerk/nextjs";
 
 import type { AgentThreadId, ToolName } from "./tool-results/types";
 
@@ -56,6 +57,27 @@ export class ChatHttpError extends Error {
     }
 }
 
+// Typed agent error surfaced by sendMessage. ChatView routes each kind to its
+// own surface (banner, modal, inline). See spec W1 §8.
+export type AgentError =
+    | { kind: "rate_limited"; retryAfterSeconds: number }
+    | { kind: "budget_exhausted"; reason: string }
+    | { kind: "llm_down" }
+    | { kind: "reconsent_required"; plaidItemId: string }
+    | { kind: "first_turn_guard" }
+    | { kind: "proposal_timed_out" }
+    | { kind: "proposal_invalid_state" };
+
+export class TypedAgentError extends Error {
+    readonly kind: AgentError["kind"];
+    readonly data: AgentError;
+    constructor(data: AgentError) {
+        super(data.kind);
+        this.kind = data.kind;
+        this.data = data;
+    }
+}
+
 export function ChatInteractionProvider({
     threadId,
     onThreadIdChange,
@@ -63,6 +85,7 @@ export function ChatInteractionProvider({
     sendMessage: sendMessageOverride,
 }: ProviderProps) {
     const convex = useConvex();
+    const { getToken } = useAuth();
     const [localThreadId, setLocalThreadId] = useState<AgentThreadId | null>(threadId ?? null);
 
     // Keep local state in sync with controlled prop.
@@ -81,9 +104,15 @@ export function ChatInteractionProvider({
         if (currentThreadId) body.threadId = currentThreadId;
         if (input.toolHint) body.toolHint = input.toolHint;
 
+        const token = await getToken({ template: "convex" });
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+        };
+        if (token) headers.Authorization = `Bearer ${token}`;
+
         const res = await fetch(endpoint, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify(body),
             credentials: "include",
         });
@@ -94,6 +123,25 @@ export function ChatInteractionProvider({
                 payload = await res.json();
             } catch {
                 payload = await res.text();
+            }
+            if (res.status === 429 && payload && typeof payload === "object") {
+                const err = payload as {
+                    error?: string;
+                    reason?: string;
+                    retryAfterSeconds?: number;
+                };
+                if (err.error === "rate_limited") {
+                    throw new TypedAgentError({
+                        kind: "rate_limited",
+                        retryAfterSeconds: err.retryAfterSeconds ?? 30,
+                    });
+                }
+                if (err.error === "budget_exhausted") {
+                    throw new TypedAgentError({
+                        kind: "budget_exhausted",
+                        reason: err.reason ?? "Monthly budget reached.",
+                    });
+                }
             }
             throw new ChatHttpError(res.status, payload);
         }

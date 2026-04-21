@@ -465,19 +465,47 @@ http.route({
 const SendBody = z.object({
   threadId: z.string().optional(),
   prompt: z.string().min(1).max(8192),
+  toolHint: z
+    .object({
+      tool: z.string(),
+      args: z.record(z.string(), z.unknown()),
+    })
+    .optional(),
+});
+
+const appOrigin = process.env.APP_ORIGIN ?? "";
+function corsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get("Origin") ?? "";
+  const allow = appOrigin && origin === appOrigin ? origin : appOrigin || origin;
+  return {
+    "Access-Control-Allow-Origin": allow,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Credentials": "true",
+    Vary: "Origin",
+  };
+}
+
+http.route({
+  path: "/api/agent/send",
+  method: "OPTIONS",
+  handler: httpAction(async (_ctx, request) => {
+    return new Response(null, { status: 204, headers: corsHeaders(request) });
+  }),
 });
 
 http.route({
   path: "/api/agent/send",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
+    const cors = corsHeaders(request);
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return new Response("Unauthorized", { status: 401 });
+    if (!identity) return new Response("Unauthorized", { status: 401, headers: cors });
 
     const viewer = await ctx.runQuery(internal.users.getByExternalId, {
       externalId: identity.subject,
     });
-    if (!viewer) return new Response("No viewer", { status: 401 });
+    if (!viewer) return new Response("No viewer", { status: 401, headers: cors });
 
     let body: z.infer<typeof SendBody>;
     try {
@@ -485,12 +513,10 @@ http.route({
     } catch (err) {
       return Response.json(
         { error: "validation_failed", reason: String(err) },
-        { status: 400 },
+        { status: 400, headers: cors },
       );
     }
 
-    // `internal.agent.*` resolves after `npx convex dev --once` regenerates
-    // `_generated/api.d.ts` with the new agent module. The cast is temporary.
     const agentApi = (internal as any).agent;
     const budget = await ctx.runQuery(agentApi.budgets.checkHeadroom, {
       userId: viewer._id,
@@ -499,7 +525,7 @@ http.route({
     if (!budget.ok) {
       return Response.json(
         { error: "budget_exhausted", reason: budget.reason },
-        { status: 429 },
+        { status: 429, headers: cors },
       );
     }
 
@@ -509,6 +535,9 @@ http.route({
         userId: viewer._id,
         threadId: body.threadId,
         prompt: body.prompt,
+        toolHint: body.toolHint
+          ? JSON.stringify(body.toolHint)
+          : undefined,
       },
     );
 
@@ -518,7 +547,7 @@ http.route({
       userMessageId: messageId,
     });
 
-    return Response.json({ threadId, messageId });
+    return Response.json({ threadId, messageId }, { headers: cors });
   }),
 });
 

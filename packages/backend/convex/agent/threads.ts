@@ -20,12 +20,13 @@ export const appendUserTurn = internalMutation({
     userId: v.id("users"),
     threadId: v.optional(v.id("agentThreads")),
     prompt: v.string(),
+    toolHint: v.optional(v.string()),
   },
   returns: v.object({
     threadId: v.id("agentThreads"),
     messageId: v.id("agentMessages"),
   }),
-  handler: async (ctx, { userId, threadId, prompt }) => {
+  handler: async (ctx, { userId, threadId, prompt, toolHint }) => {
     const now = Date.now();
     let targetThreadId = threadId;
 
@@ -51,6 +52,7 @@ export const appendUserTurn = internalMutation({
       agentThreadId: targetThreadId,
       role: "user",
       text: prompt,
+      toolCallsJson: toolHint,
       createdAt: now,
       isStreaming: true,
     });
@@ -80,6 +82,9 @@ export const persistStep = internalMutation({
       ),
       text: v.optional(v.string()),
       toolCallsJson: v.optional(v.string()),
+      toolName: v.optional(v.string()),
+      toolResultJson: v.optional(v.string()),
+      proposalId: v.optional(v.id("agentProposals")),
       tokensIn: v.optional(v.number()),
       tokensOut: v.optional(v.number()),
       modelId: v.optional(v.string()),
@@ -92,6 +97,9 @@ export const persistStep = internalMutation({
       role: step.role,
       text: step.text,
       toolCallsJson: step.toolCallsJson,
+      toolName: step.toolName,
+      toolResultJson: step.toolResultJson,
+      proposalId: step.proposalId,
       tokensIn: step.tokensIn,
       tokensOut: step.tokensOut,
       modelId: step.modelId,
