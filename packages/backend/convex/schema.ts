@@ -27,9 +27,7 @@ const schema = defineEntSchema(
             .edges("installmentPlans", { ref: true })
             .edges("transactionOverlays", { ref: true })
             .edges("transactionAttachments", { ref: true })
-            .edges("notificationPreferences", { ref: true })
-            .edges("emailEvents", { ref: true })
-            .edges("emailSuppressions", { ref: true }),
+            .edges("notificationPreferences", { ref: true }),
 
         // === ORG LAYER ===
         organizations: defineEnt({
@@ -291,7 +289,13 @@ const schema = defineEntSchema(
         // dedup at DB insert time. Webhook-event rows use synthetic keys of
         // the form `webhook:<resendEmailId>:<source>` so they never collide
         // with application sends.
+        //
+        // userId is a plain optional field (not an Ents edge) because
+        // Convex Ents does not support `optional: true` on edges and
+        // webhook rows intentionally arrive before we know the user
+        // (we resolve via resendEmailId sibling lookup when needed).
         emailEvents: defineEnt({
+            userId: v.optional(v.id("users")),
             email: v.string(),
             templateKey: v.string(),
             cadence: v.optional(v.number()),
@@ -325,7 +329,6 @@ const schema = defineEntSchema(
             processedAt: v.optional(v.number()),
         })
             .field("idempotencyKey", v.string(), { unique: true })
-            .edge("user", { optional: true })
             .index("by_user_created", ["userId", "createdAt"])
             .index("by_resendEmailId", ["resendEmailId"])
             .index("by_template_created", ["templateKey", "createdAt"])
@@ -334,14 +337,17 @@ const schema = defineEntSchema(
             .index("by_user_template_status", ["userId", "templateKey", "status"]),
 
         // === EMAIL SUPPRESSIONS (W7) ===
+        // Keyed by email so Clerk email-change events do not reset
+        // suppression. userId is an optional plain field; webhook
+        // handlers may resolve it later via resendEmailId sibling lookup.
         emailSuppressions: defineEnt({
+            userId: v.optional(v.id("users")),
             reason: v.union(v.literal("hard_bounce"), v.literal("complaint")),
             firstEventAt: v.number(),
             lastEventAt: v.number(),
             eventCount: v.number(),
         })
             .field("email", v.string(), { unique: true })
-            .edge("user", { optional: true })
             .index("by_user", ["userId"]),
     },
     { schemaValidation: false },
