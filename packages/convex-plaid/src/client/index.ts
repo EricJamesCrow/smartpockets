@@ -151,6 +151,7 @@ export type { ComponentApi };
 // can import via `@crowdevelopment/convex-plaid`.
 export type { ReasonCode } from "../component/reasonCode.js";
 export { mapErrorCodeToReason } from "../component/reasonCode.js";
+export type { ItemHealth } from "../component/health.js";
 
 export type {
   PlaidConfig,
