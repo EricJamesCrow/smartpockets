@@ -39,10 +39,10 @@ Tasks below are tagged `[blocked:CR-X]` when they depend on a contract request f
 
 | ID | Dependency | Owner | Blocks tasks |
 |---|---|---|---|
-| CR-1 | `api.agent.chat.sendStreaming` accepts optional `toolHint: { tool, args }` | W2 | Task 11 (ProposalConfirmCard Undo), any task that wires a drill-in that matters for determinism (can proceed with text fallback meanwhile) |
-| CR-2 | W2 system prompt honours `metadata.toolHint` | W2 | Same as CR-1 |
-| CR-3 | `api.agent.proposals.undo({ reversalToken })` mutation exists | W5 | Task 11 (Undo button wiring) |
-| CR-4 | `ChatInteractionProvider` + `useChatInteraction()` from `apps/app/src/components/chat/ChatInteractionContext.tsx` | W1 | All tasks that import `useToolHintSend` (Tasks 2 through 11) |
+| CR-1 | `api.agent.chat.sendStreaming` accepts optional `toolHint: { tool, args }` | W2 | Task 11 (all three proposal actions), plus any drill-in where routing determinism matters. Tasks 2 through 10 can land before CR-1 with a text-only fallback; ProposalConfirmCard cannot, because Confirm / Cancel / Undo route through `execute_confirmed_proposal` / `cancel_proposal` / `undo_mutation` tools (contracts §2.3 items 21 to 23) rather than direct Convex mutations (reconciliation M12). |
+| CR-2 | W2 system prompt honours `metadata.toolHint` as a strong routing directive | W2 | Same as CR-1 |
+| CR-3 | `undo_mutation(reversalToken)` agent tool registered in W2 tool registry (tool 23 per contracts §2.3); body owned by W5 | W5 body, W2 registration | Task 11 Undo button (button ships disabled if CR-3 has not landed) |
+| CR-4 | W1 exports `ChatInteractionProvider` + `useChatInteraction()` from `apps/app/src/components/chat/ChatInteractionContext.tsx`. Provider supplies a single primitive: `sendMessage({ text, toolHint? })`. **Additionally:** W1 must reconcile its CB-3 prop signature (line 390 of W1 brainstorm) to match M12. Current CB-3 says `onConfirm` wires to CA-9 mutation and `onCancel` to CA-10 mutation; that bypasses the write-tool wrapper. Correct contract: `ProposalConfirmCard` takes only `proposalId` as a prop; Confirm / Cancel / Undo are self-dispatched `sendMessage` turns. | W1 | All tasks that import `useToolHintSend` (Tasks 2 through 11) |
 | CR-5 | Helper queries: `getManyByIds` on transactions, `getMany` on creditCards, `getManyByIds` on promoRates / installmentPlans / reminders, `api.agent.proposals.get` | W2 or W5 | Tasks 2, 4, 5, 8, 9, 10, 11 |
 
 Each task below carries an explicit blocker note. Tasks 1, 12, 13, 14 have no blockers and proceed first.
@@ -136,8 +136,9 @@ export type ToolResultComponentProps<Input = unknown, Output = unknown> = {
 export type RegistryEntry<Input = unknown, Output = unknown> = {
   Component: FC<ToolResultComponentProps<Input, Output>>;
   Skeleton?: FC<{ input?: Input }>;
-  variant?: "single" | "bulk";
 };
+// Variant is not a registry field: components read `scope` directly from the
+// runtime payload (ProposalToolOutput.scope per contracts §1.6 / §4).
 ```
 
 - [ ] **Step 1.2: Create `shared/Skeletons.tsx`** with a single `SharedShimmer` component that the dispatcher uses when `Entry.Skeleton` is absent. One rounded rectangle with a Tailwind animate-pulse utility; UntitledUI tokens only (`bg-secondary`).
@@ -257,6 +258,25 @@ export function useToolHintSend() {
       sendMessage({
         text: `Edit ${field} on this card`,
         toolHint: { tool: "propose_credit_card_metadata_update", args: { cardId, field } },
+      }),
+    // Proposal actions: all three route through the agent tool-path so W5's
+    // write-wrapper (rate limit, first-turn guard, audit log, workflow) fires.
+    // Do not add direct Convex mutation equivalents here; that would bypass
+    // contracts §2.3 tools 21 to 23 (reconciliation M12).
+    confirmProposal: (proposalId: Id<"agentProposals">) =>
+      sendMessage({
+        text: "Confirm",
+        toolHint: { tool: "execute_confirmed_proposal", args: { proposalId } },
+      }),
+    cancelProposal: (proposalId: Id<"agentProposals">) =>
+      sendMessage({
+        text: "Cancel",
+        toolHint: { tool: "cancel_proposal", args: { proposalId } },
+      }),
+    undoMutation: (reversalToken: string) =>
+      sendMessage({
+        text: "Undo",
+        toolHint: { tool: "undo_mutation", args: { reversalToken } },
       }),
   };
 }
@@ -862,9 +882,11 @@ function UpcomingStrip({ cards, onOpen }: { cards: CreditCard[]; onOpen: (id: Id
 
 ```ts
 list_credit_cards: { Component: CreditCardStatementCard, Skeleton: CreditCardStatementCardSkeleton },
-get_credit_card_detail: { Component: CreditCardStatementCard, Skeleton: CreditCardStatementCardSkeleton, variant: "single" },
+get_credit_card_detail: { Component: CreditCardStatementCard, Skeleton: CreditCardStatementCardSkeleton },
 get_upcoming_statements: { Component: CreditCardStatementCard, Skeleton: CreditCardStatementCardSkeleton },
 ```
+
+The component reads `toolName` and `ids.length` at render time to pick list vs. single vs. upcoming mode; no `variant` metadata on the registry entry.
 
 - [ ] **Step 5.7: Verify + commit.**
 
@@ -1043,7 +1065,7 @@ gt create feat/agentic-home/W3-10-reminders-list -m "feat(genui): RemindersList 
 **Recommended agent:** Claude Code
 **Rationale:** Most architectural component in W3. Live diff with drift detection, state-machine subscription, bulk-aware rendering, countdown timer, and Undo wiring all interact.
 **Linear issue:** LIN-TBD-W3-11
-**Blocker:** CR-1 (optional; inert Confirm fallback possible); CR-3 (Undo button is inert until landed); CR-4 (required for Confirm / Cancel callbacks via context); CR-5 (`api.agent.proposals.get`).
+**Blocker:** CR-1 (required for Confirm / Cancel / Undo dispatch via `toolHint`; without it, the card renders in read-only preview mode); CR-2 (agent must honour the hint); CR-3 (registers `undo_mutation` tool; Undo button renders disabled until CR-3 lands); CR-4 (required: W1's `ChatInteractionProvider` plus the CB-3 prop-signature reconciliation noted in the blocker ledger); CR-5 (`api.agent.proposals.get` specifically).
 
 **Files:**
 - Create: `apps/app/src/components/chat/tool-results/proposals/ProposalConfirmCard.tsx`
@@ -1058,22 +1080,52 @@ gt create feat/agentic-home/W3-10-reminders-list -m "feat(genui): RemindersList 
 
 ### Steps
 
-- [ ] **Step 11.1: Write `ProposalConfirmCard.tsx`.** Full component per spec §3.7. Renders per-state; subscribes to `api.agent.proposals.get`; subscribes to affected rows via `useLiveTransactions`, `useLiveCreditCards`, `useLivePromoRates`, `useLiveInstallmentPlans`, or `useLiveReminders` based on discriminator inferred from the proposal's `toolName`.
+- [ ] **Step 11.1: Write `ProposalConfirmCard.tsx`.** Full component per spec §3.7. Props: **only** `{ proposalId: Id<"agentProposals"> }`. Everything else (scope, state, diff, timestamps, reversalToken, errorSummary) comes from reactive subscriptions. Confirm, Cancel, and Undo route through `sendMessage` + `toolHint` via `useToolHintSend`; no mutation callbacks.
 
-Key state-machine branch:
+Structure (full code outline):
 
 ```tsx
-switch (state) {
-  case "awaiting_confirmation": return <AwaitingView ... />;
-  case "executing":             return <ExecutingView ... />;
-  case "executed":              return <ExecutedView ... undoExpiresAt={undoExpiresAt} onUndo={onUndo} reversalToken={reversalToken} />;
-  case "cancelled":             return <CancelledView ... />;
-  case "timed_out":             return <TimedOutView ... />;
-  case "reverted":              return <RevertedView ... />;
-  case "failed":                return <FailedView errorSummary={errorSummary} />;
-  default:                      return null;
+"use client";
+
+import type { Id } from "@convex/_generated/dataModel";
+import { useLiveProposal } from "../shared/liveRowsHooks";
+import { useToolHintSend } from "../shared/useToolHintSend";
+import { ToolCardShell } from "../shared/ToolCardShell";
+import { ProposalConfirmCardSkeleton } from "./ProposalConfirmCardSkeleton";
+
+type Props = { proposalId: Id<"agentProposals"> };
+
+export function ProposalConfirmCard({ proposalId }: Props) {
+  const proposal = useLiveProposal(proposalId);
+  const hint = useToolHintSend();
+
+  if (proposal === undefined) return <ProposalConfirmCardSkeleton />;
+  if (proposal === null) {
+    return <ToolCardShell title="Proposal not found"><p className="text-sm text-tertiary">The proposal may have expired or been reverted.</p></ToolCardShell>;
+  }
+
+  switch (proposal.state) {
+    case "awaiting_confirmation":
+      return <AwaitingView proposal={proposal} onConfirm={() => hint.confirmProposal(proposalId)} onCancel={() => hint.cancelProposal(proposalId)} />;
+    case "executing":
+      return <ExecutingView proposal={proposal} />;
+    case "executed":
+      return <ExecutedView proposal={proposal} onUndo={(token) => hint.undoMutation(token)} />;
+    case "cancelled":
+      return <CancelledView proposal={proposal} />;
+    case "timed_out":
+      return <TimedOutView proposal={proposal} />;
+    case "reverted":
+      return <RevertedView proposal={proposal} />;
+    case "failed":
+      return <FailedView proposal={proposal} />;
+    default:
+      return null;
+  }
 }
 ```
+
+`AwaitingView`, `ExecutingView`, etc., are file-local subcomponents. Each subcomponent receives the proposal row from the `useLiveProposal` subscription. The `scope` branch (single vs. bulk rendering) lives inside `AwaitingView` and reads `proposal.scope` directly.
 
 - [ ] **Step 11.2: Write drift detector.**
 
@@ -1099,11 +1151,18 @@ const hasDrift = useMemo(() => {
 ```ts
 import { ProposalConfirmCard } from "./proposals/ProposalConfirmCard";
 // ...
-export const proposalFallback: FC<ToolResultComponentProps<unknown, ProposalToolOutput>> = ProposalConfirmCard;
+export const proposalFallback: FC<ToolResultComponentProps<unknown, ProposalToolOutput>> = (props) => (
+  <ProposalConfirmCard proposalId={(props.output as ProposalToolOutput).proposalId} />
+);
 
-// Also register get_proposal to render ProposalConfirmCard when agent calls it directly
-get_proposal: { Component: ProposalConfirmCard, variant: "single" },
+// Also register get_proposal so the agent can render the card directly; the
+// dispatcher extracts proposalId from the output payload.
+get_proposal: {
+  Component: (props) => <ProposalConfirmCard proposalId={(props.output as any).proposalId} />,
+},
 ```
+
+No `variant` metadata on the registry entry; `ProposalConfirmCard` reads `scope` from the live proposal row at render time.
 
 - [ ] **Step 11.7: Verify `bun typecheck`, `bun build`, and commit.**
 

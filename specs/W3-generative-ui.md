@@ -62,7 +62,7 @@ This is the only architectural correction from the brainstorm. Every other §4 s
 | `ToolResultRenderer` (dispatcher) | W1 ships shell; W3 populates | Reads registry; renders component or skeleton or error |
 | `toolResultRegistry` (registry) | W3 | `Record<ToolName, RegistryEntry>` plus `proposalFallback` |
 | 11 generative components | W3 | Per §5 inventory |
-| `ChatInteractionProvider` + `useChatInteraction()` | W1 | Supplies `sendMessage(text, toolHint?)`, `confirmProposal(proposalId)`, `cancelProposal(proposalId)`, `undoMutation(reversalToken)` callbacks to the subtree |
+| `ChatInteractionProvider` + `useChatInteraction()` | W1 | Supplies `sendMessage({ text, toolHint? })`. That one primitive carries every write-path action: Confirm, Cancel, and Undo from `ProposalConfirmCard` all dispatch `sendMessage` turns with `toolHint.tool` set to `execute_confirmed_proposal`, `cancel_proposal`, or `undo_mutation` respectively, routing the write through the agent tool-path so W5's wrapper (rate limit, first-turn guard, audit log, workflow) fires. No dedicated confirm or cancel or undo callback surface. |
 | Preview harness at `/dev/tool-results` | W3 | Renders every component against fixtures against dev Convex backend |
 
 ### 3.3 Data-freshness contract
@@ -136,7 +136,6 @@ Matches W1 CB-1 signature verbatim. `threadId` is passed through so drill-ins ca
 type RegistryEntry<Input, Output> = {
   Component: FC<ToolResultComponentProps<Input, Output>>;
   Skeleton?: FC<{ input?: Input }>;
-  variant?: "single" | "bulk";
 };
 
 export const toolResultRegistry: {
@@ -146,17 +145,17 @@ export const toolResultRegistry: {
   get_account_detail:              { Component: AccountsSummary,           Skeleton: AccountsSummarySkeleton },
   list_transactions:               { Component: TransactionsTable,         Skeleton: TransactionsTableSkeleton },
   get_transaction_detail:          { Component: TransactionDetailCard,     Skeleton: TransactionDetailCardSkeleton },
-  list_credit_cards:               { Component: CreditCardStatementCard,   Skeleton: CreditCardStatementCardSkeleton, variant: "single" },
-  get_credit_card_detail:          { Component: CreditCardStatementCard,   Skeleton: CreditCardStatementCardSkeleton, variant: "single" },
+  list_credit_cards:               { Component: CreditCardStatementCard,   Skeleton: CreditCardStatementCardSkeleton },
+  get_credit_card_detail:          { Component: CreditCardStatementCard,   Skeleton: CreditCardStatementCardSkeleton },
   list_deferred_interest_promos:   { Component: DeferredInterestTimeline,  Skeleton: DeferredInterestTimelineSkeleton },
   list_installment_plans:          { Component: InstallmentPlansList,      Skeleton: InstallmentPlansListSkeleton },
   get_spend_by_category:           { Component: SpendByCategoryChart,      Skeleton: SpendByCategoryChartSkeleton },
   get_spend_over_time:             { Component: SpendOverTimeChart,        Skeleton: SpendOverTimeChartSkeleton },
-  get_upcoming_statements:         { Component: CreditCardStatementCard,   Skeleton: CreditCardStatementCardSkeleton, variant: "single" },
+  get_upcoming_statements:         { Component: CreditCardStatementCard,   Skeleton: CreditCardStatementCardSkeleton },
   list_reminders:                  { Component: RemindersList,             Skeleton: RemindersListSkeleton },
   search_merchants:                { Component: RawTextMessage,            /* fallback */ },
   get_plaid_health:                { Component: RawTextMessage,            /* W4-owned view is post-MVP */ },
-  get_proposal:                    { Component: ProposalConfirmCard,       variant: "single" /* scope from payload */ },
+  get_proposal:                    { Component: ProposalConfirmCard        /* scope read from payload at render time */ },
 };
 
 export const proposalFallback: FC<ToolResultComponentProps<unknown, ProposalToolOutput>> =
@@ -212,30 +211,17 @@ Requires a W2 CA-2 extension (flagged as contract request in §9).
 
 ### 3.7 `ProposalConfirmCard` contract
 
-Single component; one file; one `scope` branch. Matches W1 CB-3 signature verbatim, plus an `onUndo` prop (W3 contract request; see §9):
+Single component; one file; one `scope` branch read from the payload at render time. Confirm, Cancel, and Undo route through agent tools per [specs/00-contracts.md](00-contracts.md) §2.3 (reconciliation M12). The component calls `sendMessage({ text, toolHint })` from `useChatInteraction()` directly; no mutation-callback props. W1's CB-3 prop signature (line 390 of W1 brainstorm) contradicts M12 and must reconcile to match this contract; see §9.2 CR-4 below.
 
 ```ts
 type ProposalConfirmCardProps = {
   proposalId: Id<"agentProposals">;
-  summary: string;
-  diff: ProposalDiff;
-  scope: "single" | "bulk";
-  state:
-    | "awaiting_confirmation"
-    | "executing"
-    | "executed"
-    | "cancelled"
-    | "timed_out"
-    | "reverted"
-    | "failed";
-  onConfirm: () => Promise<{ executed: boolean; reversalToken?: string }>;
-  onCancel: () => Promise<{ cancelled: boolean }>;
-  onUndo: (reversalToken: string) => Promise<{ reverted: boolean }>;
-  executedAt?: number;
-  undoExpiresAt?: number;
-  reversalToken?: string;
-  errorSummary?: string;
 };
+
+// Everything else (scope, state, diff, executedAt, undoExpiresAt, reversalToken,
+// errorSummary) comes from the reactive subscription to api.agent.proposals.get
+// and the live row subscriptions over affectedIds. The card is self-contained
+// given a proposalId.
 
 type ProposalDiff = {
   patch: Record<string, unknown>;
@@ -277,14 +263,17 @@ Bulk variant rendering (`scope === "bulk"`):
 - `Irreversible` banner when `affectedIds.length > 500`.
 
 Confirm button behaviour:
-- Default: disabled for 250 ms on mount (prevents hit-the-road misclicks after card appears from streaming).
+- Default: disabled for 250 ms on mount (prevents misclicks after the card appears from streaming).
 - Irreversible scope: 3-second countdown badge overlays the button; disabled during countdown; re-enables with a subtle flash.
-- On click, awaits `onConfirm()`, which W1 wires to CA-9 (`api.agent.proposals.confirm`).
+- On click, fires `sendMessage({ text: "Confirm", toolHint: { tool: "execute_confirmed_proposal", args: { proposalId } } })`. The agent invokes `execute_confirmed_proposal` (tool 21 from contracts §2.3) which runs W5's write-tool wrapper: auth check, rate-limit bucket, first-turn guard, audit log insert, workflow kickoff. State transitions `awaiting_confirmation -> confirmed -> executing -> executed` are observed via the reactive subscription to `api.agent.proposals.get`.
+
+Cancel button behaviour:
+- On click, fires `sendMessage({ text: "Cancel", toolHint: { tool: "cancel_proposal", args: { proposalId } } })`. Agent invokes `cancel_proposal` (tool 22). State transitions `awaiting_confirmation -> cancelled`, observed reactively.
 
 Undo button behaviour:
 - Visible only in `state === "executed"` with `undoExpiresAt > Date.now()`.
 - `useEffect` polls `Date.now()` every 30 s (`setInterval` with cleanup) to hide the button past window.
-- On click, calls `onUndo(reversalToken)` which W1 wires to `api.agent.proposals.undo` (new mutation; see §9 CA-15 request).
+- On click, fires `sendMessage({ text: "Undo", toolHint: { tool: "undo_mutation", args: { reversalToken } } })`. Agent invokes `undo_mutation` (tool 23) which runs W5's wrapper and emits a reversal audit entry. State transitions `executed -> reverted`, observed reactively.
 
 ## 4. File structure
 
@@ -433,7 +422,7 @@ All bind the spec. W3 `/plan` blocks until each is acknowledged in the matching 
 | 4 | Proposal state enum is 9 states; W3 renders 7 (see §3.7) | [specs/00-contracts.md](00-contracts.md) §3 |
 | 5 | `scope` field is on `agentProposals` and is read from `ProposalToolOutput.scope`, not derived | [specs/00-contracts.md](00-contracts.md) §1.6 (reconciliation M6) |
 | 6 | `get_proposal` is a read tool returning the proposal with sample and state | [specs/00-contracts.md](00-contracts.md) §2.5 (M11) |
-| 7 | `api.agent.proposals.confirm` (CA-9) and `api.agent.proposals.cancel` (CA-10) are Convex mutations, not agent tools | W1 CA-9 / CA-10; W2 §6.2 |
+| 7 | Confirm, Cancel, and Undo on `ProposalConfirmCard` route through the agent tool-path (`execute_confirmed_proposal`, `cancel_proposal`, `undo_mutation`) via `sendMessage` + `toolHint`, not through direct Convex mutations. This enforces the write-tool wrapper (rate limit, first-turn guard, audit log, workflow) per reconciliation M12. W1's CA-9 / CA-10 may exist as internal W2 state-flip helpers that the tool path calls; W3 does not consume them. | [specs/00-contracts.md](00-contracts.md) §2.3 (tools 21 to 23) and §3 (state machine) |
 | 8 | Clerk viewer context propagates into every tool handler via `ctx.viewerX()` | AGENTS.md §Auth Pattern; W0 §3 |
 | 9 | Rate-limit and budget errors surface as `AgentError.kind` typed values; W1 renders banners | [specs/00-contracts.md](00-contracts.md) §6 |
 
@@ -443,8 +432,8 @@ All bind the spec. W3 `/plan` blocks until each is acknowledged in the matching 
 |---|---|---|---|
 | CR-1 | `api.agent.chat.sendStreaming` args extend to `{ threadId, prompt, modelId?, toolHint?: { tool: ToolName, args: Record<string, unknown> } }`. Non-breaking addition. | Drill-in and card-action determinism per §3.6. Without `toolHint`, drill-ins degrade to natural-language matching, which W2 system prompt cannot guarantee. | Must land in W2 plan; W3 plan blocks on CR-1 acknowledgment. |
 | CR-2 | W2 system prompt honors `metadata.toolHint` on the latest user message as a strong routing bias, falling back to free-form only if the hint is infeasible. | Same as CR-1. | Same. |
-| CR-3 | `api.agent.proposals.undo` mutation; args `{ reversalToken: string }`; returns `{ reverted: boolean }`. Owned by W5 per master-prompt §8; routed via Convex mutation, not via agent tool, to avoid an LLM round-trip for a user-confirmed action. | `ProposalConfirmCard` Undo button per §3.7. | Must land in W5 plan. W3 plan can ship the prop wiring first; button is inert until CR-3 lands. |
-| CR-4 | W1 exports `ChatInteractionProvider` at `apps/app/src/components/chat/ChatInteractionContext.tsx` plus `useChatInteraction()` hook. Provider supplies `{ sendMessage, confirmProposal, cancelProposal, undoMutation }`. | W3 drill-ins and card actions per §3.6 and proposal confirmation per §3.7. | Must land in W1 plan as a companion to `ToolResultRenderer`. |
+| CR-3 | `undo_mutation(reversalToken)` is an agent tool (contracts §2.3 item 23). Owned by W5. Invoked via `sendMessage` + `toolHint` from `ProposalConfirmCard` Undo button; not a direct Convex mutation. This keeps undo inside the write-tool wrapper (rate limit, audit log). | `ProposalConfirmCard` Undo button per §3.7. | Must land in W5 plan. Undo button is inert until CR-3 lands; W3 plan ships the button with a `disabled` fallback when the tool is not yet registered. |
+| CR-4 | W1 exports `ChatInteractionProvider` at `apps/app/src/components/chat/ChatInteractionContext.tsx` plus `useChatInteraction()` hook. Provider supplies a single primitive: `sendMessage({ text, toolHint? })`. No confirm / cancel / undo callback surface; all three are `sendMessage` turns with appropriate `toolHint`. | W3 drill-ins, card actions, and `ProposalConfirmCard` Confirm / Cancel / Undo per §3.6 and §3.7. | Must land in W1 plan. Additionally, W1 must reconcile its CB-3 prop signature (`onConfirm`, `onCancel` wired to CA-9 / CA-10 mutations) to match M12: `ProposalConfirmCard` takes only `proposalId` as a prop and calls `sendMessage` internally; no mutation callbacks. W3 flags this as a W1 brainstorm correction required before W3 stack merges. |
 
 W3 plan lists CR-1 through CR-4 as cross-workstream blockers at the top; tasks that depend on them carry explicit `gt submit --stack --no-submit` holds until the corresponding PR lands.
 
