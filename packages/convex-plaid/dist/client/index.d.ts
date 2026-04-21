@@ -31,6 +31,7 @@ export type PlaidComponent = Pick<ComponentApi, "actions" | "public">;
 export type { ComponentApi };
 export type { ReasonCode } from "../component/reasonCode.js";
 export { mapErrorCodeToReason } from "../component/reasonCode.js";
+export type { ItemHealth } from "../component/health.js";
 export type { PlaidConfig, RegisterRoutesConfig, CreateLinkTokenResult, ExchangePublicTokenResult, FetchAccountsResult, SyncTransactionsResult, SyncTransactionsOptions, FetchLiabilitiesResult, OnboardItemResult, FetchRecurringStreamsResult, CreateUpdateLinkTokenResult, CompleteReauthResult, TriggerTransactionsRefreshResult, EnrichTransactionsResult, ActionCtx, SyncType, SyncTrigger, SyncStatus, SyncResult, SyncStats, InstitutionMetadata, PlaidAccount, PlaidAccountFilters, PlaidItem, PlaidItemStatus, CircuitState, UserIdentity, AuthenticatedContext, SecureWrapper, };
 /**
  * Plaid Component Client
@@ -373,6 +374,50 @@ export declare class Plaid {
             status: string;
             syncError?: string;
             userId: string;
+        }[], string | undefined>;
+        getItemHealth: import("convex/server").FunctionReference<"query", "internal", {
+            plaidItemId: string;
+        }, {
+            plaidItemId: string;
+            itemId: string;
+            state: "syncing" | "ready" | "error" | "re-consent-required";
+            recommendedAction: "reconnect" | "reconnect_for_new_accounts" | "wait" | "contact_support" | null;
+            reasonCode: "healthy" | "syncing_initial" | "syncing_incremental" | "auth_required_login" | "auth_required_expiration" | "transient_circuit_open" | "transient_institution_down" | "transient_rate_limited" | "permanent_invalid_token" | "permanent_item_not_found" | "permanent_no_accounts" | "permanent_access_not_granted" | "permanent_products_not_supported" | "permanent_institution_unsupported" | "permanent_revoked" | "permanent_unknown" | "new_accounts_available";
+            isActive: boolean;
+            institutionId: string | null;
+            institutionName: string | null;
+            institutionLogoBase64: string | null;
+            institutionPrimaryColor: string | null;
+            lastSyncedAt: number | null;
+            lastWebhookAt: number | null;
+            errorCode: string | null;
+            errorMessage: string | null;
+            circuitState: "closed" | "open" | "half_open";
+            consecutiveFailures: number;
+            nextRetryAt: number | null;
+            newAccountsAvailableAt: number | null;
+        }, string | undefined>;
+        getItemHealthByUser: import("convex/server").FunctionReference<"query", "internal", {
+            userId: string;
+        }, {
+            plaidItemId: string;
+            itemId: string;
+            state: "syncing" | "ready" | "error" | "re-consent-required";
+            recommendedAction: "reconnect" | "reconnect_for_new_accounts" | "wait" | "contact_support" | null;
+            reasonCode: "healthy" | "syncing_initial" | "syncing_incremental" | "auth_required_login" | "auth_required_expiration" | "transient_circuit_open" | "transient_institution_down" | "transient_rate_limited" | "permanent_invalid_token" | "permanent_item_not_found" | "permanent_no_accounts" | "permanent_access_not_granted" | "permanent_products_not_supported" | "permanent_institution_unsupported" | "permanent_revoked" | "permanent_unknown" | "new_accounts_available";
+            isActive: boolean;
+            institutionId: string | null;
+            institutionName: string | null;
+            institutionLogoBase64: string | null;
+            institutionPrimaryColor: string | null;
+            lastSyncedAt: number | null;
+            lastWebhookAt: number | null;
+            errorCode: string | null;
+            errorMessage: string | null;
+            circuitState: "closed" | "open" | "half_open";
+            consecutiveFailures: number;
+            nextRetryAt: number | null;
+            newAccountsAvailableAt: number | null;
         }[], string | undefined>;
         getLiabilitiesByItem: import("convex/server").FunctionReference<"query", "internal", {
             plaidItemId: string;
