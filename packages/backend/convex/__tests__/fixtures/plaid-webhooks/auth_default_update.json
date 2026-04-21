@@ -1,0 +1,11 @@
+{
+  "body": {
+    "webhook_type": "AUTH",
+    "webhook_code": "AUTOMATICALLY_VERIFIED",
+    "item_id": "test_item_id_placeholder",
+    "account_id": "test_account_id_placeholder",
+    "error": null
+  },
+  "jwt": null,
+  "bypassSignature": true
+}

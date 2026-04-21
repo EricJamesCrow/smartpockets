@@ -1,0 +1,12 @@
+{
+  "body": {
+    "webhook_type": "INVESTMENTS_TRANSACTIONS",
+    "webhook_code": "DEFAULT_UPDATE",
+    "item_id": "test_item_id_placeholder",
+    "new_investments_transactions": 0,
+    "canceled_investments_transactions": 0,
+    "error": null
+  },
+  "jwt": null,
+  "bypassSignature": true
+}
