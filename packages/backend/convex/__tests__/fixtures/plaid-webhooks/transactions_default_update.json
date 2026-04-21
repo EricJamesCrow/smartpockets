@@ -1,0 +1,11 @@
+{
+  "body": {
+    "webhook_type": "TRANSACTIONS",
+    "webhook_code": "DEFAULT_UPDATE",
+    "item_id": "test_item_id_placeholder",
+    "new_transactions": 3,
+    "error": null
+  },
+  "jwt": null,
+  "bypassSignature": true
+}

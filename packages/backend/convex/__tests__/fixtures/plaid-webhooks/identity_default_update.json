@@ -1,0 +1,11 @@
+{
+  "body": {
+    "webhook_type": "IDENTITY",
+    "webhook_code": "DEFAULT_UPDATE",
+    "item_id": "test_item_id_placeholder",
+    "account_ids_with_updated_identity": {},
+    "error": null
+  },
+  "jwt": null,
+  "bypassSignature": true
+}

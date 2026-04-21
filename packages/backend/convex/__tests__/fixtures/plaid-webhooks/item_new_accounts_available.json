@@ -1,0 +1,10 @@
+{
+  "body": {
+    "webhook_type": "ITEM",
+    "webhook_code": "NEW_ACCOUNTS_AVAILABLE",
+    "item_id": "test_item_id_placeholder",
+    "error": null
+  },
+  "jwt": null,
+  "bypassSignature": true
+}
