@@ -4,6 +4,8 @@ import type { FC } from "react";
 
 import { AccountsSummary } from "./accounts/AccountsSummary";
 import { AccountsSummarySkeleton } from "./accounts/AccountsSummarySkeleton";
+import { CreditCardStatementCard } from "./credit-cards/CreditCardStatementCard";
+import { CreditCardStatementCardSkeleton } from "./credit-cards/CreditCardStatementCardSkeleton";
 import { RawTextMessage } from "./shared/RawTextMessage";
 import { TransactionDetailCard } from "./transactions/TransactionDetailCard";
 import { TransactionDetailCardSkeleton } from "./transactions/TransactionDetailCardSkeleton";
@@ -35,13 +37,13 @@ export const toolResultRegistry: Record<ReadToolName, RegistryEntry> = {
     get_account_detail: { Component: AccountsSummary as AnyEntry["Component"], Skeleton: AccountsSummarySkeleton },
     list_transactions: { Component: TransactionsTable as AnyEntry["Component"], Skeleton: TransactionsTableSkeleton },
     get_transaction_detail: { Component: TransactionDetailCard as AnyEntry["Component"], Skeleton: TransactionDetailCardSkeleton },
-    list_credit_cards: { Component: FallbackToRaw },
-    get_credit_card_detail: { Component: FallbackToRaw },
+    list_credit_cards: { Component: CreditCardStatementCard as AnyEntry["Component"], Skeleton: CreditCardStatementCardSkeleton },
+    get_credit_card_detail: { Component: CreditCardStatementCard as AnyEntry["Component"], Skeleton: CreditCardStatementCardSkeleton },
     list_deferred_interest_promos: { Component: FallbackToRaw },
     list_installment_plans: { Component: FallbackToRaw },
     get_spend_by_category: { Component: FallbackToRaw },
     get_spend_over_time: { Component: FallbackToRaw },
-    get_upcoming_statements: { Component: FallbackToRaw },
+    get_upcoming_statements: { Component: CreditCardStatementCard as AnyEntry["Component"], Skeleton: CreditCardStatementCardSkeleton },
     list_reminders: { Component: FallbackToRaw },
     search_merchants: { Component: FallbackToRaw },
     get_plaid_health: { Component: FallbackToRaw },
