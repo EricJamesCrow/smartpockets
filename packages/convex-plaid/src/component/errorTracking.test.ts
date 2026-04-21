@@ -10,7 +10,10 @@ import { convexTest } from "convex-test";
 import schema from "./schema.js";
 import { internal } from "./_generated/api.js";
 
-const modules = import.meta.glob("./**/*.ts");
+// Vite's import.meta.glob is not in the standard ImportMeta type.
+const modules = (import.meta as unknown as {
+  glob: (pattern: string) => Record<string, () => Promise<unknown>>;
+}).glob("./**/*.ts");
 
 async function seedPlaidItem(
   t: ReturnType<typeof convexTest>,
