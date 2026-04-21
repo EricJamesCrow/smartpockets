@@ -12,9 +12,10 @@
  *       (ignored for fixtures, which are data-only).
  *   R2. No `useQuery` import from `"convex/react"`. All reactive queries must
  *       come from `"convex-helpers/react/cache/hooks"`.
- *   R3. No `useMemo`, `useCallback`, `React.memo`, or bare `memo` calls
- *       unless the three lines immediately above include a `// JUSTIFIED:`
- *       comment explaining why the React Compiler cannot handle the case.
+ *   R3. No `useMemo`, `useCallback`, `memo(...)` (bare or `React.memo(...)`)
+ *       calls unless the three lines immediately above include a
+ *       `// JUSTIFIED:` comment explaining why the React Compiler cannot
+ *       handle the case.
  *   R4. No color literal strings (hex, rgb/rgba/hsl, or direct Tailwind color
  *       families like `text-red-500`). Only UntitledUI utility tokens allowed
  *       (e.g. `text-utility-brand-700`).
@@ -32,10 +33,13 @@ const REPO_ROOT = resolve(import.meta.dir, "../../..");
 const TOOL_RESULTS_DIR = resolve(REPO_ROOT, "apps/app/src/components/chat/tool-results");
 const FIXTURES_DIR = resolve(TOOL_RESULTS_DIR, "__fixtures__");
 
+// Bare `memo` catches both `import { memo } from "react"; memo(Foo)` and
+// `React.memo(Foo)` (word boundary on the dot). Keeping only `memo` avoids
+// double-reporting the namespaced form.
 const FORBIDDEN_HOOK_NAMES = [
     "useMemo",
     "useCallback",
-    "React.memo",
+    "memo",
 ];
 
 const FORBIDDEN_USEQUERY_MODULE = "convex/react";
