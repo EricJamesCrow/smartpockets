@@ -7,7 +7,8 @@
     "dev": "convex dev --tail-logs",
     "deploy": "convex deploy",
     "setup": "convex dev --once",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint:prompt-drift": "bun run scripts/lint-prompt-drift.ts"
   },
   "exports": {
     "./_generated/api": "./convex/_generated/api.js",
