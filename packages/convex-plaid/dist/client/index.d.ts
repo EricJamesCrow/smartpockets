@@ -29,6 +29,8 @@ export type PlaidComponent = Pick<ComponentApi, "actions" | "public">;
  * Re-exported for convenience.
  */
 export type { ComponentApi };
+export type { ReasonCode } from "../component/reasonCode.js";
+export { mapErrorCodeToReason } from "../component/reasonCode.js";
 export type { PlaidConfig, RegisterRoutesConfig, CreateLinkTokenResult, ExchangePublicTokenResult, FetchAccountsResult, SyncTransactionsResult, SyncTransactionsOptions, FetchLiabilitiesResult, OnboardItemResult, FetchRecurringStreamsResult, CreateUpdateLinkTokenResult, CompleteReauthResult, TriggerTransactionsRefreshResult, EnrichTransactionsResult, ActionCtx, SyncType, SyncTrigger, SyncStatus, SyncResult, SyncStats, InstitutionMetadata, PlaidAccount, PlaidAccountFilters, PlaidItem, PlaidItemStatus, CircuitState, UserIdentity, AuthenticatedContext, SecureWrapper, };
 /**
  * Plaid Component Client
@@ -614,15 +616,7 @@ export declare class Plaid {
                 city?: string;
                 country?: string;
                 postalCode?: string;
-                region? /**
-                 * Get the public queries/mutations API for use in query/mutation handlers.
-                 *
-                 * @example
-                 * ```typescript
-                 * // In a query handler
-                 * const items = await ctx.runQuery(plaid.api.getItemsByUser, { userId });
-                 * ```
-                 */: string;
+                region?: string;
                 street?: string;
             };
             updatedAt: number;

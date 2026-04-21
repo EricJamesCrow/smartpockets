@@ -147,6 +147,11 @@ export type PlaidComponent = Pick<ComponentApi, "actions" | "public">;
  */
 export type { ComponentApi };
 
+// W4: reason-code taxonomy re-exported at the package boundary so host apps
+// can import via `@crowdevelopment/convex-plaid`.
+export type { ReasonCode } from "../component/reasonCode.js";
+export { mapErrorCodeToReason } from "../component/reasonCode.js";
+
 export type {
   PlaidConfig,
   RegisterRoutesConfig,
