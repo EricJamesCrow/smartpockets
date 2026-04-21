@@ -5,6 +5,9 @@ import type { WebhookEvent } from "@clerk/backend";
 import { Webhook } from "svix";
 import { transformWebhookData } from "./paymentAttemptTypes";
 import { verifyPlaidWebhook, shouldSkipVerification } from "./lib/plaidWebhookVerification";
+import { verifyUnsubscribeToken } from "./email/unsubscribeToken";
+import { resend } from "./email/resend";
+import type { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
 
@@ -302,6 +305,67 @@ http.route({
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
     }
+  }),
+});
+
+// =============================================================================
+// EMAIL UNSUBSCRIBE (RFC 8058 one-click)
+// =============================================================================
+
+http.route({
+  path: "/email/unsubscribe",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token");
+    if (!token) return new Response("missing token", { status: 400 });
+
+    const signingKey = process.env.EMAIL_UNSUBSCRIBE_SIGNING_KEY;
+    if (!signingKey) {
+      console.error("[Unsubscribe] EMAIL_UNSUBSCRIBE_SIGNING_KEY is not set");
+      return new Response("server misconfigured", { status: 500 });
+    }
+
+    const verified = verifyUnsubscribeToken(token, signingKey);
+    if (!verified.ok) {
+      return new Response(`invalid signature: ${verified.reason}`, { status: 400 });
+    }
+
+    await ctx.runMutation(internal.email.mutations.flipPreferenceFromToken, {
+      userId: verified.data.userId as Id<"users">,
+      templateKey: verified.data.templateKey,
+    });
+
+    // Flip still performed for expired tokens; surface a 410 so the
+    // client knows the token is stale without rejecting the action.
+    return new Response(null, { status: verified.data.expired ? 410 : 200 });
+  }),
+});
+
+http.route({
+  path: "/email/unsubscribe",
+  method: "GET",
+  handler: httpAction(async (_ctx, req) => {
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token") ?? "";
+    const safeToken = encodeURIComponent(token);
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Unsubscribe</title></head><body style="font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:560px;margin:0 auto"><h1 style="font-size:20px">Unsubscribe</h1><p>Click the button below to stop receiving this type of email from SmartPockets.</p><form method="POST" action="/email/unsubscribe?token=${safeToken}"><button type="submit" style="padding:12px 20px;background:#16a34a;color:white;border:0;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600">Confirm unsubscribe</button></form></body></html>`;
+    return new Response(html, {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }),
+});
+
+// =============================================================================
+// RESEND WEBHOOK
+// =============================================================================
+
+http.route({
+  path: "/resend-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    return await resend.handleResendEventWebhook(ctx, req);
   }),
 });
 
