@@ -37,6 +37,9 @@ declare const _default: import("convex/server").SchemaDefinition<{
         consecutiveSuccesses?: number | undefined;
         lastFailureAt?: number | undefined;
         nextRetryAt?: number | undefined;
+        newAccountsAvailableAt?: number | undefined;
+        firstErrorAt?: number | undefined;
+        lastDispatchedAt?: number | undefined;
         products: string[];
         userId: string;
         itemId: string;
@@ -71,7 +74,10 @@ declare const _default: import("convex/server").SchemaDefinition<{
         consecutiveSuccesses: import("convex/values").VFloat64<number | undefined, "optional">;
         lastFailureAt: import("convex/values").VFloat64<number | undefined, "optional">;
         nextRetryAt: import("convex/values").VFloat64<number | undefined, "optional">;
-    }, "required", "products" | "userId" | "institutionId" | "isActive" | "itemId" | "status" | "errorCode" | "errorMessage" | "accessToken" | "cursor" | "institutionName" | "syncError" | "createdAt" | "lastSyncedAt" | "activatedAt" | "errorAt" | "reauthReason" | "reauthAt" | "disconnectedReason" | "disconnectedAt" | "syncVersion" | "syncStartedAt" | "circuitState" | "consecutiveFailures" | "consecutiveSuccesses" | "lastFailureAt" | "nextRetryAt">, {
+        newAccountsAvailableAt: import("convex/values").VFloat64<number | undefined, "optional">;
+        firstErrorAt: import("convex/values").VFloat64<number | undefined, "optional">;
+        lastDispatchedAt: import("convex/values").VFloat64<number | undefined, "optional">;
+    }, "required", "products" | "userId" | "institutionId" | "isActive" | "itemId" | "status" | "errorCode" | "errorMessage" | "accessToken" | "cursor" | "institutionName" | "syncError" | "createdAt" | "lastSyncedAt" | "activatedAt" | "errorAt" | "reauthReason" | "reauthAt" | "disconnectedReason" | "disconnectedAt" | "syncVersion" | "syncStartedAt" | "circuitState" | "consecutiveFailures" | "consecutiveSuccesses" | "lastFailureAt" | "nextRetryAt" | "newAccountsAvailableAt" | "firstErrorAt" | "lastDispatchedAt">, {
         by_user: ["userId", "_creationTime"];
         by_item_id: ["itemId", "_creationTime"];
         by_status: ["status", "_creationTime"];

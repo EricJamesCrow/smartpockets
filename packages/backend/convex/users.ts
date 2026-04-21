@@ -1,6 +1,7 @@
 import { UserJSON } from "@clerk/backend";
 import { Validator, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./functions";
+import { components } from "./_generated/api";
 
 /**
  * Get the current authenticated user
@@ -146,6 +147,24 @@ export const deleteFromClerk = internalMutation({
         }
 
         return null;
+    },
+});
+
+/**
+ * Count the user's active Plaid items (not deleting).
+ *
+ * Used by exchangePublicTokenAction to gate the welcome-onboarding dispatch
+ * per contracts §13. A user with `countActivePlaidItems === 1` after a
+ * freshly-created item is treated as a first-link-ever case.
+ */
+export const countActivePlaidItems = internalQuery({
+    args: { userId: v.string() },
+    returns: v.number(),
+    async handler(ctx, { userId }) {
+        const items = await ctx.runQuery(components.plaid.public.getItemsByUser, {
+            userId,
+        });
+        return items.filter((i: { status: string }) => i.status !== "deleting").length;
     },
 });
 

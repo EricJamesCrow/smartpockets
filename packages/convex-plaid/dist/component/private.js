@@ -2171,4 +2171,92 @@ export const upsertInstitution = internalMutation({
         return result.id;
     },
 });
+// =============================================================================
+// W4: NEW ACCOUNTS AVAILABLE + ERROR TRACKING MUTATIONS
+// =============================================================================
+/**
+ * Stamp plaidItems.newAccountsAvailableAt with the current timestamp.
+ * Called by the ITEM:NEW_ACCOUNTS_AVAILABLE webhook handler.
+ * Idempotent: writing the timestamp twice has no functional effect.
+ */
+export const setNewAccountsAvailableInternal = internalMutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        await ctx.db.patch(item._id, { newAccountsAvailableAt: Date.now() });
+        return null;
+    },
+});
+/**
+ * Clear plaidItems.newAccountsAvailableAt.
+ * Called exactly once per flow: after a successful update-mode exchangePublicToken
+ * for an existing plaidItemId.
+ */
+export const clearNewAccountsAvailableInternal = internalMutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        await ctx.db.patch(item._id, { newAccountsAvailableAt: undefined });
+        return null;
+    },
+});
+/**
+ * Stamp plaidItems.firstErrorAt if not already set (first-write-wins).
+ * Called before the status patch on transition into error or needs_reauth.
+ * Keeps the error-transition clock monotonic across repeated error observations.
+ */
+export const markFirstErrorAtInternal = internalMutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        if (item.firstErrorAt == null) {
+            await ctx.db.patch(item._id, { firstErrorAt: Date.now() });
+        }
+        return null;
+    },
+});
+/**
+ * Clear plaidItems.firstErrorAt and plaidItems.lastDispatchedAt.
+ * Called on transition from error-class status back to active via
+ * completeReauthAction or a successful sync.
+ */
+export const clearErrorTrackingInternal = internalMutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        await ctx.db.patch(item._id, {
+            firstErrorAt: undefined,
+            lastDispatchedAt: undefined,
+        });
+        return null;
+    },
+});
+/**
+ * Stamp plaidItems.lastDispatchedAt.
+ * Called by the 6-hour persistent-error cron immediately after scheduling
+ * dispatchItemErrorPersistent. Used as the cron's dedup filter.
+ */
+export const markItemErrorDispatchedInternal = internalMutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        await ctx.db.patch(item._id, { lastDispatchedAt: Date.now() });
+        return null;
+    },
+});
 //# sourceMappingURL=private.js.map
