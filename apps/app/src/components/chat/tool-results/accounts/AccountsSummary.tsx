@@ -62,7 +62,7 @@ export function AccountsSummary(props: ToolResultComponentProps<unknown, ToolOut
         return <AccountsSummarySkeleton />;
     }
 
-    // Detail mode — single account.
+    // Detail mode - single account.
     if (toolName === "get_account_detail" || accounts.length === 1) {
         const account = accounts[0];
         if (!account) {

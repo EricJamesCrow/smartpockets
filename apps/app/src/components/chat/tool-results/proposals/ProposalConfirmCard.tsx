@@ -366,7 +366,7 @@ export function ProposalConfirmCard({ proposalId }: Props) {
         case "proposed":
         case "confirmed":
         default:
-            // Transient — W2 transitions through these synchronously; fall through to skeleton.
+            // Transient: W2 transitions through these synchronously; fall through to skeleton.
             return <ProposalConfirmCardSkeleton />;
     }
 }
