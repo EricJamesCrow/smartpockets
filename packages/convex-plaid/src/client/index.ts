@@ -478,10 +478,15 @@ export class Plaid {
     ctx: ActionCtx,
     args: {
       plaidItemId: string;
+      // "reauth" (default) opens update mode for expired credentials.
+      // "account_select" opens update mode with account-selection enabled,
+      // used when the institution reports new accounts are available.
+      mode?: "reauth" | "account_select";
     }
   ): Promise<CreateUpdateLinkTokenResult> {
     return await ctx.runAction(this.component.actions.createUpdateLinkToken, {
       plaidItemId: args.plaidItemId,
+      mode: args.mode,
       plaidClientId: this.config.PLAID_CLIENT_ID,
       plaidSecret: this.config.PLAID_SECRET,
       plaidEnv: this.config.PLAID_ENV,
