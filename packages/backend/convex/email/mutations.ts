@@ -35,7 +35,7 @@ export const ensurePreferences = internalMutation({
       .get("userId", userId);
     if (existing) return existing._id;
     return await ctx.table("notificationPreferences").insert({
-      user: userId,
+      userId,
       ...DEFAULT_PREFS,
       updatedAt: Date.now(),
     });
@@ -60,7 +60,7 @@ export const insertPending = internalMutation({
   handler: async (ctx, args) => {
     return await ctx.table("emailEvents").insert({
       idempotencyKey: args.idempotencyKey,
-      user: args.userId,
+      userId: args.userId,
       email: args.email.toLowerCase(),
       templateKey: args.templateKey,
       cadence: args.cadence,
