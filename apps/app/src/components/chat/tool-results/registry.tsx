@@ -3,12 +3,19 @@
 import type { FC } from "react";
 
 import { RawTextMessage } from "./shared/RawTextMessage";
+import { TransactionsTable } from "./transactions/TransactionsTable";
+import { TransactionsTableSkeleton } from "./transactions/TransactionsTableSkeleton";
 import type {
     ProposalToolOutput,
     ReadToolName,
     RegistryEntry,
     ToolResultComponentProps,
 } from "./types";
+
+// Registry entries must conform to the default `ToolResultComponentProps`
+// shape. Per-component signatures are narrower (typed `Output` generic); they
+// are cast here at registration time and remain type-safe at the call site.
+type AnyEntry = RegistryEntry<unknown, unknown>;
 
 /**
  * Fallback renderer used by all not-yet-wired entries. Subsequent W3 tasks
@@ -22,7 +29,7 @@ export function FallbackToRaw(props: ToolResultComponentProps) {
 export const toolResultRegistry: Record<ReadToolName, RegistryEntry> = {
     list_accounts: { Component: FallbackToRaw },
     get_account_detail: { Component: FallbackToRaw },
-    list_transactions: { Component: FallbackToRaw },
+    list_transactions: { Component: TransactionsTable as AnyEntry["Component"], Skeleton: TransactionsTableSkeleton },
     get_transaction_detail: { Component: FallbackToRaw },
     list_credit_cards: { Component: FallbackToRaw },
     get_credit_card_detail: { Component: FallbackToRaw },
