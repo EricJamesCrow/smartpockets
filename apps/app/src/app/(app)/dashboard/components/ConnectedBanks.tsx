@@ -84,8 +84,22 @@ export function ConnectedBanks() {
         <div className="space-y-3">
           {visibleBanks.map((bank) => {
             const isExpanded = expandedBanks.has(bank.itemId);
-            const needsAttention =
-              bank.status === "needs_reauth" || bank.status === "error";
+            // W4: needsAttention keyed on recommendedAction (derivation owns
+            // the classification; UI just consumes). null = no CTA needed.
+            const needsAttention = bank.recommendedAction != null;
+            // Short summary label keyed on recommendedAction. Full copy
+            // (title/description/ctaLabel) comes from reasonCodeToUserCopy
+            // for settings pages and other richer surfaces.
+            const attentionLabel =
+              bank.recommendedAction === "reconnect"
+                ? "Reconnect needed"
+                : bank.recommendedAction === "reconnect_for_new_accounts"
+                  ? "New accounts available"
+                  : bank.recommendedAction === "wait"
+                    ? "Retrying"
+                    : bank.recommendedAction === "contact_support"
+                      ? "Sync error"
+                      : null;
 
             return (
               <div key={bank.itemId}>
@@ -105,10 +119,10 @@ export function ConnectedBanks() {
                           needsAttention ? "text-warning-600" : "text-tertiary"
                         )}
                       >
-                        {needsAttention ? (
+                        {needsAttention && attentionLabel ? (
                           <span className="flex items-center gap-1">
                             <AlertTriangle className="size-3" />
-                            Needs re-auth
+                            {attentionLabel}
                           </span>
                         ) : (
                           formatSyncTime(bank.lastSyncedAt)
