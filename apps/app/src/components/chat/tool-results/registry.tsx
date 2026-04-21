@@ -2,6 +2,8 @@
 
 import type { FC } from "react";
 
+import { AccountsSummary } from "./accounts/AccountsSummary";
+import { AccountsSummarySkeleton } from "./accounts/AccountsSummarySkeleton";
 import { RawTextMessage } from "./shared/RawTextMessage";
 import { TransactionDetailCard } from "./transactions/TransactionDetailCard";
 import { TransactionDetailCardSkeleton } from "./transactions/TransactionDetailCardSkeleton";
@@ -29,8 +31,8 @@ export function FallbackToRaw(props: ToolResultComponentProps) {
 }
 
 export const toolResultRegistry: Record<ReadToolName, RegistryEntry> = {
-    list_accounts: { Component: FallbackToRaw },
-    get_account_detail: { Component: FallbackToRaw },
+    list_accounts: { Component: AccountsSummary as AnyEntry["Component"], Skeleton: AccountsSummarySkeleton },
+    get_account_detail: { Component: AccountsSummary as AnyEntry["Component"], Skeleton: AccountsSummarySkeleton },
     list_transactions: { Component: TransactionsTable as AnyEntry["Component"], Skeleton: TransactionsTableSkeleton },
     get_transaction_detail: { Component: TransactionDetailCard as AnyEntry["Component"], Skeleton: TransactionDetailCardSkeleton },
     list_credit_cards: { Component: FallbackToRaw },
