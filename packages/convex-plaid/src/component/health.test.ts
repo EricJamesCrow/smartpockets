@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { derive, type InstitutionSnapshot, type PlaidItemSnapshot } from "./health";
+import { derive, type InstitutionSnapshot, type PlaidItemSnapshot } from "./health.js";
 
 const baseItem: PlaidItemSnapshot = {
   _id: "j_item_1",

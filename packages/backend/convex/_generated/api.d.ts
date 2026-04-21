@@ -16,10 +16,12 @@ import type * as crons from "../crons.js";
 import type * as dashboard_index from "../dashboard/index.js";
 import type * as dashboard_queries from "../dashboard/queries.js";
 import type * as email_clerk from "../email/clerk.js";
+import type * as email_dispatch from "../email/dispatch.js";
 import type * as email_events from "../email/events.js";
 import type * as email_resend from "../email/resend.js";
 import type * as email_send from "../email/send.js";
 import type * as email_templates from "../email/templates.js";
+import type * as plaid_errorTaxonomy from "../plaid/errorTaxonomy.js";
 import type * as functions from "../functions.js";
 import type * as http from "../http.js";
 import type * as installmentPlans_mutations from "../installmentPlans/mutations.js";
@@ -71,10 +73,12 @@ declare const fullApi: ApiFromModules<{
   "dashboard/index": typeof dashboard_index;
   "dashboard/queries": typeof dashboard_queries;
   "email/clerk": typeof email_clerk;
+  "email/dispatch": typeof email_dispatch;
   "email/events": typeof email_events;
   "email/resend": typeof email_resend;
   "email/send": typeof email_send;
   "email/templates": typeof email_templates;
+  "plaid/errorTaxonomy": typeof plaid_errorTaxonomy;
   functions: typeof functions;
   http: typeof http;
   "installmentPlans/mutations": typeof installmentPlans_mutations;
@@ -435,6 +439,38 @@ export declare const components: {
           plaidSecret: string;
         },
         { error?: string; requestId?: string; success: boolean }
+      >;
+    };
+    private: {
+      setNewAccountsAvailableInternal: FunctionReference<
+        "mutation",
+        "internal",
+        { plaidItemId: string },
+        null
+      >;
+      clearNewAccountsAvailableInternal: FunctionReference<
+        "mutation",
+        "internal",
+        { plaidItemId: string },
+        null
+      >;
+      markFirstErrorAtInternal: FunctionReference<
+        "mutation",
+        "internal",
+        { plaidItemId: string },
+        null
+      >;
+      clearErrorTrackingInternal: FunctionReference<
+        "mutation",
+        "internal",
+        { plaidItemId: string },
+        null
+      >;
+      markItemErrorDispatchedInternal: FunctionReference<
+        "mutation",
+        "internal",
+        { plaidItemId: string },
+        null
       >;
     };
     public: {

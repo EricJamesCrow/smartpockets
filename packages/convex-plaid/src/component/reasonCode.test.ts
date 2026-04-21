@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { mapErrorCodeToReason } from "./reasonCode";
+import { mapErrorCodeToReason } from "./reasonCode.js";
 
 describe("mapErrorCodeToReason", () => {
   const cases: Array<[string | null, string]> = [
