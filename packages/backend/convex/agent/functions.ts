@@ -12,45 +12,50 @@
 
 import { entsTableFactory } from "convex-ents";
 import {
-  customCtx,
   customMutation,
   customQuery,
 } from "convex-helpers/server/customFunctions";
+import { v } from "convex/values";
 import {
   internalAction as baseInternalAction,
   internalMutation as baseInternalMutation,
   internalQuery as baseInternalQuery,
-  QueryCtx as BaseQueryCtx,
-  MutationCtx as BaseMutationCtx,
 } from "../_generated/server";
-import type { Id } from "../_generated/dataModel";
 import { entDefinitions } from "../schema";
 
-async function resolveViewer<Ctx extends BaseQueryCtx | BaseMutationCtx>(
-  baseCtx: Ctx,
-  userId: Id<"users">,
-) {
-  const table = entsTableFactory(baseCtx as BaseMutationCtx, entDefinitions);
-  const viewer = await table("users").getX(userId);
-  const viewerX = () => viewer;
-  return { table, viewer, viewerX };
-}
+export const agentQuery = customQuery(baseInternalQuery, {
+  args: { userId: v.id("users") },
+  input: async (baseCtx, { userId }) => {
+    const table = entsTableFactory(baseCtx, entDefinitions);
+    const viewer = await table("users").getX(userId);
+    return {
+      ctx: {
+        ...baseCtx,
+        table,
+        viewer,
+        viewerX: () => viewer,
+      },
+      args: {},
+    };
+  },
+});
 
-export const agentQuery = customQuery(
-  baseInternalQuery,
-  customCtx(async (baseCtx: BaseQueryCtx, { userId }: { userId: Id<"users"> }) => {
-    const { table, viewer, viewerX } = await resolveViewer(baseCtx, userId);
-    return { table, viewer, viewerX };
-  }),
-);
-
-export const agentMutation = customMutation(
-  baseInternalMutation,
-  customCtx(async (baseCtx: BaseMutationCtx, { userId }: { userId: Id<"users"> }) => {
-    const { table, viewer, viewerX } = await resolveViewer(baseCtx, userId);
-    return { table, viewer, viewerX };
-  }),
-);
+export const agentMutation = customMutation(baseInternalMutation, {
+  args: { userId: v.id("users") },
+  input: async (baseCtx, { userId }) => {
+    const table = entsTableFactory(baseCtx, entDefinitions);
+    const viewer = await table("users").getX(userId);
+    return {
+      ctx: {
+        ...baseCtx,
+        table,
+        viewer,
+        viewerX: () => viewer,
+      },
+      args: {},
+    };
+  },
+});
 
 // Actions do not receive the Ents table ctx; they resolve viewer via ctx.runQuery.
 export const agentAction = baseInternalAction;
