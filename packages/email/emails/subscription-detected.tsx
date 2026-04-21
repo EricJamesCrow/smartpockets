@@ -37,9 +37,9 @@ export const SubscriptionDetected = ({
 }: SubscriptionDetectedProps) => {
     const config = { ...defaultEmailConfig, ...brandConfig };
     const appUrl = config.appUrl ?? config.websiteUrl;
-    const single = detected.length === 1;
-    const preview = single
-        ? `${detected[0].normalizedMerchant} looks like a recurring charge. Confirm or dismiss in one click.`
+    const firstDetected = detected.length === 1 ? detected[0] : undefined;
+    const preview = firstDetected
+        ? `${firstDetected.normalizedMerchant} looks like a recurring charge. Confirm or dismiss in one click.`
         : "Recurring charges detected across your accounts. Review below.";
 
     return (

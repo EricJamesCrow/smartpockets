@@ -37,9 +37,9 @@ export const AnomalyAlert = ({
 }: AnomalyAlertProps) => {
     const config = { ...defaultEmailConfig, ...brandConfig };
     const appUrl = config.appUrl ?? config.websiteUrl;
-    const single = anomalies.length === 1;
-    const preview = single
-        ? `${dollars(anomalies[0].amountCents)} at ${anomalies[0].merchantName} stands out against recent spending patterns.`
+    const firstAnomaly = anomalies.length === 1 ? anomalies[0] : undefined;
+    const preview = firstAnomaly
+        ? `${dollars(firstAnomaly.amountCents)} at ${firstAnomaly.merchantName} stands out against recent spending patterns.`
         : `SmartPockets flagged ${anomalies.length} charges that look different from your usual spend.`;
 
     return (
