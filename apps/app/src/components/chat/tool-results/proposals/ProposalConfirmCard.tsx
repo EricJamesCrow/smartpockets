@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 
 import { cx } from "@/utils/cx";
 
+import type { Id } from "@convex/_generated/dataModel";
+
 import { ToolCardShell } from "../shared/ToolCardShell";
 import {
+    useLiveCreditCards,
     useLiveProposal,
+    useLiveReminders,
     useLiveTransactions,
     type AgentProposalRow,
 } from "../shared/liveRowsHooks";
@@ -71,10 +75,37 @@ function DiffList({ patch }: { patch: Record<string, unknown> }) {
     );
 }
 
+// Pick the live-row hook by the propose tool that created this proposal.
+// Transactions, credit cards, and reminders each live in distinct tables, so a
+// single `useLiveTransactions` call can miss drift on card / promo / reminder
+// proposals (the rows never resolve). Every hook is called unconditionally so
+// hook order stays stable; empty-id calls are cheap and return `undefined`.
 function useDriftDetection(proposal: AgentProposalRow | null | undefined): boolean {
+    const toolName = proposal?.toolName ?? "";
     const ids = proposal?.affectedIds ?? [];
-    const rows = useLiveTransactions(ids);
-    if (!proposal || !rows) return false;
+
+    const wantsTransactions =
+        toolName === "propose_transaction_update" || toolName === "propose_bulk_transaction_update";
+    const wantsCards =
+        toolName === "propose_credit_card_metadata_update" || toolName === "propose_manual_promo";
+    const wantsReminders =
+        toolName === "propose_reminder_create" || toolName === "propose_reminder_delete";
+
+    const transactionRows = useLiveTransactions(wantsTransactions ? ids : []);
+    const cardRows = useLiveCreditCards(
+        wantsCards ? (ids as Array<Id<"creditCards">>) : [],
+    );
+    const reminderRows = useLiveReminders(wantsReminders ? ids : []);
+
+    if (!proposal) return false;
+    const rows = wantsTransactions
+        ? transactionRows
+        : wantsCards
+            ? cardRows
+            : wantsReminders
+                ? reminderRows
+                : undefined;
+    if (!rows) return false;
     return rows.some((row) => (row._updateTime ?? 0) > proposal.createdAt);
 }
 
