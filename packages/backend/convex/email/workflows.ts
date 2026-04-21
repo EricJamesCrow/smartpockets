@@ -214,6 +214,12 @@ export const sendStatementReminder = internalAction({
 // ============================================================================
 // anomaly-alert (coalesce path; 15-min window)
 // ============================================================================
+//
+// Split into two actions so the 15-minute wait runs as a scheduled
+// step instead of blocking a live action. This mirrors the real
+// workflow component's journaled waitForMoreAnomaliesStep (contracts
+// §9.2): step 0 is the leadership check + schedule, step 1
+// (runAfter 15 min) is the coalesce + send.
 
 const ANOMALY_WINDOW_MS = 15 * 60 * 1000;
 
@@ -227,11 +233,25 @@ export const sendAnomalyAlert = internalAction({
     );
     if (!leadership.isLeader) return null;
 
-    // Wait out the coalesce window. The real workflow component uses a
-    // journaled step with runAfter; the shim relies on scheduler.runAfter
-    // from the parent, so we sleep-wait here to keep the semantics.
-    await new Promise((r) => setTimeout(r, ANOMALY_WINDOW_MS));
+    // Defer the coalesce body to a scheduled step after the window.
+    // Running on the scheduler lets the action return immediately
+    // and stays within Convex action runtime limits; on restart the
+    // scheduler redelivers at-least-once and runAnomalyCoalesce is
+    // idempotent by design (re-reads row status, leadership respects
+    // completed peers).
+    await ctx.scheduler.runAfter(
+      ANOMALY_WINDOW_MS,
+      internal.email.workflows.runAnomalyCoalesce,
+      { emailEventId },
+    );
+    return null;
+  },
+});
 
+export const runAnomalyCoalesce = internalAction({
+  args: { emailEventId: v.id("emailEvents") },
+  returns: v.null(),
+  handler: async (ctx, { emailEventId }) => {
     const coalesced = await ctx.runMutation(
       internal.email.middleware.anomalyCoalesce,
       { leaderId: emailEventId, windowMs: ANOMALY_WINDOW_MS },
