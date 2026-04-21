@@ -3,6 +3,8 @@
 import type { FC } from "react";
 
 import { RawTextMessage } from "./shared/RawTextMessage";
+import { TransactionDetailCard } from "./transactions/TransactionDetailCard";
+import { TransactionDetailCardSkeleton } from "./transactions/TransactionDetailCardSkeleton";
 import { TransactionsTable } from "./transactions/TransactionsTable";
 import { TransactionsTableSkeleton } from "./transactions/TransactionsTableSkeleton";
 import type {
@@ -30,7 +32,7 @@ export const toolResultRegistry: Record<ReadToolName, RegistryEntry> = {
     list_accounts: { Component: FallbackToRaw },
     get_account_detail: { Component: FallbackToRaw },
     list_transactions: { Component: TransactionsTable as AnyEntry["Component"], Skeleton: TransactionsTableSkeleton },
-    get_transaction_detail: { Component: FallbackToRaw },
+    get_transaction_detail: { Component: TransactionDetailCard as AnyEntry["Component"], Skeleton: TransactionDetailCardSkeleton },
     list_credit_cards: { Component: FallbackToRaw },
     get_credit_card_detail: { Component: FallbackToRaw },
     list_deferred_interest_promos: { Component: FallbackToRaw },
