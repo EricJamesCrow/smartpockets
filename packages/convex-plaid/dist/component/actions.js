@@ -404,12 +404,15 @@ export const syncTransactions = action({
                 errorCode: plaidError.code,
                 errorMessage: plaidError.message,
             });
-            // Release lock with error status
+            // Release lock with error status. W4: pass errorCode through so the
+            // 6-hour persistent-error cron (which reads plaidItems.errorCode) has
+            // the data it needs to dispatch a best-effort alert.
             await ctx.runMutation(internal.private.releaseSyncLock, {
                 plaidItemId: args.plaidItemId,
                 syncVersion,
                 status: requiresReauth(plaidError) ? "needs_reauth" : "error",
                 syncError: plaidError.message,
+                errorCode: plaidError.code,
             });
             throw error;
         }
@@ -785,6 +788,10 @@ export const createUpdateLinkToken = action({
     args: {
         plaidItemId: v.string(),
         ...plaidConfigArgs,
+        // W4: "reauth" is default existing behavior. "account_select" opens update
+        // mode with account-selection enabled, used by the NEW_ACCOUNTS_AVAILABLE
+        // flow so the user can add newly-available accounts at the institution.
+        mode: v.optional(v.union(v.literal("reauth"), v.literal("account_select"))),
     },
     returns: v.object({
         linkToken: v.string(),
@@ -799,9 +806,11 @@ export const createUpdateLinkToken = action({
         }
         // Decrypt access token
         const accessToken = await decryptToken(item.accessToken, args.encryptionKey);
-        console.log("[Plaid Component] Creating update link token for re-auth...");
+        console.log(`[Plaid Component] Creating update link token (mode: ${args.mode ?? "reauth"})...`);
         const plaidClient = initPlaidClient(args.plaidClientId, args.plaidSecret, args.plaidEnv);
-        // Create link token in update mode (with access_token)
+        // Create link token in update mode (with access_token).
+        // When mode === "account_select", pass update.account_selection_enabled = true
+        // so the user can add newly-available accounts at the institution.
         const response = await plaidClient.linkTokenCreate({
             user: {
                 client_user_id: item.userId,
@@ -810,6 +819,9 @@ export const createUpdateLinkToken = action({
             access_token: accessToken, // This triggers update mode
             country_codes: ["US"],
             language: "en",
+            update: args.mode === "account_select"
+                ? { account_selection_enabled: true }
+                : undefined,
         });
         console.log("[Plaid Component] Update link token created successfully");
         return {

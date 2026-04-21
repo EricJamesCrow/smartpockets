@@ -18,13 +18,14 @@ export declare const getItemsByUser: import("convex/server").RegisteredQuery<"pu
     userId: string;
 }, Promise<{
     _id: string;
+    _creationTime: number;
     userId: string;
     itemId: string;
     institutionId: string | undefined;
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
+    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -40,6 +41,9 @@ export declare const getItemsByUser: import("convex/server").RegisteredQuery<"pu
     consecutiveFailures: number | undefined;
     lastFailureAt: number | undefined;
     nextRetryAt: number | undefined;
+    newAccountsAvailableAt: number | undefined;
+    firstErrorAt: number | undefined;
+    lastDispatchedAt: number | undefined;
 }[]>>;
 /**
  * Get a single plaidItem by component document ID.
@@ -52,13 +56,14 @@ export declare const getItem: import("convex/server").RegisteredQuery<"public", 
     plaidItemId: string;
 }, Promise<{
     _id: string;
+    _creationTime: number;
     userId: string;
     itemId: string;
     institutionId: string | undefined;
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
+    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -74,6 +79,9 @@ export declare const getItem: import("convex/server").RegisteredQuery<"public", 
     consecutiveFailures: number | undefined;
     lastFailureAt: number | undefined;
     nextRetryAt: number | undefined;
+    newAccountsAvailableAt: number | undefined;
+    firstErrorAt: number | undefined;
+    lastDispatchedAt: number | undefined;
 } | null>>;
 /**
  * Get a single plaidItem by Plaid's item_id.
@@ -87,13 +95,14 @@ export declare const getItemByPlaidItemId: import("convex/server").RegisteredQue
     itemId: string;
 }, Promise<{
     _id: string;
+    _creationTime: number;
     userId: string;
     itemId: string;
     institutionId: string | undefined;
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
+    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -109,6 +118,9 @@ export declare const getItemByPlaidItemId: import("convex/server").RegisteredQue
     consecutiveFailures: number | undefined;
     lastFailureAt: number | undefined;
     nextRetryAt: number | undefined;
+    newAccountsAvailableAt: number | undefined;
+    firstErrorAt: number | undefined;
+    lastDispatchedAt: number | undefined;
 } | null>>;
 /**
  * Get all active plaidItems across all users.
@@ -119,13 +131,14 @@ export declare const getItemByPlaidItemId: import("convex/server").RegisteredQue
  */
 export declare const getAllActiveItems: import("convex/server").RegisteredQuery<"public", {}, Promise<{
     _id: string;
+    _creationTime: number;
     userId: string;
     itemId: string;
     institutionId: string | undefined;
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
+    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -141,6 +154,9 @@ export declare const getAllActiveItems: import("convex/server").RegisteredQuery<
     consecutiveFailures: number | undefined;
     lastFailureAt: number | undefined;
     nextRetryAt: number | undefined;
+    newAccountsAvailableAt: number | undefined;
+    firstErrorAt: number | undefined;
+    lastDispatchedAt: number | undefined;
 }[]>>;
 /**
  * Get all accounts for a user.
@@ -533,7 +549,7 @@ export declare const getMerchantEnrichment: import("convex/server").RegisteredQu
     categoryIconUrl: string | undefined;
     website: string | undefined;
     phoneNumber: string | undefined;
-    confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
+    confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
     lastEnriched: number;
 } | null>>;
 /**
@@ -739,7 +755,7 @@ export declare const getSyncLogsByItem: import("convex/server").RegisteredQuery<
     startedAt: number;
     completedAt: number | undefined;
     durationMs: number | undefined;
-    status: "started" | "success" | "error" | "rate_limited" | "circuit_open";
+    status: "error" | "started" | "success" | "rate_limited" | "circuit_open";
     result: {
         transactionsAdded?: number | undefined;
         transactionsModified?: number | undefined;
@@ -773,7 +789,7 @@ export declare const getSyncLogsByUser: import("convex/server").RegisteredQuery<
     startedAt: number;
     completedAt: number | undefined;
     durationMs: number | undefined;
-    status: "started" | "success" | "error" | "rate_limited" | "circuit_open";
+    status: "error" | "started" | "success" | "rate_limited" | "circuit_open";
     result: {
         transactionsAdded?: number | undefined;
         transactionsModified?: number | undefined;
@@ -839,4 +855,25 @@ export declare const getAllInstitutions: import("convex/server").RegisteredQuery
     products: string[] | undefined;
     lastFetched: number;
 }[]>>;
+/**
+ * Get health for a single plaidItem.
+ *
+ * @security Components cannot access ctx.auth. Host apps must verify the caller
+ * owns this item before returning data.
+ */
+export declare const getItemHealth: import("convex/server").RegisteredQuery<"public", {
+    plaidItemId: string;
+}, Promise<import("./health.js").ItemHealth>>;
+/**
+ * Get health for every non-deleting plaidItem owned by userId.
+ *
+ * Filters `status === "deleting"` rows out of the list so the UI does not
+ * render mid-cascade-delete items.
+ *
+ * @security Components cannot access ctx.auth. Host apps must validate userId
+ * before calling this query.
+ */
+export declare const getItemHealthByUser: import("convex/server").RegisteredQuery<"public", {
+    userId: string;
+}, Promise<import("./health.js").ItemHealth[]>>;
 //# sourceMappingURL=public.d.ts.map

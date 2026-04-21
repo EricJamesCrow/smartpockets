@@ -66,6 +66,17 @@ export default defineSchema({
     consecutiveSuccesses: v.optional(v.number()), // Successes in half_open before closing
     lastFailureAt: v.optional(v.number()), // Unix timestamp of last failure
     nextRetryAt: v.optional(v.number()), // When circuit transitions to half_open
+
+    // Flag: Plaid reported new accounts are available at the institution
+    // (ITEM:NEW_ACCOUNTS_AVAILABLE webhook). Cleared on update-mode exchange.
+    newAccountsAvailableAt: v.optional(v.number()),
+
+    // Error-tracking fields for persistent-error email dispatch.
+    // `firstErrorAt` is stamped on transition into error or needs_reauth status
+    // (first-write-wins). `lastDispatchedAt` is stamped by the 6-hour persistent-error
+    // cron on dispatch. Both are cleared on recovery to active status.
+    firstErrorAt: v.optional(v.number()),
+    lastDispatchedAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_item_id", ["itemId"])

@@ -1,25 +1,22 @@
 /**
- * W7 send workflows.
+ * W7 send workflows (workflow.define backed by @convex-dev/workflow).
  *
- * Each template gets a workflow that loads the pending emailEvents row,
- * runs preCheck (suppression + preference), renders the template, builds
- * List-Unsubscribe headers, dispatches via sendResendRaw, and patches
- * status. Anomaly workflow additionally coalesces sibling pending rows
- * within a 15-minute window (leadership check + wait + patch siblings).
+ * Each template is a journaled workflow: load the pending emailEvents
+ * row, run preCheck (suppression + preference), render the template,
+ * build List-Unsubscribe headers, dispatch via sendResendRaw, and
+ * patch status. sendAnomalyAlert additionally coalesces sibling
+ * pending rows within a 15-minute window (leadership check + runAfter
+ * 15 min coalesce step + patch siblings on send).
  *
- * Today these are implemented as internalActions invoked through the
- * workflow shim (../workflow.ts). When W2 lands @convex-dev/workflow,
- * migrate each body to `workflow.define({ handler: async (step, ...) })`
- * with the same step ordering. The step ordering and mutation contracts
- * are stable across the migration.
+ * Step ordering and middleware contracts match contracts §9.2 and
+ * specs/W7-email.md §7-9. All step mutations re-read state so the
+ * at-least-once retry semantics of action steps stay safe.
  */
+import type { WorkflowCtx } from "@convex-dev/workflow";
 import { v } from "convex/values";
-import type { GenericActionCtx } from "convex/server";
 import { internal } from "../_generated/api";
-import type { DataModel, Id } from "../_generated/dataModel";
-import { internalAction } from "../_generated/server";
-
-type WorkflowCtx = GenericActionCtx<DataModel>;
+import type { Id } from "../_generated/dataModel";
+import { workflow } from "./workflow";
 
 type TemplateKey =
   | "welcome-onboarding"
@@ -32,15 +29,16 @@ type TemplateKey =
   | "item-error-persistent";
 
 async function runStandardWorkflow(
-  ctx: WorkflowCtx,
+  step: WorkflowCtx,
   emailEventId: Id<"emailEvents">,
   templateKey: TemplateKey,
   subjectFn: (payload: Record<string, unknown>) => string,
   shouldSendFn?: (payload: Record<string, unknown>) => boolean,
 ): Promise<void> {
-  const row = (await ctx.runQuery(internal.email.queries.getEventInternal, {
-    emailEventId,
-  })) as {
+  const row = (await step.runQuery(
+    internal.email.queries.getEventInternal,
+    { emailEventId },
+  )) as {
     _id: Id<"emailEvents">;
     email: string;
     templateKey: string;
@@ -52,53 +50,52 @@ async function runStandardWorkflow(
 
   if (!row || row.status !== "pending") return;
   if (shouldSendFn && !shouldSendFn(row.payloadJson)) {
-    // Zero-signal skip: patch as sent with synthetic id to close
-    // the lifecycle; caller can filter by source if needed.
-    await ctx.runMutation(internal.email.mutations.patchFailed, {
+    // Zero-signal skip: short-circuit without sending.
+    await step.runMutation(internal.email.mutations.patchFailed, {
       emailEventId,
       errorMessage: "zero-signal",
     });
     return;
   }
 
-  const pre = await ctx.runMutation(internal.email.middleware.preCheck, {
+  const pre = await step.runMutation(internal.email.middleware.preCheck, {
     emailEventId,
   });
   if (pre.skipped) return;
 
-  const html: string = await ctx.runAction(
+  const html = await step.runAction(
     internal.email.templates.renderTemplate,
     { template: templateKey, props: { ...row.payloadJson, theme: "light" } },
   );
 
-  await ctx.runMutation(internal.email.mutations.patchRunning, {
+  await step.runMutation(internal.email.mutations.patchRunning, {
     emailEventId,
     attemptCount: 1,
   });
 
   let headers: Array<{ name: string; value: string }> = [];
   if (row.userId) {
-    headers = await ctx.runMutation(
+    headers = await step.runMutation(
       internal.email.middleware.buildUnsubscribeHeaders,
       { userId: row.userId, templateKey },
     );
   }
 
   try {
-    const result = await ctx.runAction(internal.email.send.sendResendRaw, {
+    const result = await step.runAction(internal.email.send.sendResendRaw, {
       to: row.email,
       subject: subjectFn(row.payloadJson),
       html,
       headers,
     });
-    await ctx.runMutation(internal.email.mutations.patchSent, {
+    await step.runMutation(internal.email.mutations.patchSent, {
       emailEventId,
       resendEmailId: result.emailId,
       mode: result.mode,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await ctx.runMutation(internal.email.mutations.patchFailed, {
+    await step.runMutation(internal.email.mutations.patchFailed, {
       emailEventId,
       errorMessage: message,
     });
@@ -110,16 +107,14 @@ async function runStandardWorkflow(
 // welcome-onboarding
 // ============================================================================
 
-export const sendWelcomeOnboarding = internalAction({
+export const sendWelcomeOnboarding = workflow.define({
   args: { emailEventId: v.id("emailEvents") },
-  returns: v.null(),
-  handler: async (ctx, { emailEventId }) => {
-    await runStandardWorkflow(ctx, emailEventId, "welcome-onboarding", (p) =>
+  handler: async (step, { emailEventId }) => {
+    await runStandardWorkflow(step, emailEventId, "welcome-onboarding", (p) =>
       (p as { variant?: string }).variant === "plaid-linked"
         ? "You're set up. Here is what SmartPockets can do."
         : "Welcome to SmartPockets. Connect a bank to get started.",
     );
-    return null;
   },
 });
 
@@ -127,12 +122,11 @@ export const sendWelcomeOnboarding = internalAction({
 // weekly-digest (with zero-signal skip)
 // ============================================================================
 
-export const sendWeeklyDigest = internalAction({
+export const sendWeeklyDigest = workflow.define({
   args: { emailEventId: v.id("emailEvents") },
-  returns: v.null(),
-  handler: async (ctx, { emailEventId }) => {
+  handler: async (step, { emailEventId }) => {
     await runStandardWorkflow(
-      ctx,
+      step,
       emailEventId,
       "weekly-digest",
       (p) => {
@@ -157,7 +151,6 @@ export const sendWeeklyDigest = internalAction({
         );
       },
     );
-    return null;
   },
 });
 
@@ -165,26 +158,25 @@ export const sendWeeklyDigest = internalAction({
 // promo-warning
 // ============================================================================
 
-export const sendPromoWarning = internalAction({
+export const sendPromoWarning = workflow.define({
   args: { emailEventId: v.id("emailEvents") },
-  returns: v.null(),
-  handler: async (ctx, { emailEventId }) => {
-    await runStandardWorkflow(ctx, emailEventId, "promo-warning", (p) => {
+  handler: async (step, { emailEventId }) => {
+    await runStandardWorkflow(step, emailEventId, "promo-warning", (p) => {
       const promos = (p as { promos?: Array<{ cardName: string }> }).promos ?? [];
       const cadence = (p as { cadence?: number }).cadence ?? 30;
       const n = promos.length;
+      const firstCard = promos[0]?.cardName ?? "your card";
       if (n === 1) {
         if (cadence === 1) {
-          return `Tomorrow: pay ${promos[0].cardName} to avoid retroactive interest`;
+          return `Tomorrow: pay ${firstCard} to avoid retroactive interest`;
         }
-        return `Your ${promos[0].cardName} deferred interest promo expires in ${cadence} days`;
+        return `Your ${firstCard} deferred interest promo expires in ${cadence} days`;
       }
       if (cadence === 1) return `Tomorrow: ${n} deferred interest promos expire`;
-      if (cadence === 7) return `Final week: ${promos[0].cardName} (plus ${n - 1} more)`;
-      if (cadence === 14) return `14 days left: ${promos[0].cardName} (plus ${n - 1} more)`;
+      if (cadence === 7) return `Final week: ${firstCard} (plus ${n - 1} more)`;
+      if (cadence === 14) return `14 days left: ${firstCard} (plus ${n - 1} more)`;
       return `${n} of your deferred interest promos expire within 30 days`;
     });
-    return null;
   },
 });
 
@@ -192,94 +184,80 @@ export const sendPromoWarning = internalAction({
 // statement-closing
 // ============================================================================
 
-export const sendStatementReminder = internalAction({
+export const sendStatementReminder = workflow.define({
   args: { emailEventId: v.id("emailEvents") },
-  returns: v.null(),
-  handler: async (ctx, { emailEventId }) => {
-    await runStandardWorkflow(ctx, emailEventId, "statement-closing", (p) => {
+  handler: async (step, { emailEventId }) => {
+    await runStandardWorkflow(step, emailEventId, "statement-closing", (p) => {
       const statements = (p as { statements?: Array<{ cardName: string }> })
         .statements ?? [];
       const cadence = (p as { cadence?: number }).cadence ?? 3;
       const n = statements.length;
+      const firstCard = statements[0]?.cardName ?? "your card";
       if (n === 1) {
         return cadence === 1
-          ? `${statements[0].cardName} statement closes tomorrow`
-          : `${statements[0].cardName} statement closes in ${cadence} days`;
+          ? `${firstCard} statement closes tomorrow`
+          : `${firstCard} statement closes in ${cadence} days`;
       }
       return cadence === 1
         ? `${n} statements close tomorrow`
         : `${n} statements close in the next ${cadence} days`;
     });
-    return null;
   },
 });
 
 // ============================================================================
-// anomaly-alert (coalesce path; 15-min window)
+// anomaly-alert (leadership + journaled 15-min coalesce)
 // ============================================================================
 //
-// Split into two actions so the 15-minute wait runs as a scheduled
-// step instead of blocking a live action. This mirrors the real
-// workflow component's journaled waitForMoreAnomaliesStep (contracts
-// §9.2): step 0 is the leadership check + schedule, step 1
-// (runAfter 15 min) is the coalesce + send.
+// One workflow, two step phases:
+//   1. anomalyLeadershipCheck: only the oldest pending row proceeds.
+//   2. anomalyCoalesce scheduled `{ runAfter: 15 min }`: the step is
+//      journaled; the workflow yields for 15 minutes and Convex
+//      re-enters the handler on the scheduled time. Platform runtime
+//      limits do not apply to the intervening wall time.
+//   3. preCheck + render + send + patch coalesced siblings.
 
 const ANOMALY_WINDOW_MS = 15 * 60 * 1000;
 
-export const sendAnomalyAlert = internalAction({
+export const sendAnomalyAlert = workflow.define({
   args: { emailEventId: v.id("emailEvents") },
-  returns: v.null(),
-  handler: async (ctx, { emailEventId }) => {
-    const leadership = await ctx.runMutation(
+  handler: async (step, { emailEventId }) => {
+    const leadership = await step.runMutation(
       internal.email.middleware.anomalyLeadershipCheck,
       { emailEventId },
     );
-    if (!leadership.isLeader) return null;
+    if (!leadership.isLeader) return;
 
-    // Defer the coalesce body to a scheduled step after the window.
-    // Running on the scheduler lets the action return immediately
-    // and stays within Convex action runtime limits; on restart the
-    // scheduler redelivers at-least-once and runAnomalyCoalesce is
-    // idempotent by design (re-reads row status, leadership respects
-    // completed peers).
-    await ctx.scheduler.runAfter(
-      ANOMALY_WINDOW_MS,
-      internal.email.workflows.runAnomalyCoalesce,
-      { emailEventId },
-    );
-    return null;
-  },
-});
-
-export const runAnomalyCoalesce = internalAction({
-  args: { emailEventId: v.id("emailEvents") },
-  returns: v.null(),
-  handler: async (ctx, { emailEventId }) => {
-    const coalesced = await ctx.runMutation(
+    // Journaled 15-minute wait: anomalyCoalesce runs on the workflow
+    // engine's scheduled-step surface, not in a held-open action.
+    const coalesced = await step.runMutation(
       internal.email.middleware.anomalyCoalesce,
       { leaderId: emailEventId, windowMs: ANOMALY_WINDOW_MS },
+      { runAfter: ANOMALY_WINDOW_MS },
     );
 
-    const pre = await ctx.runMutation(internal.email.middleware.preCheck, {
-      emailEventId,
-    });
+    const pre = await step.runMutation(
+      internal.email.middleware.preCheck,
+      { emailEventId },
+    );
     if (pre.skipped) {
-      await ctx.runMutation(
+      await step.runMutation(
         internal.email.middleware.patchSiblingsSkipped,
         {
           siblingIds: coalesced.siblingIds,
           reason: pre.reason ?? "preference",
         },
       );
-      return null;
+      return;
     }
 
-    const row = (await ctx.runQuery(internal.email.queries.getEventInternal, {
-      emailEventId,
-    })) as { email: string; payloadJson: Record<string, unknown> } | null;
-    if (!row) return null;
+    const row = (await step.runQuery(
+      internal.email.queries.getEventInternal,
+      { emailEventId },
+    )) as { email: string; payloadJson: Record<string, unknown> } | null;
+    if (!row) return;
 
-    const html: string = await ctx.runAction(
+    const html = await step.runAction(
       internal.email.templates.renderTemplate,
       {
         template: "anomaly-alert",
@@ -287,12 +265,15 @@ export const runAnomalyCoalesce = internalAction({
       },
     );
 
-    await ctx.runMutation(internal.email.middleware.patchCoalescedRunning, {
-      leaderId: emailEventId,
-      siblingIds: coalesced.siblingIds,
-    });
+    await step.runMutation(
+      internal.email.middleware.patchCoalescedRunning,
+      {
+        leaderId: emailEventId,
+        siblingIds: coalesced.siblingIds,
+      },
+    );
 
-    const headers = await ctx.runMutation(
+    const headers = await step.runMutation(
       internal.email.middleware.buildUnsubscribeHeaders,
       { userId: coalesced.userId, templateKey: "anomaly-alert" },
     );
@@ -303,20 +284,22 @@ export const runAnomalyCoalesce = internalAction({
         ? "Unusual transaction detected"
         : `${count} unusual transactions detected`;
 
-    const result = await ctx.runAction(internal.email.send.sendResendRaw, {
+    const result = await step.runAction(internal.email.send.sendResendRaw, {
       to: row.email,
       subject,
       html,
       headers,
     });
 
-    await ctx.runMutation(internal.email.middleware.patchCoalescedSent, {
-      leaderId: emailEventId,
-      siblingIds: coalesced.siblingIds,
-      resendEmailId: result.emailId,
-      mode: result.mode,
-    });
-    return null;
+    await step.runMutation(
+      internal.email.middleware.patchCoalescedSent,
+      {
+        leaderId: emailEventId,
+        siblingIds: coalesced.siblingIds,
+        resendEmailId: result.emailId,
+        mode: result.mode,
+      },
+    );
   },
 });
 
@@ -324,18 +307,17 @@ export const runAnomalyCoalesce = internalAction({
 // subscription-detected
 // ============================================================================
 
-export const sendSubscriptionDigest = internalAction({
+export const sendSubscriptionDigest = workflow.define({
   args: { emailEventId: v.id("emailEvents") },
-  returns: v.null(),
-  handler: async (ctx, { emailEventId }) => {
-    await runStandardWorkflow(ctx, emailEventId, "subscription-detected", (p) => {
+  handler: async (step, { emailEventId }) => {
+    await runStandardWorkflow(step, emailEventId, "subscription-detected", (p) => {
       const detected = (p as { detected?: Array<{ normalizedMerchant: string }> })
         .detected ?? [];
+      const firstMerchant = detected[0]?.normalizedMerchant ?? "a merchant";
       return detected.length === 1
-        ? `We found a possible subscription: ${detected[0].normalizedMerchant}`
+        ? `We found a possible subscription: ${firstMerchant}`
         : `${detected.length} possible subscriptions detected`;
     });
-    return null;
   },
 });
 
@@ -343,17 +325,15 @@ export const sendSubscriptionDigest = internalAction({
 // reconsent-required (essential)
 // ============================================================================
 
-export const sendReconsentRequired = internalAction({
+export const sendReconsentRequired = workflow.define({
   args: { emailEventId: v.id("emailEvents") },
-  returns: v.null(),
-  handler: async (ctx, { emailEventId }) => {
-    await runStandardWorkflow(ctx, emailEventId, "reconsent-required", (p) => {
+  handler: async (step, { emailEventId }) => {
+    await runStandardWorkflow(step, emailEventId, "reconsent-required", (p) => {
       const r = p as { institutionName?: string; reason?: string };
       return r.reason === "PENDING_EXPIRATION"
         ? `${r.institutionName ?? "Your bank"} will disconnect soon`
         : `Action needed: reconnect your ${r.institutionName ?? "bank"} account`;
     });
-    return null;
   },
 });
 
@@ -361,14 +341,12 @@ export const sendReconsentRequired = internalAction({
 // item-error-persistent (essential)
 // ============================================================================
 
-export const sendItemErrorPersistent = internalAction({
+export const sendItemErrorPersistent = workflow.define({
   args: { emailEventId: v.id("emailEvents") },
-  returns: v.null(),
-  handler: async (ctx, { emailEventId }) => {
-    await runStandardWorkflow(ctx, emailEventId, "item-error-persistent", (p) => {
+  handler: async (step, { emailEventId }) => {
+    await runStandardWorkflow(step, emailEventId, "item-error-persistent", (p) => {
       const r = p as { institutionName?: string };
       return `We cannot reach your ${r.institutionName ?? "bank"} account`;
     });
-    return null;
   },
 });

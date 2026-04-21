@@ -501,6 +501,13 @@ export const completeSyncWithVersion = internalMutation({
 /**
  * Release sync lock on error without updating cursor.
  * Uses O(1) lookup via ctx.db.normalizeId() + ctx.db.get().
+ *
+ * W4: when transitioning into an error-class status ("error" or
+ * "needs_reauth"), stamp the error-tracking fields the 6-hour persistent-
+ * error cron filters on: `firstErrorAt` (monotonic; first-write-wins),
+ * `errorAt = now`, and `errorCode` (from the optional arg, falling back
+ * to a "SYNC_ERROR" sentinel so the cron can still emit a best-effort
+ * dispatch with a visible label).
  */
 export const releaseSyncLock = internalMutation({
   args: {
@@ -508,6 +515,7 @@ export const releaseSyncLock = internalMutation({
     syncVersion: v.number(),
     status: v.string(),
     syncError: v.optional(v.string()),
+    errorCode: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -520,11 +528,22 @@ export const releaseSyncLock = internalMutation({
       if (item.status === "deleting") {
         return null;
       }
-      await ctx.db.patch(item._id, {
+
+      const patch: Record<string, unknown> = {
         status: args.status as any,
         syncError: args.syncError,
         syncStartedAt: undefined,
-      });
+      };
+
+      if (args.status === "error" || args.status === "needs_reauth") {
+        const now = Date.now();
+        if (item.firstErrorAt == null) patch.firstErrorAt = now;
+        patch.errorAt = now;
+        patch.errorCode = args.errorCode ?? "SYNC_ERROR";
+        if (args.syncError != null) patch.errorMessage = args.syncError;
+      }
+
+      await ctx.db.patch(item._id, patch);
     }
 
     return null;
@@ -2503,5 +2522,137 @@ export const upsertInstitution = internalMutation({
     );
 
     return result.id;
+  },
+});
+
+// =============================================================================
+// W4: NEW ACCOUNTS AVAILABLE + ERROR TRACKING MUTATIONS
+// =============================================================================
+
+/**
+ * Stamp plaidItems.newAccountsAvailableAt with the current timestamp.
+ * Called by the ITEM:NEW_ACCOUNTS_AVAILABLE webhook handler.
+ * Idempotent: writing the timestamp twice has no functional effect.
+ */
+export const setNewAccountsAvailableInternal = internalMutation({
+  args: { plaidItemId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const item = await getPlaidItemById(ctx, args.plaidItemId);
+    if (!item) return null;
+    await ctx.db.patch(item._id, { newAccountsAvailableAt: Date.now() });
+    return null;
+  },
+});
+
+/**
+ * Clear plaidItems.newAccountsAvailableAt.
+ * Called exactly once per flow: after a successful update-mode exchangePublicToken
+ * for an existing plaidItemId.
+ */
+export const clearNewAccountsAvailableInternal = internalMutation({
+  args: { plaidItemId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const item = await getPlaidItemById(ctx, args.plaidItemId);
+    if (!item) return null;
+    await ctx.db.patch(item._id, { newAccountsAvailableAt: undefined });
+    return null;
+  },
+});
+
+/**
+ * Stamp plaidItems.firstErrorAt if not already set (first-write-wins).
+ * Called before the status patch on transition into error or needs_reauth.
+ * Keeps the error-transition clock monotonic across repeated error observations.
+ */
+export const markFirstErrorAtInternal = internalMutation({
+  args: { plaidItemId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const item = await getPlaidItemById(ctx, args.plaidItemId);
+    if (!item) return null;
+    if (item.firstErrorAt == null) {
+      await ctx.db.patch(item._id, { firstErrorAt: Date.now() });
+    }
+    return null;
+  },
+});
+
+/**
+ * Clear plaidItems.firstErrorAt and plaidItems.lastDispatchedAt.
+ * Called on transition from error-class status back to active via
+ * completeReauthAction or a successful sync.
+ */
+export const clearErrorTrackingInternal = internalMutation({
+  args: { plaidItemId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const item = await getPlaidItemById(ctx, args.plaidItemId);
+    if (!item) return null;
+    await ctx.db.patch(item._id, {
+      firstErrorAt: undefined,
+      lastDispatchedAt: undefined,
+    });
+    return null;
+  },
+});
+
+/**
+ * Stamp plaidItems.lastDispatchedAt.
+ * Called by the 6-hour persistent-error cron immediately after scheduling
+ * dispatchItemErrorPersistent. Used as the cron's dedup filter.
+ */
+export const markItemErrorDispatchedInternal = internalMutation({
+  args: { plaidItemId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const item = await getPlaidItemById(ctx, args.plaidItemId);
+    if (!item) return null;
+    await ctx.db.patch(item._id, { lastDispatchedAt: Date.now() });
+    return null;
+  },
+});
+
+/**
+ * List plaidItems in error status that:
+ *   - have lastSyncedAt older than olderThanLastSyncedAt (or undefined)
+ *   - have lastDispatchedAt older than dispatchedBefore (or undefined)
+ *
+ * Used by the host-app 6-hour persistent-error cron per W4 spec §8.2.
+ * Returns a subset payload (not the full plaidItem doc) to cap component-
+ * boundary surface area.
+ */
+export const listErrorItemsInternal = internalQuery({
+  args: {
+    olderThanLastSyncedAt: v.number(),
+    dispatchedBefore: v.number(),
+  },
+  returns: v.array(
+    v.object({
+      plaidItemId: v.string(),
+      userId: v.string(),
+      institutionName: v.union(v.string(), v.null()),
+      firstErrorAt: v.union(v.number(), v.null()),
+      errorAt: v.union(v.number(), v.null()),
+      errorCode: v.union(v.string(), v.null()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const items = await ctx.db
+      .query("plaidItems")
+      .withIndex("by_status", (q) => q.eq("status", "error"))
+      .collect();
+    return items
+      .filter((i) => (i.lastSyncedAt ?? 0) < args.olderThanLastSyncedAt)
+      .filter((i) => (i.lastDispatchedAt ?? 0) < args.dispatchedBefore)
+      .map((i) => ({
+        plaidItemId: String(i._id),
+        userId: i.userId,
+        institutionName: i.institutionName ?? null,
+        firstErrorAt: i.firstErrorAt ?? null,
+        errorAt: i.errorAt ?? null,
+        errorCode: i.errorCode ?? null,
+      }));
   },
 });

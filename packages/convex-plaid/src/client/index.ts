@@ -147,6 +147,12 @@ export type PlaidComponent = Pick<ComponentApi, "actions" | "public">;
  */
 export type { ComponentApi };
 
+// W4: reason-code taxonomy re-exported at the package boundary so host apps
+// can import via `@crowdevelopment/convex-plaid`.
+export type { ReasonCode } from "../component/reasonCode.js";
+export { mapErrorCodeToReason } from "../component/reasonCode.js";
+export type { ItemHealth } from "../component/health.js";
+
 export type {
   PlaidConfig,
   RegisterRoutesConfig,
@@ -478,10 +484,15 @@ export class Plaid {
     ctx: ActionCtx,
     args: {
       plaidItemId: string;
+      // "reauth" (default) opens update mode for expired credentials.
+      // "account_select" opens update mode with account-selection enabled,
+      // used when the institution reports new accounts are available.
+      mode?: "reauth" | "account_select";
     }
   ): Promise<CreateUpdateLinkTokenResult> {
     return await ctx.runAction(this.component.actions.createUpdateLinkToken, {
       plaidItemId: args.plaidItemId,
+      mode: args.mode,
       plaidClientId: this.config.PLAID_CLIENT_ID,
       plaidSecret: this.config.PLAID_SECRET,
       plaidEnv: this.config.PLAID_ENV,

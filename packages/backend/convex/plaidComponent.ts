@@ -14,6 +14,7 @@
  */
 
 import { action, query, mutation, internalAction, internalMutation } from "./_generated/server";
+import { query as viewerQuery } from "./functions";
 import { v } from "convex/values";
 import { Plaid } from "@crowdevelopment/convex-plaid";
 import { components } from "./_generated/api";
@@ -76,6 +77,12 @@ export const createLinkTokenAction = action({
 
 /**
  * Exchange public token for access token and create plaidItem.
+ *
+ * Thin wrapper. The real onboarding path that UI calls is
+ * `onboardNewConnectionAction` below, which performs the W4 welcome-
+ * onboarding dispatch + any update-mode `newAccountsAvailableAt` clearing.
+ * This entry point is kept for alternate callers that exchange a token
+ * without running the full onboard chain.
  */
 export const exchangePublicTokenAction = action({
   args: {
@@ -162,6 +169,13 @@ export const fetchLiabilitiesAction = action({
 export const createUpdateLinkTokenAction = action({
   args: {
     plaidItemId: v.string(),
+    // W4: "reauth" (default) opens update mode for expired credentials.
+    // "account_select" opens update mode with account-selection enabled,
+    // used by the NEW_ACCOUNTS_AVAILABLE flow so the user can add newly-
+    // available accounts at the institution.
+    mode: v.optional(
+      v.union(v.literal("reauth"), v.literal("account_select"))
+    ),
   },
   returns: v.object({
     linkToken: v.string(),
@@ -173,6 +187,12 @@ export const createUpdateLinkTokenAction = action({
 
 /**
  * Complete re-authentication after user has gone through update Link flow.
+ *
+ * W4 additions:
+ * - Clears error-tracking fields (firstErrorAt, lastDispatchedAt) on
+ *   successful recovery so subsequent error transitions start fresh.
+ * - Clears `newAccountsAvailableAt` (update-mode Link with mode="account_select"
+ *   completes via this action, not exchangePublicToken).
  */
 export const completeReauthAction = action({
   args: {
@@ -182,7 +202,16 @@ export const completeReauthAction = action({
     success: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    return await getPlaid().completeReauth(ctx, args);
+    const result = await getPlaid().completeReauth(ctx, args);
+    await ctx.runMutation(
+      components.plaid.private.clearErrorTrackingInternal,
+      { plaidItemId: args.plaidItemId },
+    );
+    await ctx.runMutation(
+      components.plaid.private.clearNewAccountsAvailableInternal,
+      { plaidItemId: args.plaidItemId },
+    );
+    return result;
   },
 });
 
@@ -266,6 +295,42 @@ export const onboardNewConnectionAction = action({
       });
 
       const { plaidItemId, itemId } = exchangeResult;
+
+      // W4: welcome-onboarding trigger per contracts §13 (moved here from
+      // exchangePublicTokenAction because onboardNewConnectionAction is the
+      // actual path the host app uses). First-link detection: the newly-
+      // created item's _creationTime is within the last 60s AND priorLinkCount
+      // (which includes the just-created item) === 1.
+      try {
+        const newItem = await ctx.runQuery(components.plaid.public.getItem, {
+          plaidItemId,
+        });
+        const priorLinkCount = await ctx.runQuery(
+          internal.users.countActivePlaidItems,
+          { userId: args.userId },
+        );
+        const isFirstLinkEver =
+          priorLinkCount === 1 &&
+          newItem != null &&
+          Date.now() - newItem._creationTime < 60_000;
+        if (isFirstLinkEver) {
+          const institutionName = newItem.institutionName ?? "your bank";
+          await ctx.scheduler.runAfter(
+            0,
+            internal.email.dispatch.dispatchWelcomeOnboarding,
+            {
+              userId: args.userId,
+              variant: "plaid-linked",
+              firstLinkedInstitutionName: institutionName,
+            },
+          );
+        }
+      } catch (error) {
+        console.error(
+          "[onboardNewConnectionAction] welcome dispatch check failed:",
+          error,
+        );
+      }
 
       // Step 2: Fetch accounts
       console.log("📍 Step 2/4.5: Fetch accounts");
@@ -762,6 +827,100 @@ export const getLiabilitiesByUserId = query({
       components.plaid.public.getLiabilitiesByUser,
       { userId: args.userId }
     );
+  },
+});
+
+// =============================================================================
+// W4: ITEM HEALTH QUERIES (auth-scoped wrappers)
+// =============================================================================
+
+const itemHealthValidator = v.object({
+  plaidItemId: v.string(),
+  itemId: v.string(),
+  state: v.union(
+    v.literal("syncing"),
+    v.literal("ready"),
+    v.literal("error"),
+    v.literal("re-consent-required"),
+  ),
+  recommendedAction: v.union(
+    v.literal("reconnect"),
+    v.literal("reconnect_for_new_accounts"),
+    v.literal("wait"),
+    v.literal("contact_support"),
+    v.null(),
+  ),
+  reasonCode: v.union(
+    v.literal("healthy"),
+    v.literal("syncing_initial"),
+    v.literal("syncing_incremental"),
+    v.literal("auth_required_login"),
+    v.literal("auth_required_expiration"),
+    v.literal("transient_circuit_open"),
+    v.literal("transient_institution_down"),
+    v.literal("transient_rate_limited"),
+    v.literal("permanent_invalid_token"),
+    v.literal("permanent_item_not_found"),
+    v.literal("permanent_no_accounts"),
+    v.literal("permanent_access_not_granted"),
+    v.literal("permanent_products_not_supported"),
+    v.literal("permanent_institution_unsupported"),
+    v.literal("permanent_revoked"),
+    v.literal("permanent_unknown"),
+    v.literal("new_accounts_available"),
+  ),
+  isActive: v.boolean(),
+  institutionId: v.union(v.string(), v.null()),
+  institutionName: v.union(v.string(), v.null()),
+  institutionLogoBase64: v.union(v.string(), v.null()),
+  institutionPrimaryColor: v.union(v.string(), v.null()),
+  lastSyncedAt: v.union(v.number(), v.null()),
+  lastWebhookAt: v.union(v.number(), v.null()),
+  errorCode: v.union(v.string(), v.null()),
+  errorMessage: v.union(v.string(), v.null()),
+  circuitState: v.union(
+    v.literal("closed"),
+    v.literal("open"),
+    v.literal("half_open"),
+  ),
+  consecutiveFailures: v.number(),
+  nextRetryAt: v.union(v.number(), v.null()),
+  newAccountsAvailableAt: v.union(v.number(), v.null()),
+});
+
+/**
+ * Get health for a single Plaid item owned by the viewer.
+ * Throws if the item is not owned by the authenticated user.
+ */
+export const getPlaidItemHealth = viewerQuery({
+  args: { plaidItemId: v.string() },
+  returns: itemHealthValidator,
+  handler: async (ctx, { plaidItemId }) => {
+    const viewer = ctx.viewerX();
+    const item = await ctx.runQuery(components.plaid.public.getItem, {
+      plaidItemId,
+    });
+    if (!item || item.userId !== viewer.externalId) {
+      throw new Error("Plaid item not found or unauthorized");
+    }
+    return await ctx.runQuery(components.plaid.public.getItemHealth, {
+      plaidItemId,
+    });
+  },
+});
+
+/**
+ * Get health for every non-deleting Plaid item owned by the viewer.
+ * Filters status=deleting rows out of the list automatically.
+ */
+export const getPlaidItemHealthByUser = viewerQuery({
+  args: {},
+  returns: v.array(itemHealthValidator),
+  handler: async (ctx) => {
+    const viewer = ctx.viewerX();
+    return await ctx.runQuery(components.plaid.public.getItemHealthByUser, {
+      userId: viewer.externalId,
+    });
   },
 });
 

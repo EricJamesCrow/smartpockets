@@ -71,6 +71,7 @@ function validatePlaidConfig(config) {
         throw new PlaidConfigError(`ENCRYPTION_KEY is not valid base64: ${e instanceof Error ? e.message : String(e)}`);
     }
 }
+export { mapErrorCodeToReason } from "../component/reasonCode.js";
 // =============================================================================
 // PLAID CLIENT CLASS
 // =============================================================================
@@ -285,6 +286,7 @@ export class Plaid {
     async createUpdateLinkToken(ctx, args) {
         return await ctx.runAction(this.component.actions.createUpdateLinkToken, {
             plaidItemId: args.plaidItemId,
+            mode: args.mode,
             plaidClientId: this.config.PLAID_CLIENT_ID,
             plaidSecret: this.config.PLAID_SECRET,
             plaidEnv: this.config.PLAID_ENV,

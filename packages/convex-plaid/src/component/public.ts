@@ -35,10 +35,16 @@ const aprValidator = v.object({
 // =============================================================================
 
 /**
- * Validator for plaidItem return type (excludes accessToken for security)
+ * Validator for plaidItem return type (excludes accessToken for security).
+ *
+ * W4 additions: `_creationTime` (Convex system field; used by the host-app
+ * first-link-ever welcome-dispatch trigger), `newAccountsAvailableAt` (used
+ * by update-mode Link clearing + UI banner), `firstErrorAt` /
+ * `lastDispatchedAt` (used by the 6-hour persistent-error cron).
  */
 const plaidItemReturnValidator = v.object({
   _id: v.string(),
+  _creationTime: v.number(),
   userId: v.string(),
   itemId: v.string(),
   institutionId: v.optional(v.string()),
@@ -65,6 +71,10 @@ const plaidItemReturnValidator = v.object({
   consecutiveFailures: v.optional(v.number()),
   lastFailureAt: v.optional(v.number()),
   nextRetryAt: v.optional(v.number()),
+  // W4: new-accounts + error-tracking flags
+  newAccountsAvailableAt: v.optional(v.number()),
+  firstErrorAt: v.optional(v.number()),
+  lastDispatchedAt: v.optional(v.number()),
 });
 
 /**
@@ -86,6 +96,7 @@ export const getItemsByUser = query({
     // Explicitly map fields to avoid complex type inference
     return items.map((item) => ({
       _id: String(item._id),
+      _creationTime: item._creationTime,
       userId: item.userId,
       itemId: item.itemId,
       institutionId: item.institutionId,
@@ -108,6 +119,9 @@ export const getItemsByUser = query({
       consecutiveFailures: item.consecutiveFailures,
       lastFailureAt: item.lastFailureAt,
       nextRetryAt: item.nextRetryAt,
+      newAccountsAvailableAt: item.newAccountsAvailableAt,
+      firstErrorAt: item.firstErrorAt,
+      lastDispatchedAt: item.lastDispatchedAt,
     }));
   },
 });
@@ -132,6 +146,7 @@ export const getItem = query({
     // Explicitly return fields to avoid complex type inference
     return {
       _id: String(item._id),
+      _creationTime: item._creationTime,
       userId: item.userId,
       itemId: item.itemId,
       institutionId: item.institutionId,
@@ -154,6 +169,9 @@ export const getItem = query({
       consecutiveFailures: item.consecutiveFailures,
       lastFailureAt: item.lastFailureAt,
       nextRetryAt: item.nextRetryAt,
+      newAccountsAvailableAt: item.newAccountsAvailableAt,
+      firstErrorAt: item.firstErrorAt,
+      lastDispatchedAt: item.lastDispatchedAt,
     };
   },
 });
@@ -179,6 +197,7 @@ export const getItemByPlaidItemId = query({
 
     return {
       _id: String(item._id),
+      _creationTime: item._creationTime,
       userId: item.userId,
       itemId: item.itemId,
       institutionId: item.institutionId,
@@ -201,6 +220,9 @@ export const getItemByPlaidItemId = query({
       consecutiveFailures: item.consecutiveFailures,
       lastFailureAt: item.lastFailureAt,
       nextRetryAt: item.nextRetryAt,
+      newAccountsAvailableAt: item.newAccountsAvailableAt,
+      firstErrorAt: item.firstErrorAt,
+      lastDispatchedAt: item.lastDispatchedAt,
     };
   },
 });
@@ -227,6 +249,7 @@ export const getAllActiveItems = query({
     // Explicitly map fields to avoid complex type inference
     return activeItems.map((item) => ({
       _id: String(item._id),
+      _creationTime: item._creationTime,
       userId: item.userId,
       itemId: item.itemId,
       institutionId: item.institutionId,
@@ -249,6 +272,9 @@ export const getAllActiveItems = query({
       consecutiveFailures: item.consecutiveFailures,
       lastFailureAt: item.lastFailureAt,
       nextRetryAt: item.nextRetryAt,
+      newAccountsAvailableAt: item.newAccountsAvailableAt,
+      firstErrorAt: item.firstErrorAt,
+      lastDispatchedAt: item.lastDispatchedAt,
     }));
   },
 });
@@ -1631,5 +1657,174 @@ export const getAllInstitutions = query({
       products: inst.products,
       lastFetched: inst.lastFetched,
     }));
+  },
+});
+
+// =============================================================================
+// W4: ITEM HEALTH
+// =============================================================================
+
+import { derive, type InstitutionSnapshot } from "./health.js";
+import type { QueryCtx } from "./_generated/server.js";
+
+const reasonCodeValidator = v.union(
+  v.literal("healthy"),
+  v.literal("syncing_initial"),
+  v.literal("syncing_incremental"),
+  v.literal("auth_required_login"),
+  v.literal("auth_required_expiration"),
+  v.literal("transient_circuit_open"),
+  v.literal("transient_institution_down"),
+  v.literal("transient_rate_limited"),
+  v.literal("permanent_invalid_token"),
+  v.literal("permanent_item_not_found"),
+  v.literal("permanent_no_accounts"),
+  v.literal("permanent_access_not_granted"),
+  v.literal("permanent_products_not_supported"),
+  v.literal("permanent_institution_unsupported"),
+  v.literal("permanent_revoked"),
+  v.literal("permanent_unknown"),
+  v.literal("new_accounts_available"),
+);
+
+const itemHealthValidator = v.object({
+  plaidItemId: v.string(),
+  itemId: v.string(),
+  state: v.union(
+    v.literal("syncing"),
+    v.literal("ready"),
+    v.literal("error"),
+    v.literal("re-consent-required"),
+  ),
+  recommendedAction: v.union(
+    v.literal("reconnect"),
+    v.literal("reconnect_for_new_accounts"),
+    v.literal("wait"),
+    v.literal("contact_support"),
+    v.null(),
+  ),
+  reasonCode: reasonCodeValidator,
+  isActive: v.boolean(),
+  institutionId: v.union(v.string(), v.null()),
+  institutionName: v.union(v.string(), v.null()),
+  institutionLogoBase64: v.union(v.string(), v.null()),
+  institutionPrimaryColor: v.union(v.string(), v.null()),
+  lastSyncedAt: v.union(v.number(), v.null()),
+  lastWebhookAt: v.union(v.number(), v.null()),
+  errorCode: v.union(v.string(), v.null()),
+  errorMessage: v.union(v.string(), v.null()),
+  circuitState: v.union(
+    v.literal("closed"),
+    v.literal("open"),
+    v.literal("half_open"),
+  ),
+  consecutiveFailures: v.number(),
+  nextRetryAt: v.union(v.number(), v.null()),
+  newAccountsAvailableAt: v.union(v.number(), v.null()),
+});
+
+async function getInstitutionSnapshot(
+  ctx: QueryCtx,
+  institutionId: string | undefined,
+): Promise<InstitutionSnapshot> {
+  if (!institutionId) {
+    return {
+      institutionId: null,
+      institutionName: null,
+      institutionLogoBase64: null,
+      institutionPrimaryColor: null,
+    };
+  }
+  const inst = await ctx.db
+    .query("plaidInstitutions")
+    .withIndex("by_institution_id", (q) =>
+      q.eq("institutionId", institutionId),
+    )
+    .first();
+  if (!inst) {
+    return {
+      institutionId,
+      institutionName: null,
+      institutionLogoBase64: null,
+      institutionPrimaryColor: null,
+    };
+  }
+  return {
+    institutionId: inst.institutionId,
+    institutionName: inst.name ?? null,
+    institutionLogoBase64: inst.logo ?? null,
+    institutionPrimaryColor: inst.primaryColor ?? null,
+  };
+}
+
+async function getLastWebhookAt(
+  ctx: QueryCtx,
+  itemId: string,
+): Promise<number | null> {
+  const log = await ctx.db
+    .query("webhookLogs")
+    .withIndex("by_item", (q) => q.eq("itemId", itemId))
+    .order("desc")
+    .first();
+  return log?.receivedAt ?? null;
+}
+
+/**
+ * Get health for a single plaidItem.
+ *
+ * @security Components cannot access ctx.auth. Host apps must verify the caller
+ * owns this item before returning data.
+ */
+export const getItemHealth = query({
+  args: { plaidItemId: v.string() },
+  returns: itemHealthValidator,
+  handler: async (ctx, args) => {
+    const normalizedId = ctx.db.normalizeId("plaidItems", args.plaidItemId);
+    if (!normalizedId) {
+      throw new Error(`Plaid item not found: ${args.plaidItemId}`);
+    }
+    const item = await ctx.db.get(normalizedId);
+    if (!item) {
+      throw new Error(`Plaid item not found: ${args.plaidItemId}`);
+    }
+    const institution = await getInstitutionSnapshot(ctx, item.institutionId);
+    const lastWebhookAt = await getLastWebhookAt(ctx, item.itemId);
+    return derive(
+      { ...item, _id: String(item._id) },
+      institution,
+      lastWebhookAt,
+    );
+  },
+});
+
+/**
+ * Get health for every non-deleting plaidItem owned by userId.
+ *
+ * Filters `status === "deleting"` rows out of the list so the UI does not
+ * render mid-cascade-delete items.
+ *
+ * @security Components cannot access ctx.auth. Host apps must validate userId
+ * before calling this query.
+ */
+export const getItemHealthByUser = query({
+  args: { userId: v.string() },
+  returns: v.array(itemHealthValidator),
+  handler: async (ctx, args) => {
+    const items = await ctx.db
+      .query("plaidItems")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    const visible = items.filter((i) => i.status !== "deleting");
+    return await Promise.all(
+      visible.map(async (item) => {
+        const institution = await getInstitutionSnapshot(ctx, item.institutionId);
+        const lastWebhookAt = await getLastWebhookAt(ctx, item.itemId);
+        return derive(
+          { ...item, _id: String(item._id) },
+          institution,
+          lastWebhookAt,
+        );
+      }),
+    );
   },
 });

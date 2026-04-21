@@ -1,0 +1,12 @@
+{
+  "body": {
+    "webhook_type": "TRANSACTIONS",
+    "webhook_code": "SYNC_UPDATES_AVAILABLE",
+    "item_id": "test_item_id_placeholder",
+    "initial_update_complete": true,
+    "historical_update_complete": true,
+    "error": null
+  },
+  "jwt": null,
+  "bypassSignature": true
+}

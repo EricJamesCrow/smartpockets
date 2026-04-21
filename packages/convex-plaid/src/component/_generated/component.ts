@@ -53,6 +53,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         {
           encryptionKey: string;
+          mode?: "reauth" | "account_select";
           plaidClientId: string;
           plaidEnv: string;
           plaidItemId: string;
@@ -310,6 +311,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         { plaidItemId: string },
         {
           _id: string;
+          _creationTime: number;
           activatedAt?: number;
           circuitState?: string;
           consecutiveFailures?: number;
@@ -319,12 +321,15 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           errorAt?: number;
           errorCode?: string;
           errorMessage?: string;
+          firstErrorAt?: number;
           institutionId?: string;
           institutionName?: string;
           isActive?: boolean;
           itemId: string;
+          lastDispatchedAt?: number;
           lastFailureAt?: number;
           lastSyncedAt?: number;
+          newAccountsAvailableAt?: number;
           nextRetryAt?: number;
           products: Array<string>;
           reauthAt?: number;
@@ -341,6 +346,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         { userId: string },
         Array<{
           _id: string;
+          _creationTime: number;
           activatedAt?: number;
           circuitState?: string;
           consecutiveFailures?: number;
@@ -350,12 +356,15 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           errorAt?: number;
           errorCode?: string;
           errorMessage?: string;
+          firstErrorAt?: number;
           institutionId?: string;
           institutionName?: string;
           isActive?: boolean;
           itemId: string;
+          lastDispatchedAt?: number;
           lastFailureAt?: number;
           lastSyncedAt?: number;
+          newAccountsAvailableAt?: number;
           nextRetryAt?: number;
           products: Array<string>;
           reauthAt?: number;
@@ -363,6 +372,102 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           status: string;
           syncError?: string;
           userId: string;
+        }>,
+        Name
+      >;
+      getItemHealth: FunctionReference<
+        "query",
+        "internal",
+        { plaidItemId: string },
+        {
+          plaidItemId: string;
+          itemId: string;
+          state: "syncing" | "ready" | "error" | "re-consent-required";
+          recommendedAction:
+            | "reconnect"
+            | "reconnect_for_new_accounts"
+            | "wait"
+            | "contact_support"
+            | null;
+          reasonCode:
+            | "healthy"
+            | "syncing_initial"
+            | "syncing_incremental"
+            | "auth_required_login"
+            | "auth_required_expiration"
+            | "transient_circuit_open"
+            | "transient_institution_down"
+            | "transient_rate_limited"
+            | "permanent_invalid_token"
+            | "permanent_item_not_found"
+            | "permanent_no_accounts"
+            | "permanent_access_not_granted"
+            | "permanent_products_not_supported"
+            | "permanent_institution_unsupported"
+            | "permanent_revoked"
+            | "permanent_unknown"
+            | "new_accounts_available";
+          isActive: boolean;
+          institutionId: string | null;
+          institutionName: string | null;
+          institutionLogoBase64: string | null;
+          institutionPrimaryColor: string | null;
+          lastSyncedAt: number | null;
+          lastWebhookAt: number | null;
+          errorCode: string | null;
+          errorMessage: string | null;
+          circuitState: "closed" | "open" | "half_open";
+          consecutiveFailures: number;
+          nextRetryAt: number | null;
+          newAccountsAvailableAt: number | null;
+        },
+        Name
+      >;
+      getItemHealthByUser: FunctionReference<
+        "query",
+        "internal",
+        { userId: string },
+        Array<{
+          plaidItemId: string;
+          itemId: string;
+          state: "syncing" | "ready" | "error" | "re-consent-required";
+          recommendedAction:
+            | "reconnect"
+            | "reconnect_for_new_accounts"
+            | "wait"
+            | "contact_support"
+            | null;
+          reasonCode:
+            | "healthy"
+            | "syncing_initial"
+            | "syncing_incremental"
+            | "auth_required_login"
+            | "auth_required_expiration"
+            | "transient_circuit_open"
+            | "transient_institution_down"
+            | "transient_rate_limited"
+            | "permanent_invalid_token"
+            | "permanent_item_not_found"
+            | "permanent_no_accounts"
+            | "permanent_access_not_granted"
+            | "permanent_products_not_supported"
+            | "permanent_institution_unsupported"
+            | "permanent_revoked"
+            | "permanent_unknown"
+            | "new_accounts_available";
+          isActive: boolean;
+          institutionId: string | null;
+          institutionName: string | null;
+          institutionLogoBase64: string | null;
+          institutionPrimaryColor: string | null;
+          lastSyncedAt: number | null;
+          lastWebhookAt: number | null;
+          errorCode: string | null;
+          errorMessage: string | null;
+          circuitState: "closed" | "open" | "half_open";
+          consecutiveFailures: number;
+          nextRetryAt: number | null;
+          newAccountsAvailableAt: number | null;
         }>,
         Name
       >;

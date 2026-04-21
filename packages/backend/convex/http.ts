@@ -1,8 +1,9 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import type { WebhookEvent } from "@clerk/backend";
 import { Webhook } from "svix";
+import { z } from "zod";
 import { transformWebhookData } from "./paymentAttemptTypes";
 import { verifyPlaidWebhook, shouldSkipVerification } from "./lib/plaidWebhookVerification";
 import { verifyUnsubscribeToken } from "./email/unsubscribeToken";
@@ -212,6 +213,19 @@ http.route({
             plaidItemId: plaidItem._id,
             trigger: "webhook",
           });
+        } else if (webhook_code === "DEFAULT_UPDATE") {
+          // W4: legacy TRANSACTIONS webhook (older items not migrated to sync-based).
+          // Mirror SYNC_UPDATES_AVAILABLE: schedule sync + 500ms offset refresh.
+          console.log("[Webhook] TRANSACTIONS DEFAULT_UPDATE: scheduling sync (legacy path)...");
+          await ctx.scheduler.runAfter(0, internal.plaidComponent.syncTransactionsInternal, {
+            plaidItemId: plaidItem._id,
+            trigger: "webhook",
+          });
+          await ctx.scheduler.runAfter(500, internal.plaidComponent.refreshAccountsAndSyncCreditCardsInternal, {
+            plaidItemId: plaidItem._id,
+            userId: plaidItem.userId,
+            trigger: "webhook",
+          });
         }
       }
 
@@ -240,12 +254,28 @@ http.route({
 
           console.log(`[Webhook] Item error: ${errorCode} - ${errorMessage}`);
 
+          // W4: stamp firstErrorAt on first transition into error-class status.
+          await ctx.runMutation(components.plaid.private.markFirstErrorAtInternal, {
+            plaidItemId: plaidItem._id,
+          });
+
           // Special handling for login required errors
           if (errorCode === "ITEM_LOGIN_REQUIRED") {
             await ctx.runMutation(internal.plaidComponent.markNeedsReauthInternal, {
               itemId: plaidItem._id,
               reason: errorMessage,
             });
+            // W4: dispatch reconsent-required email per contracts §15.
+            await ctx.scheduler.runAfter(
+              0,
+              internal.email.dispatch.dispatchReconsentRequired,
+              {
+                userId: plaidItem.userId,
+                plaidItemId: plaidItem._id,
+                institutionName: plaidItem.institutionName ?? "your bank",
+                reason: "ITEM_LOGIN_REQUIRED",
+              },
+            );
           } else {
             await ctx.runMutation(internal.plaidComponent.setItemErrorInternal, {
               itemId: plaidItem._id,
@@ -258,10 +288,27 @@ http.route({
           const expirationDate = body.consent_expiration_time || "soon";
           console.log(`[Webhook] Item pending expiration: ${expirationDate}`);
 
+          // W4: stamp firstErrorAt on first transition into needs_reauth.
+          await ctx.runMutation(components.plaid.private.markFirstErrorAtInternal, {
+            plaidItemId: plaidItem._id,
+          });
+
           await ctx.runMutation(internal.plaidComponent.markNeedsReauthInternal, {
             itemId: plaidItem._id,
             reason: `Credentials expiring: ${expirationDate}`,
           });
+
+          // W4: dispatch reconsent-required email per contracts §15.
+          await ctx.scheduler.runAfter(
+            0,
+            internal.email.dispatch.dispatchReconsentRequired,
+            {
+              userId: plaidItem.userId,
+              plaidItemId: plaidItem._id,
+              institutionName: plaidItem.institutionName ?? "your bank",
+              reason: "PENDING_EXPIRATION",
+            },
+          );
         } else if (webhook_code === "USER_PERMISSION_REVOKED") {
           // User revoked access in their bank's settings
           console.log("[Webhook] User permission revoked");
@@ -281,9 +328,51 @@ http.route({
         } else if (webhook_code === "WEBHOOK_UPDATE_ACKNOWLEDGED") {
           // Webhook URL was successfully updated
           console.log("[Webhook] Webhook URL update acknowledged");
+        } else if (webhook_code === "LOGIN_REPAIRED") {
+          // W4: log-only (see spec §3.4). The dominant repair path is
+          // update-mode Link via completeReauthAction which already resets
+          // status. Log preserves empirical data in webhookLogs for future
+          // decisions about whether to act on this code.
+          console.log("[Webhook] ITEM LOGIN_REPAIRED: log-only");
+        } else if (webhook_code === "NEW_ACCOUNTS_AVAILABLE") {
+          // W4: stamp newAccountsAvailableAt so the UI surfaces the
+          // "Update accounts" CTA via the account_select update-mode flow.
+          console.log("[Webhook] ITEM NEW_ACCOUNTS_AVAILABLE: stamping flag");
+          await ctx.runMutation(
+            components.plaid.private.setNewAccountsAvailableInternal,
+            { plaidItemId: plaidItem._id },
+          );
         } else {
           console.log(`[Webhook] Unhandled ITEM code: ${webhook_code}`);
         }
+      }
+
+      // ----- HOLDINGS WEBHOOKS (W4 stub; investments deferred per spec §3.1) -----
+      else if (webhook_type === "HOLDINGS") {
+        console.log(
+          `[Webhook] HOLDINGS ${webhook_code}: log-only (investments deferred)`,
+        );
+      }
+
+      // ----- INVESTMENTS_TRANSACTIONS WEBHOOKS (W4 stub) -----
+      else if (webhook_type === "INVESTMENTS_TRANSACTIONS") {
+        console.log(
+          `[Webhook] INVESTMENTS_TRANSACTIONS ${webhook_code}: log-only (investments deferred)`,
+        );
+      }
+
+      // ----- AUTH WEBHOOKS (W4 stub; AUTH product not in MVP) -----
+      else if (webhook_type === "AUTH") {
+        console.log(
+          `[Webhook] AUTH ${webhook_code}: log-only (AUTH product not in MVP)`,
+        );
+      }
+
+      // ----- IDENTITY WEBHOOKS (W4 stub; identity merge deferred to post-MVP) -----
+      else if (webhook_type === "IDENTITY") {
+        console.log(
+          `[Webhook] IDENTITY ${webhook_code}: log-only (identity merge deferred)`,
+        );
       }
 
       // ----- UNKNOWN WEBHOOKS -----
@@ -366,6 +455,70 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, req) => {
     return await resend.handleResendEventWebhook(ctx, req);
+  }),
+});
+
+// ============================================================================
+// Agent HTTP Action (W2) — POST /api/agent/send
+// ============================================================================
+
+const SendBody = z.object({
+  threadId: z.string().optional(),
+  prompt: z.string().min(1).max(8192),
+});
+
+http.route({
+  path: "/api/agent/send",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return new Response("Unauthorized", { status: 401 });
+
+    const viewer = await ctx.runQuery(internal.users.getByExternalId, {
+      externalId: identity.subject,
+    });
+    if (!viewer) return new Response("No viewer", { status: 401 });
+
+    let body: z.infer<typeof SendBody>;
+    try {
+      body = SendBody.parse(await request.json());
+    } catch (err) {
+      return Response.json(
+        { error: "validation_failed", reason: String(err) },
+        { status: 400 },
+      );
+    }
+
+    // `internal.agent.*` resolves after `npx convex dev --once` regenerates
+    // `_generated/api.d.ts` with the new agent module. The cast is temporary.
+    const agentApi = (internal as any).agent;
+    const budget = await ctx.runQuery(agentApi.budgets.checkHeadroom, {
+      userId: viewer._id,
+      threadId: body.threadId,
+    });
+    if (!budget.ok) {
+      return Response.json(
+        { error: "budget_exhausted", reason: budget.reason },
+        { status: 429 },
+      );
+    }
+
+    const { threadId, messageId } = await ctx.runMutation(
+      agentApi.threads.appendUserTurn,
+      {
+        userId: viewer._id,
+        threadId: body.threadId,
+        prompt: body.prompt,
+      },
+    );
+
+    await ctx.scheduler.runAfter(0, agentApi.runtime.runAgentTurn, {
+      userId: viewer._id,
+      threadId,
+      userMessageId: messageId,
+    });
+
+    return Response.json({ threadId, messageId });
   }),
 });
 

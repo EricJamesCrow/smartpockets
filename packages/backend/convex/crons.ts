@@ -27,6 +27,40 @@ crons.daily(
 );
 
 // =============================================================================
+// W2 agent crons
+// =============================================================================
+
+/**
+ * Agent Proposal TTL (W2)
+ * Every 5 minutes, expire any `agentProposals` row whose
+ * `awaitingExpiresAt` is in the past and whose state is still
+ * `awaiting_confirmation`. Transitions to `timed_out` and inserts a
+ * system message into the thread for user visibility.
+ */
+crons.cron(
+  "Expire stale proposals",
+  "*/5 * * * *",
+  (internal as any).agent.proposals.expireStaleInternal
+);
+
+// =============================================================================
+// W4 Plaid crons
+// =============================================================================
+
+/**
+ * W4: Plaid Persistent Error Check (6-hour interval per contracts §14).
+ *
+ * Scans for plaidItems in error status with stale sync (>24h) that have
+ * not been dispatched in the last 72h, then schedules
+ * dispatchItemErrorPersistent and stamps lastDispatchedAt.
+ */
+crons.interval(
+  "Plaid Persistent Error Check",
+  { hours: 6 },
+  internal.plaid.persistentError.runPersistentErrorCheckInternal
+);
+
+// =============================================================================
 // W7 email crons
 // =============================================================================
 

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { FunctionReference } from "convex/server";
 import type { GenericActionCtx } from "convex/server";
 import { internal } from "../_generated/api";
 import type { DataModel, Id } from "../_generated/dataModel";
@@ -7,6 +8,14 @@ import { idempotencyKey } from "../notifications/hashing";
 import { workflow } from "./workflow";
 
 type DispatchCtx = GenericActionCtx<DataModel>;
+
+// Workflow.define produces an internal mutation reference; dispatch
+// actions hand a reference to workflow.start.
+type EmailWorkflowRef = FunctionReference<
+  "mutation",
+  "internal",
+  { emailEventId: Id<"emailEvents"> }
+>;
 
 const DispatchResult = v.object({
   status: v.union(v.literal("queued"), v.literal("skipped_duplicate")),
@@ -30,7 +39,7 @@ async function queueOrSkip(
     templateKey: string;
     cadence?: number;
     payload: Record<string, unknown>;
-    workflowRef: unknown;
+    workflowRef: EmailWorkflowRef;
   },
 ): Promise<{
   status: "queued" | "skipped_duplicate";
@@ -79,9 +88,11 @@ async function queueOrSkip(
     return { status: "skipped_duplicate", emailEventId: raced };
   }
 
-  const workflowId = await workflow.start(ctx, params.workflowRef, {
-    emailEventId,
-  });
+  const workflowId = await workflow.start(
+    ctx,
+    params.workflowRef,
+    { emailEventId },
+  );
 
   await ctx.runMutation(internal.email.mutations.patchWorkflowId, {
     emailEventId,
@@ -103,7 +114,7 @@ export const dispatchWelcomeOnboarding = internalAction({
   },
   returns: DispatchResult,
   handler: async (ctx, args) => {
-    const key = idempotencyKey({
+    const key = await idempotencyKey({
       userId: args.userId,
       scope: "welcome-class",
     });
@@ -169,7 +180,7 @@ export const dispatchWeeklyDigest = internalAction({
   returns: DispatchResult,
   handler: async (ctx, args) => {
     const dateBucket = utcDateBucket(new Date(args.weekStart));
-    const key = idempotencyKey({
+    const key = await idempotencyKey({
       userId: args.userId,
       scope: "weekly-digest",
       dateBucket,
@@ -210,7 +221,7 @@ export const dispatchPromoWarning = internalAction({
   returns: DispatchResult,
   handler: async (ctx, args) => {
     const dateBucket = utcDateBucket();
-    const key = idempotencyKey({
+    const key = await idempotencyKey({
       userId: args.userId,
       scope: "promo-warning",
       cadence: args.cadence,
@@ -250,7 +261,7 @@ export const dispatchStatementReminder = internalAction({
   returns: DispatchResult,
   handler: async (ctx, args) => {
     const dateBucket = utcDateBucket();
-    const key = idempotencyKey({
+    const key = await idempotencyKey({
       userId: args.userId,
       scope: "statement-closing",
       cadence: args.cadence,
@@ -279,7 +290,7 @@ export const dispatchAnomalyAlert = internalAction({
   },
   returns: DispatchResult,
   handler: async (ctx, args) => {
-    const key = idempotencyKey({
+    const key = await idempotencyKey({
       userId: args.userId,
       scope: "anomaly-alert",
       ids: [args.anomalyId],
@@ -319,7 +330,7 @@ export const dispatchSubscriptionDigest = internalAction({
   },
   returns: DispatchResult,
   handler: async (ctx, args) => {
-    const key = idempotencyKey({
+    const key = await idempotencyKey({
       userId: args.userId,
       scope: "subscription-detected",
       ids: args.detected.map((d) => d.subscriptionId),
@@ -352,7 +363,7 @@ export const dispatchReconsentRequired = internalAction({
   returns: DispatchResult,
   handler: async (ctx, args) => {
     const dateBucket = utcDateBucket();
-    const key = idempotencyKey({
+    const key = await idempotencyKey({
       userId: args.userId,
       scope: "reconsent-required",
       ids: [args.plaidItemId],
@@ -384,7 +395,7 @@ export const dispatchItemErrorPersistent = internalAction({
   returns: DispatchResult,
   handler: async (ctx, args) => {
     const dateBucket = utcDateBucket();
-    const key = idempotencyKey({
+    const key = await idempotencyKey({
       userId: args.userId,
       scope: "item-error-persistent",
       ids: [args.plaidItemId],

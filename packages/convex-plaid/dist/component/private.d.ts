@@ -21,7 +21,7 @@ export declare const getPlaidItem: import("convex/server").RegisteredQuery<"inte
     cursor: string | undefined;
     institutionId: string | undefined;
     institutionName: string | undefined;
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
+    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -36,8 +36,6 @@ export declare const getPlaidItemByItemId: import("convex/server").RegisteredQue
 }, Promise<{
     _id: import("convex/values").GenericId<"plaidItems">;
     _creationTime: number;
-    errorCode?: string | undefined;
-    errorMessage?: string | undefined;
     cursor?: string | undefined;
     institutionId?: string | undefined;
     institutionName?: string | undefined;
@@ -45,6 +43,8 @@ export declare const getPlaidItemByItemId: import("convex/server").RegisteredQue
     syncError?: string | undefined;
     lastSyncedAt?: number | undefined;
     activatedAt?: number | undefined;
+    errorCode?: string | undefined;
+    errorMessage?: string | undefined;
     errorAt?: number | undefined;
     reauthReason?: string | undefined;
     reauthAt?: number | undefined;
@@ -57,11 +57,14 @@ export declare const getPlaidItemByItemId: import("convex/server").RegisteredQue
     consecutiveSuccesses?: number | undefined;
     lastFailureAt?: number | undefined;
     nextRetryAt?: number | undefined;
+    newAccountsAvailableAt?: number | undefined;
+    firstErrorAt?: number | undefined;
+    lastDispatchedAt?: number | undefined;
     userId: string;
-    products: string[];
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
     itemId: string;
     accessToken: string;
+    products: string[];
+    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
     createdAt: number;
 } | null>>;
 /**
@@ -73,10 +76,10 @@ export declare const createPlaidItem: import("convex/server").RegisteredMutation
     institutionName?: string | undefined;
     isActive?: boolean | undefined;
     userId: string;
-    products: string[];
-    status: string;
     itemId: string;
     accessToken: string;
+    products: string[];
+    status: string;
 }, Promise<string>>;
 /**
  * Update plaidItem status.
@@ -84,8 +87,8 @@ export declare const createPlaidItem: import("convex/server").RegisteredMutation
  */
 export declare const updateItemStatus: import("convex/server").RegisteredMutation<"internal", {
     syncError?: string | undefined;
-    plaidItemId: string;
     status: string;
+    plaidItemId: string;
 }, Promise<null>>;
 /**
  * Update lastSyncedAt timestamp for a plaidItem.
@@ -101,8 +104,8 @@ export declare const updateLastSyncedAt: import("convex/server").RegisteredMutat
  * Uses O(1) lookup via ctx.db.normalizeId() + ctx.db.get().
  */
 export declare const updateItemCursor: import("convex/server").RegisteredMutation<"internal", {
-    plaidItemId: string;
     cursor: string;
+    plaidItemId: string;
 }, Promise<null>>;
 /**
  * Acquire a sync lock using optimistic locking.
@@ -153,9 +156,9 @@ export declare const acquireSyncLock: import("convex/server").RegisteredMutation
  * Uses O(1) lookup via ctx.db.normalizeId() + ctx.db.get().
  */
 export declare const completeSyncWithVersion: import("convex/server").RegisteredMutation<"internal", {
-    plaidItemId: string;
     cursor: string;
     syncVersion: number;
+    plaidItemId: string;
 }, Promise<{
     success: boolean;
     reason: string;
@@ -166,12 +169,20 @@ export declare const completeSyncWithVersion: import("convex/server").Registered
 /**
  * Release sync lock on error without updating cursor.
  * Uses O(1) lookup via ctx.db.normalizeId() + ctx.db.get().
+ *
+ * W4: when transitioning into an error-class status ("error" or
+ * "needs_reauth"), stamp the error-tracking fields the 6-hour persistent-
+ * error cron filters on: `firstErrorAt` (monotonic; first-write-wins),
+ * `errorAt = now`, and `errorCode` (from the optional arg, falling back
+ * to a "SYNC_ERROR" sentinel so the cron can still emit a best-effort
+ * dispatch with a visible label).
  */
 export declare const releaseSyncLock: import("convex/server").RegisteredMutation<"internal", {
     syncError?: string | undefined;
-    plaidItemId: string;
+    errorCode?: string | undefined;
     status: string;
     syncVersion: number;
+    plaidItemId: string;
 }, Promise<null>>;
 /**
  * Mark plaidItem as needing re-authentication.
@@ -232,13 +243,15 @@ export declare const resetCircuitBreaker: import("convex/server").RegisteredMuta
  * concurrent calls might both try to insert the same account.
  */
 export declare const bulkUpsertAccounts: import("convex/server").RegisteredMutation<"internal", {
+    userId: string;
+    plaidItemId: string;
     accounts: {
         officialName?: string | undefined;
         mask?: string | undefined;
         subtype?: string | undefined;
-        name: string;
         type: string;
         accountId: string;
+        name: string;
         balances: {
             available?: number | undefined;
             current?: number | undefined;
@@ -246,8 +259,6 @@ export declare const bulkUpsertAccounts: import("convex/server").RegisteredMutat
             isoCurrencyCode: string;
         };
     }[];
-    userId: string;
-    plaidItemId: string;
 }, Promise<{
     created: number;
     updated: number;
@@ -272,8 +283,8 @@ export declare const bulkUpsertTransactions: import("convex/server").RegisteredM
         categoryDetailed?: string | undefined;
         paymentChannel?: string | undefined;
         pending: boolean;
-        name: string;
         accountId: string;
+        name: string;
         isoCurrencyCode: string;
         transactionId: string;
         amount: number;
@@ -287,8 +298,8 @@ export declare const bulkUpsertTransactions: import("convex/server").RegisteredM
         categoryDetailed?: string | undefined;
         paymentChannel?: string | undefined;
         pending: boolean;
-        name: string;
         accountId: string;
+        name: string;
         isoCurrencyCode: string;
         transactionId: string;
         amount: number;
@@ -452,9 +463,9 @@ export declare const bulkUpsertRecurringStreams: import("convex/server").Registe
         firstDate?: string | undefined;
         lastDate?: string | undefined;
         predictedNextDate?: string | undefined;
-        status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
         type: "inflow" | "outflow";
         isActive: boolean;
+        status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
         accountId: string;
         isoCurrencyCode: string;
         streamId: string;
@@ -667,7 +678,7 @@ export declare const upsertMerchantEnrichment: import("convex/server").Registere
     phoneNumber?: string | undefined;
     merchantName: string;
     merchantId: string;
-    confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
+    confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 }, Promise<string>>;
 /**
  * Link transaction to merchant by updating merchantId field.
@@ -699,8 +710,8 @@ export declare const updateTransactionEnrichment: import("convex/server").Regist
 export declare const createWebhookLog: import("convex/server").RegisteredMutation<"internal", {
     errorMessage?: string | undefined;
     scheduledFunctionId?: string | undefined;
-    status: "received" | "processing" | "processed" | "duplicate" | "failed";
     itemId: string;
+    status: "received" | "processing" | "processed" | "duplicate" | "failed";
     webhookId: string;
     webhookType: string;
     webhookCode: string;
@@ -786,7 +797,7 @@ export declare const completeSyncLogSuccess: import("convex/server").RegisteredM
  * Uses O(1) lookup via ctx.db.normalizeId() + ctx.db.get().
  */
 export declare const completeSyncLogError: import("convex/server").RegisteredMutation<"internal", {
-    status?: "started" | "success" | "error" | "rate_limited" | "circuit_open" | undefined;
+    status?: "error" | "started" | "success" | "rate_limited" | "circuit_open" | undefined;
     errorCode?: string | undefined;
     errorMessage?: string | undefined;
     syncLogId: string;
@@ -837,7 +848,67 @@ export declare const upsertInstitution: import("convex/server").RegisteredMutati
     logo?: string | undefined;
     primaryColor?: string | undefined;
     url?: string | undefined;
-    name: string;
     institutionId: string;
+    name: string;
 }, Promise<string>>;
+/**
+ * Stamp plaidItems.newAccountsAvailableAt with the current timestamp.
+ * Called by the ITEM:NEW_ACCOUNTS_AVAILABLE webhook handler.
+ * Idempotent: writing the timestamp twice has no functional effect.
+ */
+export declare const setNewAccountsAvailableInternal: import("convex/server").RegisteredMutation<"internal", {
+    plaidItemId: string;
+}, Promise<null>>;
+/**
+ * Clear plaidItems.newAccountsAvailableAt.
+ * Called exactly once per flow: after a successful update-mode exchangePublicToken
+ * for an existing plaidItemId.
+ */
+export declare const clearNewAccountsAvailableInternal: import("convex/server").RegisteredMutation<"internal", {
+    plaidItemId: string;
+}, Promise<null>>;
+/**
+ * Stamp plaidItems.firstErrorAt if not already set (first-write-wins).
+ * Called before the status patch on transition into error or needs_reauth.
+ * Keeps the error-transition clock monotonic across repeated error observations.
+ */
+export declare const markFirstErrorAtInternal: import("convex/server").RegisteredMutation<"internal", {
+    plaidItemId: string;
+}, Promise<null>>;
+/**
+ * Clear plaidItems.firstErrorAt and plaidItems.lastDispatchedAt.
+ * Called on transition from error-class status back to active via
+ * completeReauthAction or a successful sync.
+ */
+export declare const clearErrorTrackingInternal: import("convex/server").RegisteredMutation<"internal", {
+    plaidItemId: string;
+}, Promise<null>>;
+/**
+ * Stamp plaidItems.lastDispatchedAt.
+ * Called by the 6-hour persistent-error cron immediately after scheduling
+ * dispatchItemErrorPersistent. Used as the cron's dedup filter.
+ */
+export declare const markItemErrorDispatchedInternal: import("convex/server").RegisteredMutation<"internal", {
+    plaidItemId: string;
+}, Promise<null>>;
+/**
+ * List plaidItems in error status that:
+ *   - have lastSyncedAt older than olderThanLastSyncedAt (or undefined)
+ *   - have lastDispatchedAt older than dispatchedBefore (or undefined)
+ *
+ * Used by the host-app 6-hour persistent-error cron per W4 spec §8.2.
+ * Returns a subset payload (not the full plaidItem doc) to cap component-
+ * boundary surface area.
+ */
+export declare const listErrorItemsInternal: import("convex/server").RegisteredQuery<"internal", {
+    olderThanLastSyncedAt: number;
+    dispatchedBefore: number;
+}, Promise<{
+    plaidItemId: string;
+    userId: string;
+    institutionName: string | null;
+    firstErrorAt: number | null;
+    errorAt: number | null;
+    errorCode: string | null;
+}[]>>;
 //# sourceMappingURL=private.d.ts.map

@@ -1,0 +1,12 @@
+{
+  "body": {
+    "webhook_type": "HOLDINGS",
+    "webhook_code": "DEFAULT_UPDATE",
+    "item_id": "test_item_id_placeholder",
+    "new_holdings": 0,
+    "updated_holdings": 0,
+    "error": null
+  },
+  "jwt": null,
+  "bypassSignature": true
+}
