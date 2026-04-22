@@ -24,6 +24,7 @@ const OVERLAY_FIELDS = [
 type OverlayField = (typeof OVERLAY_FIELDS)[number];
 
 type OverlayPatch = Partial<Record<OverlayField, string | boolean | undefined>>;
+type OverlayPriorFields = Partial<Record<OverlayField, string | boolean>>;
 
 function pickOverlayPatch(input: unknown): OverlayPatch {
   if (input == null || typeof input !== "object") return {};
@@ -111,9 +112,14 @@ registerToolExecutor(TOOL_NAME, async (ctx, proposal): Promise<ExecutorResult> =
   )[0];
 
   // Capture prior values of whichever fields the patch touches.
-  const priorFields: OverlayPatch = {};
+  const priorFields: OverlayPriorFields = {};
+  const priorUnset: OverlayField[] = [];
   for (const key of Object.keys(parsed.patch) as OverlayField[]) {
-    priorFields[key] = existing ? (existing[key] ?? undefined) : undefined;
+    if (existing && existing[key] !== undefined) {
+      priorFields[key] = existing[key] as string | boolean;
+    } else {
+      priorUnset.push(key);
+    }
   }
 
   if (existing) {
@@ -133,6 +139,7 @@ registerToolExecutor(TOOL_NAME, async (ctx, proposal): Promise<ExecutorResult> =
       kind: "overlay_patch",
       plaidTransactionId: parsed.plaidTransactionId,
       priorFields,
+      priorUnset,
       created: existing == null,
     },
     affectedIds: [parsed.plaidTransactionId],
@@ -146,7 +153,8 @@ registerReversal(TOOL_NAME, async (ctx, audit) => {
   const viewer = ctx.viewerX();
   const payload = JSON.parse(audit.reversalPayloadJson) as {
     plaidTransactionId: string;
-    priorFields: OverlayPatch;
+    priorFields: OverlayPriorFields;
+    priorUnset?: OverlayField[];
     created: boolean;
   };
 
@@ -161,9 +169,17 @@ registerReversal(TOOL_NAME, async (ctx, audit) => {
   if (existing.userId !== viewer._id) throw new Error("not_authorized");
 
   const row = await ctx.table("transactionOverlays").getX(existing._id);
+  if (payload.created) {
+    await row.delete();
+    return { summary: "Reverted transaction overlay." };
+  }
+
   const restore: Record<string, unknown> = {};
   for (const key of Object.keys(payload.priorFields) as OverlayField[]) {
     restore[key] = payload.priorFields[key];
+  }
+  for (const key of payload.priorUnset ?? []) {
+    restore[key] = undefined;
   }
   await row.patch(restore as any);
 

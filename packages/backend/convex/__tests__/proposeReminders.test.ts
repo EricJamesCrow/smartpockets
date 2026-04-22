@@ -59,18 +59,41 @@ function makeCtx(opts: { viewerId: string; reminders: Reminder[] }) {
 }
 
 describe("propose_reminder_create executor", () => {
-  it("uses title and dueAt for create dedupe", () => {
+  it("uses the reminder payload shape for create dedupe", () => {
     const first = {
+      title: "Pay card",
+      dueAt: 1_800_000_000_000,
+      notes: "Autopay backup",
+      relatedResourceType: "creditCard" as const,
+      relatedResourceId: "card_1",
+    };
+    const second = {
+      ...first,
+      notes: "Manual fallback",
+    };
+    const third = {
+      ...first,
+      dueAt: 1_800_086_400_000,
+    };
+    expect(buildReminderCreateAffectedIds(first)).toEqual([
+      "new:pay card:1800000000000:autopay backup:creditCard:card_1",
+    ]);
+    expect(buildReminderCreateAffectedIds(second)).toEqual([
+      "new:pay card:1800000000000:manual fallback:creditCard:card_1",
+    ]);
+    expect(buildReminderCreateAffectedIds(third)).toEqual([
+      "new:pay card:1800086400000:autopay backup:creditCard:card_1",
+    ]);
+  });
+
+  it("keeps empty optional fields stable in the dedupe key", () => {
+    const reminder = {
       title: "Pay card",
       dueAt: 1_800_000_000_000,
       relatedResourceType: "none" as const,
     };
-    const second = { ...first, dueAt: 1_800_086_400_000 };
-    expect(buildReminderCreateAffectedIds(first)).toEqual([
-      "new:pay card:1800000000000",
-    ]);
-    expect(buildReminderCreateAffectedIds(second)).toEqual([
-      "new:pay card:1800086400000",
+    expect(buildReminderCreateAffectedIds(reminder)).toEqual([
+      "new:pay card:1800000000000::none:",
     ]);
   });
 

@@ -47,7 +47,16 @@ function coerce(input: unknown): ReminderInput {
 }
 
 export function buildReminderCreateAffectedIds(reminder: ReminderInput): string[] {
-  return [`new:${reminder.title.toLowerCase()}:${reminder.dueAt}`];
+  return [
+    [
+      "new",
+      reminder.title.toLowerCase(),
+      String(reminder.dueAt),
+      reminder.notes?.trim().toLowerCase() ?? "",
+      reminder.relatedResourceType,
+      reminder.relatedResourceId ?? "",
+    ].join(":"),
+  ];
 }
 
 export const proposeReminderCreate = agentMutation({

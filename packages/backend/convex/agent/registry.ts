@@ -269,8 +269,12 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         .describe("Which transactions to target. At least one criterion required."),
       overlay: z.object({
         userCategory: z.string().optional(),
+        userCategoryDetailed: z.string().optional(),
         notes: z.string().optional(),
         isHidden: z.boolean().optional(),
+        userMerchantName: z.string().optional(),
+        userDate: z.string().optional(),
+        userTime: z.string().optional(),
       }),
       limit: z.number().int().max(5000).optional(),
     }),
