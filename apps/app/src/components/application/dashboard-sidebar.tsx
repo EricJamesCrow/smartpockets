@@ -6,13 +6,17 @@ import { usePathname, useRouter } from "next/navigation";
 import type { Selection } from "react-aria-components";
 import {
     BarChartSquare02,
+    ClockRewind,
     CreditCard01,
     Home03,
+    MessageSquare02,
     Receipt,
     SearchLg,
     Settings01,
     Wallet01,
 } from "@untitledui/icons";
+import { useQuery } from "convex-helpers/react/cache/hooks";
+import { api } from "@convex/_generated/api";
 import type { NavItemType } from "@repo/ui/untitledui/application/app-navigation/config";
 import { SidebarNavigationSimple, SidebarSimpleDesktop } from "@repo/ui/untitledui/application/app-navigation/sidebar-navigation/sidebar-simple";
 import { SidebarNavigationSlim, SidebarSlimDesktop } from "@repo/ui/untitledui/application/app-navigation/sidebar-navigation/sidebar-slim";
@@ -35,6 +39,7 @@ const commandRoutes: Record<string, string> = {
     transactions: "/transactions",
     wallets: "/wallets",
     settings: "/settings",
+    "new-chat": "/",
 };
 
 export function DashboardSidebar() {
@@ -54,6 +59,16 @@ export function DashboardSidebar() {
     const router = useRouter();
     const pathname = usePathname();
 
+    const threadsResult = useQuery(api.agent.threads.listForUser, {}) as
+        | Array<{ threadId: string; title?: string; summary?: string; updatedAt: number }>
+        | undefined;
+    const threads = threadsResult ?? [];
+
+    const historyItems: NavItemType["items"] = threads.map((thread) => ({
+        label: thread.title ?? "Untitled",
+        href: `/${thread.threadId}`,
+    }));
+
     const navItemsSimple: NavItemType[] = [
         {
             label: "Home",
@@ -64,6 +79,12 @@ export function DashboardSidebar() {
             label: "Overview",
             href: "/overview",
             icon: BarChartSquare02,
+        },
+        {
+            label: "History",
+            href: "/",
+            icon: ClockRewind,
+            ...(historyItems.length > 0 && { items: historyItems }),
         },
         {
             label: "Credit Cards",
@@ -85,7 +106,14 @@ export function DashboardSidebar() {
     const handleSelectionChange = (keys: Selection) => {
         if (keys === "all") return;
         const selectedKey = Array.from(keys)[0] as string;
-        if (selectedKey && commandRoutes[selectedKey]) {
+        if (!selectedKey) return;
+        if (selectedKey.startsWith("thread:")) {
+            const threadId = selectedKey.slice("thread:".length);
+            router.push(`/${threadId}`);
+            setIsCommandMenuOpen(false);
+            return;
+        }
+        if (commandRoutes[selectedKey]) {
             router.push(commandRoutes[selectedKey]);
             setIsCommandMenuOpen(false);
         }
@@ -188,6 +216,18 @@ export function DashboardSidebar() {
                         <CommandMenu.Item id="credit-cards" label="Credit Cards" type="icon" icon={CreditCard01} />
                         <CommandMenu.Item id="transactions" label="Transactions" type="icon" icon={Receipt} />
                         <CommandMenu.Item id="wallets" label="Wallets" type="icon" icon={Wallet01} />
+                    </CommandMenu.Section>
+                    <CommandMenu.Section title="Threads">
+                        <CommandMenu.Item id="new-chat" label="New chat" type="icon" icon={MessageSquare02} />
+                        {threads.slice(0, 10).map((thread) => (
+                            <CommandMenu.Item
+                                key={thread.threadId}
+                                id={`thread:${thread.threadId}`}
+                                label={thread.title ?? "Untitled"}
+                                type="icon"
+                                icon={ClockRewind}
+                            />
+                        ))}
                     </CommandMenu.Section>
                     <CommandMenu.Section title="Settings">
                         <CommandMenu.Item id="settings" label="Settings" type="icon" icon={Settings01} shortcutKeys={["⌘", ","]} />

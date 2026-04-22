@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, query } from "../functions";
+import { internalMutation, internalQuery, mutation, query } from "../functions";
 import { PROMPT_VERSION } from "./system";
 
 // Public query consumed by W1 for the reactive message stream.
@@ -130,6 +130,72 @@ export const bumpReadCallCount = internalMutation({
   handler: async (ctx, { threadId }) => {
     const thread = await ctx.table("agentThreads").getX(threadId);
     await thread.patch({ readCallCount: thread.readCallCount + 1 });
+    return null;
+  },
+});
+
+// Public query consumed by W1 sidebar History and command menu Threads section.
+// Viewer-scoped; returns at most `limit` most-recently-touched threads,
+// archived excluded.
+export const listForUser = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      threadId: v.id("agentThreads"),
+      title: v.optional(v.string()),
+      summary: v.optional(v.string()),
+      updatedAt: v.number(),
+    }),
+  ),
+  handler: async (ctx, { limit }) => {
+    const viewer = ctx.viewerX();
+    const cap = Math.min(limit ?? 50, 100);
+    const rows = await ctx
+      .table("agentThreads", "by_user_lastTurnAt", (q) => q.eq("userId", viewer._id))
+      .order("desc");
+    return rows
+      .filter((t) => !t.isArchived)
+      .slice(0, cap)
+      .map((t) => ({
+        threadId: t._id,
+        title: t.title,
+        summary: t.summaryText,
+        updatedAt: t.lastTurnAt,
+      }));
+  },
+});
+
+// Public mutation: rename a thread. Viewer must own the thread.
+export const renameThread = mutation({
+  args: {
+    threadId: v.id("agentThreads"),
+    title: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { threadId, title }) => {
+    const viewer = ctx.viewerX();
+    const thread = await ctx.table("agentThreads").getX(threadId);
+    if (thread.userId !== viewer._id) throw new Error("Not authorized");
+    const trimmed = title.trim().slice(0, 120);
+    if (!trimmed) throw new Error("Title cannot be empty");
+    await thread.patch({ title: trimmed });
+    return null;
+  },
+});
+
+// Public mutation: soft-delete a thread by setting isArchived.
+export const deleteThread = mutation({
+  args: {
+    threadId: v.id("agentThreads"),
+  },
+  returns: v.null(),
+  handler: async (ctx, { threadId }) => {
+    const viewer = ctx.viewerX();
+    const thread = await ctx.table("agentThreads").getX(threadId);
+    if (thread.userId !== viewer._id) throw new Error("Not authorized");
+    await thread.patch({ isArchived: true });
     return null;
   },
 });
