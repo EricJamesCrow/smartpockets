@@ -47,7 +47,7 @@ export const maybeCompact = internalAction({
         {
           threadId,
           summaryText,
-          summaryUpToMessageId: messages[halfIdx - 1]._id,
+          summaryUpToMessageId: messages[halfIdx - 1]!._id,
         },
       );
     }
