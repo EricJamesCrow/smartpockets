@@ -306,6 +306,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     llmInputSchema: z.object({
       cardId: z.string(),
       promo: z.object({
+        promoRateId: z.string().optional(),
         description: z.string(),
         aprPercentage: z.number(),
         originalBalance: z.number(),
