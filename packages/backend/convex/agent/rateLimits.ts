@@ -1,4 +1,4 @@
-import { MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
+import { HOUR, MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 import { components } from "../_generated/api";
 
 // components.rateLimiter is populated by Convex codegen after `npx convex dev --once`
@@ -25,6 +25,14 @@ export const agentLimiter = new RateLimiter((components as any).rateLimiter, {
     period: MINUTE,
     capacity: 3,
   },
+  // Coarser gate applied on top of `write_expensive` for tools in
+  // DESTRUCTIVE_TOOLS (spec §3.6 / contracts §12 footnote).
+  destructive_ops: {
+    kind: "token bucket",
+    rate: 10,
+    period: HOUR,
+    capacity: 10,
+  },
 });
 
 export type BucketName =
@@ -32,4 +40,32 @@ export type BucketName =
   | "read_moderate"
   | "write_single"
   | "write_bulk"
-  | "write_expensive";
+  | "write_expensive"
+  | "destructive_ops";
+
+/**
+ * Consume a bucket token for `userId`. Returns null on success, or an error
+ * envelope describing the retry-after when the bucket is empty. Swallows
+ * component errors and treats them as pass-through (same fail-open behavior
+ * as the runtime-level gate in `runtime.ts`).
+ */
+export async function consumeBucket(
+  ctx: unknown,
+  bucket: BucketName,
+  userId: string,
+): Promise<{ ok: true } | { ok: false; retryAfter: number; bucket: BucketName }> {
+  try {
+    const rl = await (agentLimiter as any).limit(ctx, bucket, { key: userId });
+    if (!rl.ok) {
+      return {
+        ok: false,
+        retryAfter: rl.retryAfter ?? 60,
+        bucket,
+      };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.warn(`[agent.rateLimits] ${bucket} check failed:`, err);
+    return { ok: true };
+  }
+}
