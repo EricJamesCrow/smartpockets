@@ -131,6 +131,31 @@ describe("subscriptions mutations", () => {
             vi.useRealTimers();
         }
     });
+
+    it("setNickname clears blank nicknames", async () => {
+        vi.useFakeTimers();
+        const t = setup();
+        const userId = await seedUser(t);
+        const subscriptionId = await seedSubscription(t, userId);
+        const asUser = t.withIdentity(IDENTITY);
+        try {
+            await asUser.mutation(
+                api.intelligence.subscriptions.mutations.setNickname,
+                { subscriptionId, nickname: "Family Netflix" },
+            );
+            await asUser.mutation(
+                api.intelligence.subscriptions.mutations.setNickname,
+                { subscriptionId, nickname: "   " },
+            );
+            await finishScheduled(t);
+            const row = await t.run(async (ctx: any) =>
+                ctx.db.get(subscriptionId),
+            );
+            expect(row.nickname).toBeUndefined();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
 });
 
 describe("anomalies mutations", () => {
