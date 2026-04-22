@@ -36,6 +36,7 @@ import type * as functions from "../functions.js";
 import type * as http from "../http.js";
 import type * as installmentPlans_mutations from "../installmentPlans/mutations.js";
 import type * as installmentPlans_queries from "../installmentPlans/queries.js";
+import type * as intelligence_anomalies_mutations from "../intelligence/anomalies/mutations.js";
 import type * as intelligence_anomalies_queries from "../intelligence/anomalies/queries.js";
 import type * as intelligence_cashflow_compute from "../intelligence/cashflow/compute.js";
 import type * as intelligence_cashflow_queries from "../intelligence/cashflow/queries.js";
@@ -48,6 +49,7 @@ import type * as intelligence_promoCountdowns_refresh from "../intelligence/prom
 import type * as intelligence_statementReminders_helpers from "../intelligence/statementReminders/helpers.js";
 import type * as intelligence_statementReminders_queries from "../intelligence/statementReminders/queries.js";
 import type * as intelligence_statementReminders_scan from "../intelligence/statementReminders/scan.js";
+import type * as intelligence_subscriptions_mutations from "../intelligence/subscriptions/mutations.js";
 import type * as intelligence_subscriptions_normalize from "../intelligence/subscriptions/normalize.js";
 import type * as intelligence_subscriptions_queries from "../intelligence/subscriptions/queries.js";
 import type * as intelligence_subscriptions_scan from "../intelligence/subscriptions/scan.js";
@@ -118,6 +120,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "installmentPlans/mutations": typeof installmentPlans_mutations;
   "installmentPlans/queries": typeof installmentPlans_queries;
+  "intelligence/anomalies/mutations": typeof intelligence_anomalies_mutations;
   "intelligence/anomalies/queries": typeof intelligence_anomalies_queries;
   "intelligence/cashflow/compute": typeof intelligence_cashflow_compute;
   "intelligence/cashflow/queries": typeof intelligence_cashflow_queries;
@@ -130,6 +133,7 @@ declare const fullApi: ApiFromModules<{
   "intelligence/statementReminders/helpers": typeof intelligence_statementReminders_helpers;
   "intelligence/statementReminders/queries": typeof intelligence_statementReminders_queries;
   "intelligence/statementReminders/scan": typeof intelligence_statementReminders_scan;
+  "intelligence/subscriptions/mutations": typeof intelligence_subscriptions_mutations;
   "intelligence/subscriptions/normalize": typeof intelligence_subscriptions_normalize;
   "intelligence/subscriptions/queries": typeof intelligence_subscriptions_queries;
   "intelligence/subscriptions/scan": typeof intelligence_subscriptions_scan;
