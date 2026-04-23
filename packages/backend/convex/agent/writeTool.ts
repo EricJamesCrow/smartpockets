@@ -45,6 +45,25 @@ export function getToolExecutor(toolName: string): ToolExecutor | undefined {
   return toolExecuteRegistry.get(toolName);
 }
 
+// ---- Reversal registry (W5.3) ----------------------------------------------
+
+export type ReversalHandler = (
+  ctx: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  audit: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+) => Promise<{ summary: string }>;
+
+const reversalRegistry = new Map<string, ReversalHandler>();
+
+export function registerReversal(toolName: string, handler: ReversalHandler) {
+  reversalRegistry.set(toolName, handler);
+}
+
+export function getReversalHandler(
+  toolName: string,
+): ReversalHandler | undefined {
+  return reversalRegistry.get(toolName);
+}
+
 // ---- Destructive-action gating (wired in W5.11) -----------------------------
 
 export const DESTRUCTIVE_TOOLS: ReadonlySet<string> = new Set<string>([
@@ -351,4 +370,96 @@ export function decodeReversalToken(token: string): string {
     throw new Error("reversal_token_invalid_prefix");
   }
   return base32Decode(token.slice(4));
+}
+
+// ---- undoByToken (W5.3) ----------------------------------------------------
+
+export interface UndoByTokenArgs {
+  reversalToken: string;
+  threadId: Id<"agentThreads">;
+}
+
+export interface UndoByTokenResult {
+  summary: string;
+  auditLogId: Id<"auditLog">;
+  undoAuditLogId: Id<"auditLog"> | null;
+  state: "reverted";
+  revertedAt: number;
+  /** True when undo was called on an already-reverted audit row. */
+  alreadyReverted?: boolean;
+}
+
+export async function undoByToken(
+  ctx: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  args: UndoByTokenArgs,
+): Promise<UndoByTokenResult> {
+  const viewer = ctx.viewerX();
+
+  let auditLogId: string;
+  try {
+    auditLogId = decodeReversalToken(args.reversalToken);
+  } catch {
+    throw new Error("reversal_token_not_found");
+  }
+
+  const audit = await ctx.table("auditLog").get(auditLogId as Id<"auditLog">);
+  if (!audit) throw new Error("reversal_token_not_found");
+  if (audit.userId !== viewer._id) throw new Error("reversal_token_not_found");
+
+  // Idempotent retry: undo on an already-reverted audit row is a no-op
+  // that returns a consistent success envelope. Per W5 review criteria.
+  if (audit.reversedAt !== undefined) {
+    return {
+      summary: "Already reverted.",
+      auditLogId: audit._id,
+      undoAuditLogId: null,
+      state: "reverted",
+      revertedAt: audit.reversedAt,
+      alreadyReverted: true,
+    };
+  }
+  if (Date.now() - audit.executedAt >= UNDO_WINDOW_MS) {
+    throw new Error("undo_window_expired");
+  }
+
+  const proposal = await ctx
+    .table("agentProposals")
+    .getX(audit.proposalId);
+  if (proposal.state !== "executed") {
+    throw new Error(
+      `proposal_invalid_state: expected executed, got ${proposal.state}`,
+    );
+  }
+
+  const handler = getReversalHandler(audit.toolName);
+  if (!handler) {
+    throw new Error(`unsupported_reversal: ${audit.toolName}`);
+  }
+
+  const { summary } = await handler(ctx, audit);
+
+  const now = Date.now();
+  await audit.patch({ reversedAt: now });
+
+  const undoAuditLogId = (await ctx.table("auditLog").insert({
+    threadId: args.threadId,
+    proposalId: audit.proposalId,
+    toolName: audit.toolName,
+    inputArgsJson: audit.inputArgsJson,
+    affectedIdsJson: audit.affectedIdsJson,
+    executedAt: now,
+    reversalPayloadJson: "{}",
+    reversalOfAuditId: audit._id,
+    userId: viewer._id,
+  })) as Id<"auditLog">;
+
+  await proposal.patch({ state: "reverted", revertedAt: now });
+
+  return {
+    summary,
+    auditLogId: audit._id,
+    undoAuditLogId,
+    state: "reverted",
+    revertedAt: now,
+  };
 }
