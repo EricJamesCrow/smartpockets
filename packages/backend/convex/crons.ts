@@ -105,6 +105,19 @@ crons.hourly(
 );
 
 /**
+ * W6.9: Cashflow forecast daily refresh (07:15 UTC).
+ * Fans out per user with any active plaidItem. For each user, reads
+ * depository balances, credit-card statement dues, confirmed subscriptions,
+ * and MATURE recurring-income streams; upserts one `cashflowForecasts` row
+ * over a 30-day horizon.
+ */
+crons.daily(
+  "Cashflow forecast daily refresh",
+  { hourUTC: 7, minuteUTC: 15 },
+  internal.intelligence.cashflow.refresh.refreshAllInternal,
+);
+
+/**
  * W6.8: Subscription detection daily scan (07:05 UTC).
  * Plaid step ingests MATURE outflow streams into detectedSubscriptions with
  * `source: "plaid"`; catchup step groups the last 180 days of transactions
