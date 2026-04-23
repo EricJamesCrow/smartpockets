@@ -7,6 +7,7 @@
  */
 
 import { v } from "convex/values";
+import { internal } from "../_generated/api";
 import { mutation } from "../functions";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -69,12 +70,20 @@ export const create = mutation({
       throw new Error("Not authorized to add promo rates to this card");
     }
 
-    return await ctx.table("promoRates").insert({
+    const promoRateId = await ctx.table("promoRates").insert({
       ...args,
       isManual: args.isManual ?? false,
       userId: viewer._id,
       isActive: true,
     });
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.intelligence.promoCountdowns.refresh.refreshOneInternal,
+      { promoRateId },
+    );
+
+    return promoRateId;
   },
 });
 
@@ -119,6 +128,12 @@ export const update = mutation({
       await promo.patch(updates);
     }
 
+    await ctx.scheduler.runAfter(
+      0,
+      internal.intelligence.promoCountdowns.refresh.refreshOneInternal,
+      { promoRateId },
+    );
+
     return null;
   },
 });
@@ -145,6 +160,13 @@ export const remove = mutation({
     }
 
     await promo.patch({ isActive: false });
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.intelligence.promoCountdowns.refresh.refreshOneInternal,
+      { promoRateId },
+    );
+
     return null;
   },
 });
@@ -169,6 +191,13 @@ export const setExpirationOverride = mutation({
     await promo.patch({
       userOverrides: { expirationDate },
     });
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.intelligence.promoCountdowns.refresh.refreshOneInternal,
+      { promoRateId },
+    );
+
     return null;
   },
 });
@@ -188,6 +217,13 @@ export const clearExpirationOverride = mutation({
       throw new Error("Not authorized to modify this promo rate");
     }
     await promo.patch({ userOverrides: undefined });
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.intelligence.promoCountdowns.refresh.refreshOneInternal,
+      { promoRateId },
+    );
+
     return null;
   },
 });

@@ -27,6 +27,20 @@ crons.daily(
 );
 
 // =============================================================================
+// W6 intelligence crons
+// =============================================================================
+
+/**
+ * Promo Countdown Refresh: daily at 07:00 UTC. Recomputes countdown
+ * rows for every user with active promoRates.
+ */
+crons.daily(
+    "Promo Countdown Refresh",
+    { hourUTC: 7, minuteUTC: 0 },
+    internal.intelligence.promoCountdowns.refresh.refreshAllInternal,
+);
+
+// =============================================================================
 // W2 agent crons
 // =============================================================================
 
