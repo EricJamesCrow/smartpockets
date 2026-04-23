@@ -6,6 +6,7 @@ import {
   query,
 } from "../functions";
 import { internal } from "../_generated/api";
+import { DESTRUCTIVE_TOOLS } from "./writeTool";
 
 // Public query: used by W1 to render `ProposalConfirmCard` inline in the stream.
 export const listOpenProposals = query({
@@ -35,9 +36,16 @@ export const get = query({
 
 // Public mutation: user clicks Confirm. CAS-safe (idempotent on non-awaiting states).
 export const confirm = mutation({
-  args: { proposalId: v.id("agentProposals") },
+  args: {
+    proposalId: v.id("agentProposals"),
+    // Trusted signal from W3's destructive second-click modal. This arg is
+    // reachable only through the user-triggered confirm mutation; the LLM
+    // cannot set it via tool args. executeWriteTool reads the persisted
+    // proposal field, not a tool-args flag.
+    confirmDestructive: v.optional(v.boolean()),
+  },
   returns: v.any(),
-  handler: async (ctx, { proposalId }) => {
+  handler: async (ctx, { proposalId, confirmDestructive }) => {
     const viewer = ctx.viewerX();
     const proposal = await ctx.table("agentProposals").getX(proposalId);
     if (proposal.userId !== viewer._id) throw new Error("Not authorized");
@@ -48,7 +56,16 @@ export const confirm = mutation({
       await proposal.patch({ state: "timed_out" });
       throw new Error("proposal_timed_out");
     }
-    await proposal.patch({ state: "confirmed" });
+    if (
+      DESTRUCTIVE_TOOLS.has(proposal.toolName) &&
+      confirmDestructive !== true
+    ) {
+      throw new Error("destructive_unconfirmed");
+    }
+    await proposal.patch({
+      state: "confirmed",
+      userConfirmedDestructive: confirmDestructive === true ? true : undefined,
+    });
     // W2.11 stubs the executor; W5 fills the body.
     await ctx.scheduler.runAfter(
       0,

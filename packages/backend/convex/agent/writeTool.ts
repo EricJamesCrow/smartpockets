@@ -64,14 +64,17 @@ export function getReversalHandler(
   return reversalRegistry.get(toolName);
 }
 
-// ---- Destructive-action gating (wired in W5.11) -----------------------------
+// ---- Destructive-action gating (W5.11) -------------------------------------
 
-export const DESTRUCTIVE_TOOLS: ReadonlySet<string> = new Set<string>([
-  // Populated as destructive tools land:
-  //   "trigger_plaid_resync",
-  //   "propose_plaid_item_remove",
-  //   "propose_card_hard_delete",
-]);
+/**
+ * Tools in this set require `confirmDestructive: true` to execute.
+ * Populated by per-tool modules at import time via `markDestructive`.
+ */
+export const DESTRUCTIVE_TOOLS = new Set<string>();
+
+export function markDestructive(toolName: string) {
+  DESTRUCTIVE_TOOLS.add(toolName);
+}
 
 // ---- Strategy C-prime insert -----------------------------------------------
 
@@ -99,6 +102,17 @@ export async function createProposal(
   args: CreateProposalArgs,
 ): Promise<CreateProposalResult> {
   const viewer = ctx.viewerX();
+
+  // First-turn-read-before-write guard (W5.11): the agent must have made
+  // at least one read call in this thread before it may propose a write.
+  // Applied here so every propose-tool handler inherits the guard.
+  const thread = await ctx.table("agentThreads").getX(args.threadId);
+  if (thread.userId !== viewer._id) {
+    throw new Error("not_authorized");
+  }
+  if ((thread.readCallCount ?? 0) < 1) {
+    throw new Error("first_turn_guard");
+  }
 
   const contentHash = await idempotencyKey({
     userId: viewer._id,
@@ -160,8 +174,6 @@ export function isUniqueConstraintError(err: unknown): boolean {
 export interface ExecuteWriteToolArgs {
   proposalId: Id<"agentProposals">;
   threadId: Id<"agentThreads">;
-  /** True when the caller explicitly opted into a destructive operation. */
-  confirmDestructive?: boolean;
 }
 
 export interface ExecuteWriteToolExecutedResult {
@@ -258,9 +270,12 @@ export async function executeWriteTool(
   if (proposal.state !== "confirmed") {
     throw new Error(`proposal_invalid_state: expected confirmed, got ${proposal.state}`);
   }
+  // Destructive gating (W5.11): the trusted signal lives on the proposal
+  // row, set only by the user-triggered `confirm` mutation. The LLM cannot
+  // reach this field through tool args.
   if (
     DESTRUCTIVE_TOOLS.has(proposal.toolName) &&
-    args.confirmDestructive !== true
+    proposal.userConfirmedDestructive !== true
   ) {
     const message = "destructive_unconfirmed";
     await proposal.patch({
