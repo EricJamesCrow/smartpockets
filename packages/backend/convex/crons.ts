@@ -75,6 +75,22 @@ crons.interval(
 );
 
 // =============================================================================
+// W6 intelligence crons
+// =============================================================================
+
+/**
+ * W6.4: Statement reminder daily scan (07:10 UTC).
+ * Scans active credit cards with `statementClosingDay` set, inserts/updates
+ * one `statementReminders` row per card within the 7-day horizon, and deletes
+ * rows for cards that flipped inactive or drifted outside the window.
+ */
+crons.daily(
+  "Statement reminder daily scan",
+  { hourUTC: 7, minuteUTC: 10 },
+  internal.intelligence.statementReminders.scan.scanAllInternal,
+);
+
+// =============================================================================
 // W7 email crons
 // =============================================================================
 
