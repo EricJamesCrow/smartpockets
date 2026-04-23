@@ -270,6 +270,7 @@ export async function executeWriteTool(
   if (proposal.state !== "confirmed") {
     throw new Error(`proposal_invalid_state: expected confirmed, got ${proposal.state}`);
   }
+
   // Destructive gating (W5.11): the trusted signal lives on the proposal
   // row, set only by the user-triggered `confirm` mutation. The LLM cannot
   // reach this field through tool args.
