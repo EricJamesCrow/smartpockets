@@ -7,6 +7,7 @@ import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { MessageActions } from "@/components/chat/MessageActions";
 import { MessageFailedState } from "@/components/chat/MessageFailedState";
 import { ToolResultRenderer } from "@/components/chat/tool-results/ToolResultRenderer";
+import { RawTextMessage } from "@/components/chat/tool-results/shared/RawTextMessage";
 import type { PartState, ToolName } from "@/components/chat/tool-results/types";
 import { cx } from "@/utils/cx";
 
@@ -59,6 +60,9 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
   if (isTool) {
     const parsedInput = tryParseJson(message.toolCallsJson);
     const parsedOutput = tryParseJson(message.toolResultJson);
+    if (!message.toolName && !parsedOutput && message.text) {
+      return <RawTextMessage text={message.text} />;
+    }
     const errorText =
       parsedOutput && typeof parsedOutput.error === "string" ? parsedOutput.error : undefined;
     return (

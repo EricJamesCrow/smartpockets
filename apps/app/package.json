@@ -8,8 +8,9 @@
     "start": "next start",
     "clean": "rm -rf .next .turbo node_modules",
     "typecheck": "tsc --noEmit",
-    "lint": "bun scripts/check-tool-results.ts",
-    "check:tool-results": "bun scripts/check-tool-results.ts"
+    "lint": "bun scripts/check-tool-results.ts && node scripts/verify-reserved-slugs.mjs",
+    "check:tool-results": "bun scripts/check-tool-results.ts",
+    "verify:slugs": "node scripts/verify-reserved-slugs.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.24.0",

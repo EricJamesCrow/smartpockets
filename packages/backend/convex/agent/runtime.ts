@@ -10,6 +10,47 @@ import { agentLimiter } from "./rateLimits";
 
 const agent = internal.agent;
 
+type ToolEnvelope =
+  | { ok: true; data?: unknown; meta?: unknown }
+  | { ok: false; error?: { code?: unknown; message?: unknown; retryable?: unknown } };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeToolResult(raw: unknown): {
+  payload: unknown;
+  proposalId?: Id<"agentProposals">;
+} {
+  let payload = raw;
+
+  if (isRecord(raw) && "ok" in raw) {
+    const envelope = raw as ToolEnvelope;
+    if (envelope.ok === true) {
+      payload = envelope.data ?? null;
+    } else {
+      const err = envelope.error ?? {};
+      payload = {
+        error:
+          typeof err.message === "string"
+            ? err.message
+            : typeof err.code === "string"
+              ? err.code
+              : "tool_failed",
+        code: typeof err.code === "string" ? err.code : "tool_failed",
+        retryable: typeof err.retryable === "boolean" ? err.retryable : false,
+      };
+    }
+  }
+
+  const proposalId =
+    isRecord(payload) && typeof payload.proposalId === "string"
+      ? (payload.proposalId as Id<"agentProposals">)
+      : undefined;
+
+  return { payload, proposalId };
+}
+
 /**
  * Build per-turn tool closures that inject trusted `userId` + `threadId`
  * before dispatching to each registered handler. Wraps:
@@ -230,28 +271,16 @@ export const runAgentTurn = internalAction({
 
           if (Array.isArray(step.toolResults)) {
             for (const tr of step.toolResults) {
-              const payload = (tr.output ?? tr.result) as
-                | { data?: { proposalId?: unknown } }
-                | unknown;
-              const proposalId =
-                payload &&
-                typeof payload === "object" &&
-                payload !== null &&
-                "data" in payload &&
-                (payload as { data?: { proposalId?: unknown } }).data
-                  ? ((payload as { data: { proposalId?: unknown } }).data
-                      .proposalId as Id<"agentProposals"> | undefined)
-                  : undefined;
+              const { payload, proposalId } = normalizeToolResult(
+                tr.output ?? tr.result ?? null,
+              );
               await ctx.runMutation(agent.threads.persistStep, {
                 threadId,
                 step: {
                   role: "tool" as const,
                   toolName: tr.toolName,
-                  toolResultJson: JSON.stringify(tr.output ?? tr.result ?? null),
-                  proposalId:
-                    typeof proposalId === "string"
-                      ? (proposalId as Id<"agentProposals">)
-                      : undefined,
+                  toolResultJson: JSON.stringify(payload),
+                  proposalId,
                 },
               });
             }
