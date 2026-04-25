@@ -27,6 +27,20 @@ crons.daily(
 );
 
 // =============================================================================
+// W6 intelligence crons
+// =============================================================================
+
+/**
+ * Promo Countdown Refresh: daily at 07:00 UTC. Recomputes countdown
+ * rows for every user with active promoRates.
+ */
+crons.daily(
+    "Promo Countdown Refresh",
+    { hourUTC: 7, minuteUTC: 0 },
+    internal.intelligence.promoCountdowns.refresh.refreshAllInternal,
+);
+
+// =============================================================================
 // W2 agent crons
 // =============================================================================
 
@@ -58,6 +72,65 @@ crons.interval(
   "Plaid Persistent Error Check",
   { hours: 6 },
   internal.plaid.persistentError.runPersistentErrorCheckInternal
+);
+
+// =============================================================================
+// W6 intelligence crons
+// =============================================================================
+
+/**
+ * W6.4: Statement reminder daily scan (07:10 UTC).
+ * Scans active credit cards with `statementClosingDay` set, inserts/updates
+ * one `statementReminders` row per card within the 7-day horizon, and deletes
+ * rows for cards that flipped inactive or drifted outside the window.
+ */
+crons.daily(
+  "Statement reminder daily scan",
+  { hourUTC: 7, minuteUTC: 10 },
+  internal.intelligence.statementReminders.scan.scanAllInternal,
+);
+
+/**
+ * W6.5: Anomaly detection hourly scan.
+ * Fans out per user with any active plaidItem. For each user, advances a
+ * per-user watermark (`anomalyScanState.lastScannedTransactionDate`) and
+ * applies three pure rules to new transactions: amount_spike_3x,
+ * new_merchant_threshold, duplicate_charge_24h. Dispatches one email per
+ * new anomaly (W7 workflow coalesces into a 15-min batch).
+ */
+crons.hourly(
+  "Anomaly detection scan",
+  { minuteUTC: 20 },
+  internal.intelligence.anomalies.scan.scanAllUsersInternal,
+);
+
+/**
+ * W6.9: Cashflow forecast daily refresh (07:15 UTC).
+ * Fans out per user with any active plaidItem. For each user, reads
+ * depository balances, credit-card statement dues, confirmed subscriptions,
+ * and MATURE recurring-income streams; upserts one `cashflowForecasts` row
+ * over a 30-day horizon.
+ */
+crons.daily(
+  "Cashflow forecast daily refresh",
+  { hourUTC: 7, minuteUTC: 15 },
+  internal.intelligence.cashflow.refresh.refreshAllInternal,
+);
+
+/**
+ * W6.8: Subscription detection daily scan (07:05 UTC).
+ * Plaid step ingests MATURE outflow streams into detectedSubscriptions with
+ * `source: "plaid"`; catchup step groups the last 180 days of transactions
+ * by normalized merchant + $0.50 bucket and upserts rows with
+ * `source: "catchup"` when ≥3 occurrences fall inside a frequency tolerance
+ * band. Plaid-sourced rows win on conflict. Dispatches one
+ * subscription-detected digest per user-per-day if any new catchup rows
+ * were inserted.
+ */
+crons.daily(
+  "Subscription detection daily scan",
+  { hourUTC: 7, minuteUTC: 5 },
+  internal.intelligence.subscriptions.scan.scanAllUsersInternal,
 );
 
 // =============================================================================

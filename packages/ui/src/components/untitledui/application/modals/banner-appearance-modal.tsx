@@ -79,7 +79,7 @@ export const BannerAppearanceModal = () => {
                             <div className="h-5 w-full" />
                             <AriaRadioGroup
                                 aria-label="Banner appearances"
-                                defaultValue={banners[1].value}
+                                defaultValue={banners[1]?.value ?? banners[0]?.value}
                                 className="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 sm:gap-5 sm:px-6"
                             >
                                 {banners.map((banner) => (

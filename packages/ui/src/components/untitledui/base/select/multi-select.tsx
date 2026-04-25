@@ -6,8 +6,6 @@ import { SearchLg } from "@untitledui/icons";
 import { FocusScope, useFilter, useFocusManager } from "react-aria";
 import type { ComboBoxProps as AriaComboBoxProps, GroupProps as AriaGroupProps, ListBoxProps as AriaListBoxProps, Key } from "react-aria-components";
 import { ComboBox as AriaComboBox, Group as AriaGroup, Input as AriaInput, ListBox as AriaListBox, ComboBoxStateContext } from "react-aria-components";
-import type { ListData } from "react-stately";
-import { useListData } from "react-stately";
 import { Avatar } from "../avatar/avatar";
 import type { IconComponentType } from "../badges/badge-types";
 import { HintText } from "../input/hint-text";
@@ -18,6 +16,30 @@ import { TagCloseX } from "../tags/base-components/tag-close-x";
 import { useResizeObserver } from "../../../../hooks/use-resize-observer";
 import { cx } from "../../../../utils/cx";
 import { SelectItem } from "./select-item";
+
+interface SelectedListData<T extends { id: Key }> {
+    items: T[];
+    append: (item: T) => void;
+    remove: (key: Key) => void;
+}
+
+function useFilteredListData<T extends { id: Key }>({
+    initialItems = [],
+    filter,
+}: {
+    initialItems?: T[];
+    filter: (item: T, filterText: string) => boolean;
+}) {
+    const [filterText, setFilterText] = useState("");
+    const items = initialItems.filter((item) => filter(item, filterText));
+
+    return {
+        filterText,
+        items,
+        setFilterText,
+        getItem: (key: Key) => initialItems.find((item) => item.id === key),
+    };
+}
 
 interface ComboBoxValueProps extends AriaGroupProps {
     size: "sm" | "md";
@@ -34,13 +56,13 @@ interface ComboBoxValueProps extends AriaGroupProps {
 const ComboboxContext = createContext<{
     size: "sm" | "md";
     selectedKeys: Key[];
-    selectedItems: ListData<SelectItemType>;
+    selectedItems: SelectedListData<SelectItemType>;
     onRemove: (keys: Set<Key>) => void;
     onInputChange: (value: string) => void;
 }>({
     size: "sm",
     selectedKeys: [],
-    selectedItems: {} as ListData<SelectItemType>,
+    selectedItems: {} as SelectedListData<SelectItemType>,
     onRemove: () => {},
     onInputChange: () => {},
 });
@@ -55,7 +77,7 @@ interface MultiSelectProps extends Omit<AriaComboBoxProps<SelectItemType>, "chil
     items?: SelectItemType[];
     popoverClassName?: string;
     shortcutClassName?: string;
-    selectedItems: ListData<SelectItemType>;
+    selectedItems: SelectedListData<SelectItemType>;
     placeholderIcon?: IconComponentType | null;
     children: AriaListBoxProps<SelectItemType>["children"];
     onItemCleared?: (key: Key) => void;
@@ -86,7 +108,7 @@ export const MultiSelectBase = ({
         [contains, selectedKeys],
     );
 
-    const accessibleList = useListData({
+    const accessibleList = useFilteredListData({
         initialItems: items,
         filter,
     });

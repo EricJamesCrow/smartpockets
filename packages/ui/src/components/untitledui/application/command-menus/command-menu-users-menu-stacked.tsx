@@ -114,7 +114,7 @@ export const CommandMenuUsersMenuStacked = () => {
                 isOpen={isOpen}
                 items={groups}
                 dialogClassName="w-180"
-                defaultSelectedKeys={[groups[0].items[1].id]}
+                defaultSelectedKeys={items[1]?.id ? [items[1].id] : []}
                 onOpenChange={setIsOpen}
                 onSelectionChange={(keys) => console.log("You clicked item: ", keys)}
                 emptyState={

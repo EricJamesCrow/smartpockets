@@ -58,7 +58,7 @@ const detectCardType = (number: string) => {
     // Find the matching card type
     const card = cardTypes.find((cardType) => cardType.pattern.test(sanitizedNumber));
 
-    return card || cardTypes[cardTypes.length - 1];
+    return card ?? cardTypes[cardTypes.length - 1]!;
 };
 
 /**

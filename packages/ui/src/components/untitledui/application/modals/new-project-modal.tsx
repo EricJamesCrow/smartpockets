@@ -61,6 +61,8 @@ export const NewProjectModal = () => {
     const handleDropFiles = (files: FileList) => {
         const newFiles = Array.from(files);
         const fileToUpload = newFiles[0];
+        if (!fileToUpload) return;
+
         const filePreview = URL.createObjectURL(fileToUpload);
         const uploadedFileObject = { name: fileToUpload.name, type: fileToUpload.type, progress: 0, failed: false, size: fileToUpload.size };
 
