@@ -421,6 +421,9 @@ export async function undoByToken(
   const audit = await ctx.table("auditLog").get(auditLogId as Id<"auditLog">);
   if (!audit) throw new Error("reversal_token_not_found");
   if (audit.userId !== viewer._id) throw new Error("reversal_token_not_found");
+  if (audit.threadId !== args.threadId) {
+    throw new Error("reversal_token_not_found");
+  }
 
   // Idempotent retry: undo on an already-reverted audit row is a no-op
   // that returns a consistent success envelope. Per W5 review criteria.
@@ -441,6 +444,9 @@ export async function undoByToken(
   const proposal = await ctx
     .table("agentProposals")
     .getX(audit.proposalId);
+  if (proposal.userId !== viewer._id || proposal.agentThreadId !== audit.threadId) {
+    throw new Error("reversal_token_not_found");
+  }
   if (proposal.state !== "executed") {
     throw new Error(
       `proposal_invalid_state: expected executed, got ${proposal.state}`,
@@ -458,7 +464,7 @@ export async function undoByToken(
   await audit.patch({ reversedAt: now });
 
   const undoAuditLogId = (await ctx.table("auditLog").insert({
-    threadId: args.threadId,
+    threadId: audit.threadId,
     proposalId: audit.proposalId,
     toolName: audit.toolName,
     inputArgsJson: audit.inputArgsJson,

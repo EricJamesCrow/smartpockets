@@ -15,6 +15,7 @@ import {
 type FakeAudit = {
   _id: string;
   userId: string;
+  threadId: string;
   toolName: string;
   executedAt: number;
   reversedAt?: number;
@@ -43,6 +44,7 @@ describe("undoByToken idempotency", () => {
     const audit: FakeAudit = {
       _id: auditId,
       userId: "user_1",
+      threadId: "thread_1",
       toolName: "propose_transaction_update",
       executedAt: 1_000_000,
       reversedAt: 1_000_500,
@@ -82,6 +84,7 @@ describe("undoByToken idempotency", () => {
     const audit: FakeAudit = {
       _id: auditId,
       userId: "user_other",
+      threadId: "thread_1",
       toolName: "propose_transaction_update",
       executedAt: 1_000_000,
       proposalId: "prop_1",
@@ -94,6 +97,28 @@ describe("undoByToken idempotency", () => {
       undoByToken(ctx as any, {
         reversalToken: encodeReversalToken(auditId),
         threadId: "thread_1" as any,
+      }),
+    ).rejects.toThrow(/reversal_token_not_found/);
+  });
+
+  it("rejects a valid token when used from another thread", async () => {
+    const auditId = "audit_thread";
+    const audit: FakeAudit = {
+      _id: auditId,
+      userId: "user_1",
+      threadId: "thread_original",
+      toolName: "propose_transaction_update",
+      executedAt: 1_000_000,
+      proposalId: "prop_1",
+      inputArgsJson: "{}",
+      affectedIdsJson: "[]",
+    };
+    const ctx = makeCtx({ viewerId: "user_1", audit });
+
+    await expect(
+      undoByToken(ctx as any, {
+        reversalToken: encodeReversalToken(auditId),
+        threadId: "thread_other" as any,
       }),
     ).rejects.toThrow(/reversal_token_not_found/);
   });
