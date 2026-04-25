@@ -15,6 +15,7 @@
 
 import { idempotencyKey } from "../notifications/hashing";
 import type { Id } from "../_generated/dataModel";
+import { agentLimiter } from "./rateLimits";
 
 // ---- Tool executor registry -------------------------------------------------
 
@@ -39,6 +40,10 @@ const toolExecuteRegistry = new Map<string, ToolExecutor>();
 
 export function registerToolExecutor(toolName: string, handler: ToolExecutor) {
   toolExecuteRegistry.set(toolName, handler);
+}
+
+export function unregisterToolExecutor(toolName: string) {
+  toolExecuteRegistry.delete(toolName);
 }
 
 export function getToolExecutor(toolName: string): ToolExecutor | undefined {
@@ -138,10 +143,7 @@ export async function createProposal(
     return { proposalId, preview: args.sampleJson, deduped: false };
   } catch (err) {
     if (!isUniqueConstraintError(err)) throw err;
-    const rows = await ctx.table("agentProposals");
-    const existing = rows.find(
-      (p: { contentHash?: string }) => p.contentHash === contentHash,
-    );
+    const existing = await ctx.table("agentProposals").get("contentHash", contentHash);
     if (existing == null) {
       throw new Error(
         "Strategy C-prime: unique constraint fired but lookup returned null",
@@ -198,6 +200,11 @@ export type ExecuteWriteToolResult =
   | ExecuteWriteToolFailedResult;
 
 const UNDO_WINDOW_MS = 10 * 60 * 1000;
+const DEFAULT_RETRY_AFTER_MS = 60_000;
+
+function retryAfterSeconds(retryAfterMs: number | undefined): number {
+  return Math.max(1, Math.ceil((retryAfterMs ?? DEFAULT_RETRY_AFTER_MS) / 1000));
+}
 
 function storedFailureMessage(proposal: { errorJson?: string }): string {
   if (!proposal.errorJson) return "execution_failed";
@@ -286,6 +293,25 @@ export async function executeWriteTool(
     return failedExecuteResult(proposal, message);
   }
 
+  if (DESTRUCTIVE_TOOLS.has(proposal.toolName)) {
+    try {
+      const rl = await (agentLimiter as any).limit(ctx, "destructive_ops", {
+        key: viewer._id,
+      });
+      if (!rl.ok) {
+        throw new Error(
+          `destructive_rate_limited: retry in ${retryAfterSeconds(rl.retryAfter)}s`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith("destructive_rate_limited")) {
+        throw err;
+      }
+      console.warn("[agent.writeTool] destructive rate-limit check failed:", err);
+      throw new Error("destructive_rate_limit_unavailable");
+    }
+  }
+
   const executor = getToolExecutor(proposal.toolName);
   if (!executor) {
     throw new Error(
@@ -300,12 +326,9 @@ export async function executeWriteTool(
   try {
     result = await executor(ctx, proposal);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await proposal.patch({
-      state: "failed",
-      errorJson: JSON.stringify({ message }),
-    });
-    return failedExecuteResult(proposal, message);
+    // Let Convex roll back any executor writes in this mutation. Persisting
+    // failed state after a partial executor throw would commit those writes.
+    throw err;
   }
 
   const now = Date.now();

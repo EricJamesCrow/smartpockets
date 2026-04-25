@@ -182,7 +182,7 @@ export const scanForUserInternal = internalMutation({
         const newCatchupDetections: Array<{
             subscriptionId: string;
             normalizedMerchant: string;
-            averageAmount: number;
+            averageAmountCents: number;
             frequency: Frequency;
         }> = [];
 
@@ -239,7 +239,7 @@ export const scanForUserInternal = internalMutation({
                 newCatchupDetections.push({
                     subscriptionId: insertedId,
                     normalizedMerchant: group.normalizedMerchant,
-                    averageAmount: Math.round(avgAmount * 100) / 100,
+                    averageAmountCents: Math.round(avgAmount * 100),
                     frequency,
                 });
             }

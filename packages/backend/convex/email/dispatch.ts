@@ -326,7 +326,7 @@ export const dispatchSubscriptionDigest = internalAction({
       v.object({
         subscriptionId: v.string(),
         normalizedMerchant: v.string(),
-        averageAmount: v.number(),
+        averageAmountCents: v.number(),
         frequency: v.union(
           v.literal("weekly"),
           v.literal("biweekly"),

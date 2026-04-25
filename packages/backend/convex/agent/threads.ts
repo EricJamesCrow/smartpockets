@@ -52,7 +52,7 @@ export const appendUserTurn = internalMutation({
       agentThreadId: targetThreadId,
       role: "user",
       text: prompt,
-      toolCallsJson: toolHint,
+      toolCallsJson: toolHint ? JSON.stringify({ hint: toolHint }) : undefined,
       createdAt: now,
       isStreaming: true,
     });

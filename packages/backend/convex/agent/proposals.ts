@@ -62,10 +62,11 @@ export const confirm = mutation({
     ) {
       throw new Error("destructive_unconfirmed");
     }
-    await proposal.patch({
+    const updates = {
       state: "confirmed",
       userConfirmedDestructive: confirmDestructive === true ? true : undefined,
-    });
+    } as const;
+    await proposal.patch(updates);
     // W2.11 stubs the executor; W5 fills the body.
     await ctx.scheduler.runAfter(
       0,
@@ -77,7 +78,7 @@ export const confirm = mutation({
         threadId: proposal.agentThreadId,
       },
     );
-    return { ...proposal, state: "confirmed" };
+    return { ...proposal, ...updates };
   },
 });
 
@@ -129,8 +130,7 @@ export const getByContentHash = internalQuery({
   args: { contentHash: v.string() },
   returns: v.any(),
   handler: async (ctx, { contentHash }) => {
-    const rows = await ctx.table("agentProposals");
-    return rows.find((p: { contentHash: string }) => p.contentHash === contentHash) ?? null;
+    return await ctx.table("agentProposals").get("contentHash", contentHash);
   },
 });
 

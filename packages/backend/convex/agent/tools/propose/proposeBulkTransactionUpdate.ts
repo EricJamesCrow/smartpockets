@@ -277,9 +277,9 @@ export const proposeBulkTransactionUpdate = agentMutation({
     if (Object.keys(patch).length === 0) {
       throw new Error("invalid_args: overlay has no patchable fields");
     }
-    const filter = (args.filter ?? {}) as BulkFilter;
+    const filter = args.filter as BulkFilter;
     validateBulkFilter(filter);
-    const limit = Math.min(Math.max(args.limit ?? 500, 1), 5000);
+    const limit = Math.min(Math.max(args.limit ?? 500, 1), 1000);
 
     const plaidTransactionIds = await resolveBulkTransactionIds(
       ctx,

@@ -13,6 +13,7 @@ import {
   encodeReversalToken,
   executeWriteTool,
   registerToolExecutor,
+  unregisterToolExecutor,
 } from "../agent/writeTool";
 
 type FakeAudit = {
@@ -164,7 +165,7 @@ describe("executeWriteTool idempotency", () => {
     });
   });
 
-  it("persists failed state when an executor throws", async () => {
+  it("does not mark failed inside the executor transaction when an executor throws", async () => {
     const proposal: FakeProposal = {
       _id: proposalId,
       userId: viewerId,
@@ -186,18 +187,15 @@ describe("executeWriteTool idempotency", () => {
       auditsByProposal: new Map(),
     });
 
-    const result = await executeWriteTool(ctx as any, {
-      proposalId: proposalId as any,
-      threadId: threadId as any,
-    });
-
-    expect(result).toEqual({
-      summary: "x",
-      state: "failed",
-      error: "executor_failed",
-    });
-    expect(proposal.state).toBe("failed");
-    expect(proposal.errorJson).toBe(JSON.stringify({ message: "executor_failed" }));
+    await expect(
+      executeWriteTool(ctx as any, {
+        proposalId: proposalId as any,
+        threadId: threadId as any,
+      }),
+    ).rejects.toThrow(/executor_failed/);
+    expect(proposal.state).toBe("executing");
+    expect(proposal.errorJson).toBeUndefined();
+    unregisterToolExecutor(proposal.toolName);
   });
 
   it("rejects when thread does not match proposal", async () => {

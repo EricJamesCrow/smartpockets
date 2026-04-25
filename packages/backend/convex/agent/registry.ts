@@ -276,7 +276,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         userDate: z.string().optional(),
         userTime: z.string().optional(),
       }),
-      limit: z.number().int().max(5000).optional(),
+      limit: z.number().int().max(1000).optional(),
     }),
     handler: agent.tools.propose.proposeBulkTransactionUpdate.proposeBulkTransactionUpdate,
     handlerType: "mutation" as const,

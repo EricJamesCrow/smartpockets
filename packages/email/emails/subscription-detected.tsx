@@ -14,7 +14,7 @@ export interface SubscriptionDetectedProps {
     detected: Array<{
         subscriptionId: string;
         normalizedMerchant: string;
-        averageAmount: number;
+        averageAmountCents: number;
         frequency: "weekly" | "biweekly" | "monthly" | "quarterly" | "annual";
         confirmUrl: string;
         dismissUrl: string;
@@ -24,8 +24,8 @@ export interface SubscriptionDetectedProps {
     brandConfig?: Partial<EmailBrandConfig>;
 }
 
-const dollars = (amount: number) =>
-    `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const dollars = (cents: number) =>
+    `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export const SubscriptionDetected = ({
     theme,
@@ -70,7 +70,7 @@ export const SubscriptionDetected = ({
                                 {detected.map((row) => (
                                     <Container key={row.subscriptionId} align="left" className="mt-2 max-w-full">
                                         <Text className="text-sm text-tertiary">
-                                            {row.normalizedMerchant}: {dollars(row.averageAmount)} ({row.frequency})
+                                            {row.normalizedMerchant}: {dollars(row.averageAmountCents)} ({row.frequency})
                                         </Text>
                                         <Text className="text-xs text-tertiary">
                                             <a href={row.confirmUrl}>Confirm</a> &middot;{" "}
@@ -125,7 +125,7 @@ SubscriptionDetected.PreviewProps = {
         {
             subscriptionId: "sub_1",
             normalizedMerchant: "Netflix",
-            averageAmount: 15.99,
+            averageAmountCents: 1599,
             frequency: "monthly",
             confirmUrl: "https://app.smartpockets.com/subscriptions/sub_1?action=confirm",
             dismissUrl: "https://app.smartpockets.com/subscriptions/sub_1?action=dismiss",

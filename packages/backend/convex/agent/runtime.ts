@@ -9,6 +9,7 @@ import { AGENT_DEFAULT_MODEL, getAnthropicModel } from "./config";
 import { agentLimiter } from "./rateLimits";
 
 const agent = internal.agent;
+const DEFAULT_RETRY_AFTER_MS = 60_000;
 
 type ToolEnvelope =
   | { ok: true; data?: unknown; meta?: unknown }
@@ -51,6 +52,10 @@ function normalizeToolResult(raw: unknown): {
   return { payload, proposalId };
 }
 
+function retryAfterSeconds(retryAfterMs: number | undefined): number {
+  return Math.max(1, Math.ceil((retryAfterMs ?? DEFAULT_RETRY_AFTER_MS) / 1000));
+}
+
 /**
  * Build per-turn tool closures that inject trusted `userId` + `threadId`
  * before dispatching to each registered handler. Wraps:
@@ -87,17 +92,28 @@ function buildToolsForAgent({
             { key: userId },
           );
           if (!rl.ok) {
+            const retryAfter = retryAfterSeconds(rl.retryAfter);
             return {
               ok: false as const,
               error: {
                 code: "rate_limited" as const,
-                message: `Rate limit reached; retry in ${rl.retryAfter ?? 60}s.`,
+                message: `Rate limit reached; retry in ${retryAfter}s.`,
                 retryable: true,
               },
             };
           }
         } catch (err) {
           console.warn(`[agent.runtime] rate-limit check failed for ${toolName}:`, err);
+          if (def.bucket === "write_expensive") {
+            return {
+              ok: false as const,
+              error: {
+                code: "rate_limit_unavailable" as const,
+                message: "Rate limit check unavailable; retry shortly.",
+                retryable: true,
+              },
+            };
+          }
         }
 
         if (def.firstTurnGuard) {
@@ -202,7 +218,14 @@ export const runAgentTurn = internalAction({
       const user = (msgs as Array<{ _id: string; role: string; toolCallsJson?: string }>)
         .find((m) => m._id === (userMessageId as unknown as string));
       if (user?.toolCallsJson) {
-        const parsed = JSON.parse(user.toolCallsJson) as {
+        const raw = JSON.parse(user.toolCallsJson) as unknown;
+        const hint =
+          isRecord(raw) && typeof raw.hint === "string"
+            ? JSON.parse(raw.hint)
+            : isRecord(raw) && isRecord(raw.hint)
+              ? raw.hint
+              : raw;
+        const parsed = hint as {
           tool?: string;
           args?: Record<string, unknown>;
         };

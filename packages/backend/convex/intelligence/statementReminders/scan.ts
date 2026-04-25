@@ -8,9 +8,9 @@ import { nextOccurrenceOfDayInMonth } from "./helpers";
 const MAX_DAYS_TO_CLOSE = 7;
 const DISPATCH_CADENCES = [3, 1] as const;
 
-function dollarsToCents(amount: number | undefined): number {
-    if (amount == null) return 0;
-    return Math.round(amount * 100);
+function displayDollarsToCents(amountDollars: number | undefined): number {
+    if (amountDollars == null) return 0;
+    return Math.round(amountDollars * 100);
 }
 
 export const scanAllInternal = internalAction({
@@ -102,6 +102,8 @@ export const scanForUserInternal = internalMutation({
                 statementClosingDate,
                 daysToClose,
                 nextPaymentDueDate: card.nextPaymentDueDate,
+                // creditCards liability values are display dollars after
+                // denormalization; statementReminders preserves that unit.
                 minimumPaymentAmount: card.minimumPaymentAmount,
                 lastStatementBalance: card.lastStatementBalance,
                 lastRefreshedAt: Date.now(),
@@ -120,10 +122,10 @@ export const scanForUserInternal = internalMutation({
                     cardId: card._id as unknown as string,
                     cardName: card.displayName,
                     closingDate: statementClosingDate,
-                    projectedBalanceCents: dollarsToCents(
+                    projectedBalanceCents: displayDollarsToCents(
                         card.lastStatementBalance,
                     ),
-                    minimumDueCents: dollarsToCents(card.minimumPaymentAmount),
+                    minimumDueCents: displayDollarsToCents(card.minimumPaymentAmount),
                     dueDate: card.nextPaymentDueDate ?? statementClosingDate,
                 });
                 dispatchGroups.set(cadence, group);

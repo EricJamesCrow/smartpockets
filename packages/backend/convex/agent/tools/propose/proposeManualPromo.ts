@@ -82,6 +82,7 @@ export const proposeManualPromo = agentMutation({
         .get(promo.promoRateId as any);
       if (!existing) throw new Error("promo_not_found");
       if (existing.userId !== viewer._id) throw new Error("not_authorized");
+      if (existing.creditCardId !== args.cardId) throw new Error("not_authorized");
       if (existing.isManual !== true) {
         throw new Error("not_authorized: cannot modify Plaid-synced promo");
       }
@@ -126,6 +127,7 @@ registerToolExecutor(TOOL_NAME, async (ctx, proposal): Promise<ExecutorResult> =
       .table("promoRates")
       .getX(parsed.promo.promoRateId as any);
     if (row.userId !== viewer._id) throw new Error("not_authorized");
+    if (row.creditCardId !== parsed.cardId) throw new Error("not_authorized");
     if (row.isManual !== true) throw new Error("not_authorized");
 
     const priorFields: PromoPriorFields = {

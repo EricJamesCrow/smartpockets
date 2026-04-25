@@ -42,6 +42,7 @@ function makeCtx(opts: {
   const promoHandle = (id: string) => ({
     _id: id,
     get userId() { return promos.get(id)!.userId; },
+    get creditCardId() { return promos.get(id)!.creditCardId; },
     get isManual() { return promos.get(id)!.isManual; },
     get description() { return promos.get(id)!.description; },
     get aprPercentage() { return promos.get(id)!.aprPercentage; },
@@ -185,6 +186,38 @@ describe("propose_manual_promo executor", () => {
           isDeferredInterest: false,
           isActive: true,
           isManual: false,
+        },
+      ],
+    });
+    const exec = getToolExecutor("propose_manual_promo")!;
+    await expect(
+      exec(ctx as any, {
+        argsJson: JSON.stringify({
+          cardId: "card_1",
+          promo: { ...basePromo, promoRateId: "promo_1" },
+        }),
+      }),
+    ).rejects.toThrow(/not_authorized/);
+  });
+
+  it("rejects updates when promoRateId belongs to a different card", async () => {
+    const ctx = makeCtx({
+      viewerId: "user_1",
+      cards: [{ _id: "card_1", userId: "user_1", displayName: "X" }],
+      promos: [
+        {
+          _id: "promo_1",
+          userId: "user_1",
+          creditCardId: "card_2",
+          description: "old",
+          aprPercentage: 5,
+          originalBalance: 100,
+          remainingBalance: 100,
+          startDate: "2025-01-01",
+          expirationDate: "2025-12-31",
+          isDeferredInterest: false,
+          isActive: true,
+          isManual: true,
         },
       ],
     });

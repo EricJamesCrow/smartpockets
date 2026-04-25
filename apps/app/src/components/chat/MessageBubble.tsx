@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useSmoothText } from "@convex-dev/agent/react";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { MessageActions } from "@/components/chat/MessageActions";
-import { MessageFailedState } from "@/components/chat/MessageFailedState";
 import { ToolResultRenderer } from "@/components/chat/tool-results/ToolResultRenderer";
 import { RawTextMessage } from "@/components/chat/tool-results/shared/RawTextMessage";
 import type { PartState, ToolName } from "@/components/chat/tool-results/types";
@@ -37,7 +35,6 @@ function deriveToolState(message: AgentMessage): PartState {
 }
 
 export function MessageBubble({ message, threadId, onRegenerate }: MessageBubbleProps) {
-  const [isRetrying, setIsRetrying] = useState(false);
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const isTool = message.role === "tool";
@@ -46,16 +43,6 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
 
   const [smoothText] = useSmoothText(message.text ?? "", { startStreaming: isStreaming });
   const displayText = isUser || isSystem ? message.text ?? "" : smoothText;
-
-  const handleRetry = async () => {
-    if (!onRegenerate) return;
-    setIsRetrying(true);
-    try {
-      await onRegenerate();
-    } finally {
-      setIsRetrying(false);
-    }
-  };
 
   if (isTool) {
     const parsedInput = tryParseJson(message.toolCallsJson);
@@ -115,9 +102,6 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
             <MarkdownContent content={displayText} />
           )}
         </div>
-        {isAssistant && !isStreaming && onRegenerate && (
-          <MessageFailedState onRetry={handleRetry} isRetrying={isRetrying} />
-        )}
         {!isStreaming && (
           <MessageActions
             messageText={message.text ?? ""}

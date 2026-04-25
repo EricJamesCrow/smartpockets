@@ -36,7 +36,6 @@ const schema = defineEntSchema(
             .edges("promoCountdowns", { ref: true })
             .edges("statementReminders", { ref: true })
             .edges("anomalies", { ref: true })
-            .edges("anomalyScanState", { ref: true })
             .edges("detectedSubscriptions", { ref: true })
             .edges("cashflowForecasts", { ref: true }),
 
@@ -540,7 +539,7 @@ const schema = defineEntSchema(
             lastScannedTransactionDate: v.string(),
             skippedNullMerchantCount: v.number(),
         })
-            .edge("user")
+            .field("userId", v.id("users"), { unique: true })
             .index("by_userId", ["userId"]),
 
         detectedSubscriptions: defineEnt({

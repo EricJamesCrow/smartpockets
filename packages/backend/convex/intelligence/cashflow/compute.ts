@@ -5,15 +5,10 @@
 // line items are signed: negative = outflow, positive = inflow.
 // Callers convert from Plaid milliunits before calling this function.
 
-import { addDays } from "../subscriptions/normalize";
+import { addDays, frequencyToIntervalDays, type Frequency } from "../subscriptions/normalize";
 import { daysBetween, todayUtcYmd } from "../promoCountdowns/helpers";
 
-export type Frequency =
-    | "weekly"
-    | "biweekly"
-    | "monthly"
-    | "quarterly"
-    | "annual";
+export type { Frequency } from "../subscriptions/normalize";
 
 export type CashflowLineItem = {
     date: string;
@@ -66,21 +61,6 @@ export type RecurringIncomeInput = {
 };
 
 export const HORIZON_DAYS = 30;
-
-export function frequencyToIntervalDays(f: Frequency): number {
-    switch (f) {
-        case "weekly":
-            return 7;
-        case "biweekly":
-            return 14;
-        case "monthly":
-            return 30;
-        case "quarterly":
-            return 91;
-        case "annual":
-            return 365;
-    }
-}
 
 function inHorizon(
     dateYmd: string,

@@ -42,30 +42,3 @@ export type BucketName =
   | "write_bulk"
   | "write_expensive"
   | "destructive_ops";
-
-/**
- * Consume a bucket token for `userId`. Returns null on success, or an error
- * envelope describing the retry-after when the bucket is empty. Swallows
- * component errors and treats them as pass-through (same fail-open behavior
- * as the runtime-level gate in `runtime.ts`).
- */
-export async function consumeBucket(
-  ctx: unknown,
-  bucket: BucketName,
-  userId: string,
-): Promise<{ ok: true } | { ok: false; retryAfter: number; bucket: BucketName }> {
-  try {
-    const rl = await (agentLimiter as any).limit(ctx, bucket, { key: userId });
-    if (!rl.ok) {
-      return {
-        ok: false,
-        retryAfter: rl.retryAfter ?? 60,
-        bucket,
-      };
-    }
-    return { ok: true };
-  } catch (err) {
-    console.warn(`[agent.rateLimits] ${bucket} check failed:`, err);
-    return { ok: true };
-  }
-}
