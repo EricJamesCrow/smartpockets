@@ -64,7 +64,11 @@ export const setNickname = mutation({
     returns: v.null(),
     handler: async (ctx, { subscriptionId, nickname }) => {
         const row = await requireOwnedSubscription(ctx, subscriptionId);
-        await row.patch({ nickname });
+        const normalizedNickname = nickname.trim();
+        await row.patch({
+            nickname:
+                normalizedNickname.length > 0 ? normalizedNickname : undefined,
+        });
         await scheduleCashflowRefresh(ctx, row.userId);
         return null;
     },
