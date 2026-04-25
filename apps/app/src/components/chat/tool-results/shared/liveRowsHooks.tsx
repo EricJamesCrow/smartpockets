@@ -1,46 +1,25 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
-
+import { type ReactNode, createContext, useContext } from "react";
+import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-
+import { useQuery } from "convex-helpers/react/cache/hooks";
 import type { AgentProposalId } from "../types";
 
 // ============================================================================
-// CR-5 STUB HOOKS
+// CR-5 LIVE ROW HOOKS
 // ============================================================================
 //
-// These hooks are the live-data subscription surface for W3 components. Each
-// corresponds to a helper query that does NOT yet exist in
-// `@convex/_generated/api` and must be provided by W2 / W5:
-//
-//   - api.transactions.queries.getManyByIds       (W2 or W5)
-//   - api.creditCards.queries.getMany             (W2)
-//   - api.plaidAccounts.queries.getManyByIds      (W2)
-//   - api.promoRates.queries.getManyByIds         (W5 area)
-//   - api.installmentPlans.queries.getManyByIds   (W5 area)
-//   - api.reminders.queries.getManyByIds          (W2)
-//   - api.agent.proposals.get                     (W2 - also tool `get_proposal`)
+// These hooks are the live-data subscription surface for W3 components. They
+// read through `api.agent.liveRows.*` so streamed tool cards hydrate from
+// Convex after the initial agent preview payload lands.
 //
 // Spec: specs/W3-generative-ui.md §9.2 CR-5; research §3.5.
-//
-// Until those queries land, each hook returns `undefined` so component
-// skeletons render during preview-harness walkthroughs. Fixtures carry
-// hard-coded `preview` payloads so the UI still demonstrates end-to-end.
 //
 // The preview harness at `/dev/tool-results` additionally wraps its fixture
 // tree in `<LivePreviewOverrideProvider>` with mock rows so components that
 // depend on reactive subscriptions (notably `ProposalConfirmCard`) can render
 // every state without a live Convex backend.
-//
-// When the queries land, replace each hook's body with:
-//
-//   import { useQuery } from "convex-helpers/react/cache/hooks";
-//   import { api } from "@convex/_generated/api";
-//   return useQuery(api.transactions.queries.getManyByIds, ids.length > 0 ? { ids } : "skip");
-//
-// The preview context can be kept or removed once real queries exist; it is a
-// no-op in the absence of a provider.
 // ============================================================================
 
 type TransactionRow = {
@@ -129,16 +108,7 @@ type AgentProposalRow = {
     _updateTime?: number;
     toolName: string;
     scope: "single" | "bulk";
-    state:
-        | "proposed"
-        | "awaiting_confirmation"
-        | "confirmed"
-        | "executing"
-        | "executed"
-        | "cancelled"
-        | "timed_out"
-        | "reverted"
-        | "failed";
+    state: "proposed" | "awaiting_confirmation" | "confirmed" | "executing" | "executed" | "cancelled" | "timed_out" | "reverted" | "failed";
     summaryText: string;
     affectedCount: number;
     affectedIds?: string[];
@@ -168,24 +138,11 @@ export type LivePreviewOverrides = {
 
 const LivePreviewOverrideContext = createContext<LivePreviewOverrides | null>(null);
 
-export function LivePreviewOverrideProvider({
-    value,
-    children,
-}: {
-    value: LivePreviewOverrides;
-    children: ReactNode;
-}) {
-    return (
-        <LivePreviewOverrideContext.Provider value={value}>
-            {children}
-        </LivePreviewOverrideContext.Provider>
-    );
+export function LivePreviewOverrideProvider({ value, children }: { value: LivePreviewOverrides; children: ReactNode }) {
+    return <LivePreviewOverrideContext.Provider value={value}>{children}</LivePreviewOverrideContext.Provider>;
 }
 
-function collect<T>(
-    ids: string[],
-    overrides: Record<string, T | null> | undefined,
-): T[] | undefined {
+function collect<T>(ids: string[], overrides: Record<string, T | null> | undefined): T[] | undefined {
     if (!overrides || ids.length === 0) return undefined;
     const found: T[] = [];
     for (const id of ids) {
@@ -197,70 +154,60 @@ function collect<T>(
 
 export function useLiveTransactions(ids: string[]): TransactionRow[] | undefined {
     const overrides = useContext(LivePreviewOverrideContext);
+    const live = useQuery((api as any).agent.liveRows.getTransactions, ids.length > 0 ? { ids } : "skip") as TransactionRow[] | undefined;
     const hit = collect<TransactionRow>(ids, overrides?.transactions);
     if (hit) return hit;
-    // CR-5: api.transactions.queries.getManyByIds pending from W2/W5 plan.
-    return undefined;
+    return live;
 }
 
 export function useLiveCreditCards(ids: Array<Id<"creditCards">>): CreditCardRow[] | undefined {
     const overrides = useContext(LivePreviewOverrideContext);
+    const live = useQuery((api as any).agent.liveRows.getCreditCards, ids.length > 0 ? { ids } : "skip") as CreditCardRow[] | undefined;
     const hit = collect<CreditCardRow>(ids as unknown as string[], overrides?.creditCards);
     if (hit) return hit;
-    // CR-5: api.creditCards.queries.getMany pending from W2 plan.
-    return undefined;
+    return live;
 }
 
 export function useLivePlaidAccounts(ids: string[]): PlaidAccountRow[] | undefined {
     const overrides = useContext(LivePreviewOverrideContext);
+    const live = useQuery((api as any).agent.liveRows.getPlaidAccounts, ids.length > 0 ? { ids } : "skip") as PlaidAccountRow[] | undefined;
     const hit = collect<PlaidAccountRow>(ids, overrides?.plaidAccounts);
     if (hit) return hit;
-    // CR-5: api.plaidAccounts.queries.getManyByIds pending from W2 plan.
-    return undefined;
+    return live;
 }
 
 export function useLivePromoRates(ids: string[]): PromoRateRow[] | undefined {
     const overrides = useContext(LivePreviewOverrideContext);
+    const live = useQuery((api as any).agent.liveRows.getPromoRates, ids.length > 0 ? { ids } : "skip") as PromoRateRow[] | undefined;
     const hit = collect<PromoRateRow>(ids, overrides?.promoRates);
     if (hit) return hit;
-    // CR-5: api.promoRates.queries.getManyByIds pending from W5 plan.
-    return undefined;
+    return live;
 }
 
 export function useLiveInstallmentPlans(ids: string[]): InstallmentPlanRow[] | undefined {
     const overrides = useContext(LivePreviewOverrideContext);
+    const live = useQuery((api as any).agent.liveRows.getInstallmentPlans, ids.length > 0 ? { ids } : "skip") as InstallmentPlanRow[] | undefined;
     const hit = collect<InstallmentPlanRow>(ids, overrides?.installmentPlans);
     if (hit) return hit;
-    // CR-5: api.installmentPlans.queries.getManyByIds pending from W5 plan.
-    return undefined;
+    return live;
 }
 
 export function useLiveReminders(ids: string[]): ReminderRow[] | undefined {
     const overrides = useContext(LivePreviewOverrideContext);
+    const live = useQuery((api as any).agent.liveRows.getReminders, ids.length > 0 ? { ids } : "skip") as ReminderRow[] | undefined;
     const hit = collect<ReminderRow>(ids, overrides?.reminders);
     if (hit) return hit;
-    // CR-5: api.reminders.queries.getManyByIds pending from W2 plan.
-    return undefined;
+    return live;
 }
 
-export function useLiveProposal(
-    proposalId: AgentProposalId | undefined,
-): AgentProposalRow | null | undefined {
+export function useLiveProposal(proposalId: AgentProposalId | undefined): AgentProposalRow | null | undefined {
     const overrides = useContext(LivePreviewOverrideContext);
+    const live = useQuery((api as any).agent.proposals.get, proposalId ? { proposalId } : "skip") as AgentProposalRow | null | undefined;
     if (overrides?.proposals && proposalId) {
         const hit = overrides.proposals[proposalId as unknown as string];
         if (hit !== undefined) return hit;
     }
-    // CR-5: api.agent.proposals.get pending from W2 plan.
-    return undefined;
+    return live;
 }
 
-export type {
-    TransactionRow,
-    CreditCardRow,
-    PlaidAccountRow,
-    PromoRateRow,
-    InstallmentPlanRow,
-    ReminderRow,
-    AgentProposalRow,
-};
+export type { TransactionRow, CreditCardRow, PlaidAccountRow, PromoRateRow, InstallmentPlanRow, ReminderRow, AgentProposalRow };

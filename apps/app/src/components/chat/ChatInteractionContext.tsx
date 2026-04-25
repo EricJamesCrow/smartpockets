@@ -3,25 +3,15 @@
 // ============================================================================
 // W1 ChatInteractionProvider: live implementation.
 //
-// Per reconciliation M12 (contracts §2.3 tools 21-23), Confirm / Cancel / Undo
-// on ProposalConfirmCard route through the agent tool-path via
-// `sendMessage({ text, toolHint })`, NOT via direct Convex mutations. So this
-// context exposes a SINGLE `sendMessage` primitive. All three proposal actions,
-// every drill-in, and every chip submission go through it.
+// Chat sends post to the Convex HTTP action at `.convex.site`. Proposal
+// confirmation/cancellation uses the trusted public Convex mutations because
+// those state transitions cannot be safely performed by an LLM tool hint.
 //
 // Spec: specs/W3-generative-ui.md §3.6, §9.2 CR-4; specs/W1-chat-home.md §14.2
 // CB-5 (adapted for M12 single-method surface).
 // ============================================================================
-
-import {
-    createContext,
-    useContext,
-    useState,
-    type ReactNode,
-} from "react";
-import { useConvex } from "convex/react";
+import { type ReactNode, createContext, useContext, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-
 import type { AgentThreadId, ToolName } from "./tool-results/types";
 
 export type SendMessageInput = {
@@ -78,13 +68,23 @@ export class TypedAgentError extends Error {
     }
 }
 
-export function ChatInteractionProvider({
-    threadId,
-    onThreadIdChange,
-    children,
-    sendMessage: sendMessageOverride,
-}: ProviderProps) {
-    const convex = useConvex();
+function getAgentSendEndpoint(): string {
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.trim();
+    if (!convexUrl) return "/api/agent/send";
+
+    try {
+        const url = new URL(convexUrl);
+        url.hostname = url.hostname.replace(/\.convex\.cloud$/, ".convex.site");
+        url.pathname = "/api/agent/send";
+        url.search = "";
+        url.hash = "";
+        return url.toString();
+    } catch {
+        return "/api/agent/send";
+    }
+}
+
+export function ChatInteractionProvider({ threadId, onThreadIdChange, children, sendMessage: sendMessageOverride }: ProviderProps) {
     const { getToken } = useAuth();
     const [localThreadId, setLocalThreadId] = useState<AgentThreadId | null>(threadId ?? null);
 
@@ -92,11 +92,7 @@ export function ChatInteractionProvider({
     const currentThreadId = threadId ?? localThreadId;
 
     const defaultSendMessage = async (input: SendMessageInput) => {
-        const siteUrl = (convex as unknown as { url?: string }).url?.replace(
-            ".convex.cloud",
-            ".convex.site",
-        );
-        const endpoint = siteUrl ? `${siteUrl}/api/agent/send` : "/api/agent/send";
+        const endpoint = getAgentSendEndpoint();
 
         const body: Record<string, unknown> = {
             prompt: input.text,
@@ -169,8 +165,7 @@ export function useChatInteraction(): ChatInteractionValue {
     const ctx = useContext(ChatInteractionContext);
     if (!ctx) {
         throw new Error(
-            "useChatInteraction must be used within a <ChatInteractionProvider>. " +
-                "W3 tool-result components require the provider to be mounted above them.",
+            "useChatInteraction must be used within a <ChatInteractionProvider>. " + "W3 tool-result components require the provider to be mounted above them.",
         );
     }
     return ctx;
