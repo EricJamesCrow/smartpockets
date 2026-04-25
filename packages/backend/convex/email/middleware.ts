@@ -171,6 +171,31 @@ type CoalescedResult = {
   siblingIds: Array<Id<"emailEvents">>;
 };
 
+function dollarsToCents(amount: number): number {
+  return Math.round(amount * 100);
+}
+
+async function hydrateAnomalyPayload(
+  // biome-ignore lint/suspicious/noExplicitAny: Ents ctx type is verbose here.
+  ctx: any,
+  payload: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (typeof payload.anomalyId !== "string") return payload;
+  const anomaly = await ctx
+    .table("anomalies")
+    .get(payload.anomalyId as Id<"anomalies">);
+  if (!anomaly) return payload;
+
+  return {
+    anomalyId: payload.anomalyId,
+    transactionDate: anomaly.transactionDate,
+    merchantName: anomaly.merchantName || "Unknown merchant",
+    amountCents: dollarsToCents(anomaly.amount),
+    cardName: "your card",
+    transactionUrl: `/transactions/${anomaly.plaidTransactionId}`,
+  };
+}
+
 export const anomalyCoalesce = internalMutation({
   args: { leaderId: v.id("emailEvents"), windowMs: v.number() },
   returns: v.object({
@@ -193,9 +218,15 @@ export const anomalyCoalesce = internalMutation({
       .filter((q) => q.gte(q.field("createdAt"), leader.createdAt - windowMs));
 
     const siblingIds = siblings.map((s) => s._id);
-    const anomalies = siblings.map(
-      (s) => s.payloadJson as Record<string, unknown>,
-    );
+    const anomalies = [];
+    for (const sibling of siblings) {
+      anomalies.push(
+        await hydrateAnomalyPayload(
+          ctx,
+          sibling.payloadJson as Record<string, unknown>,
+        ),
+      );
+    }
     return { userId: leader.userId, anomalies, siblingIds };
   },
 });
