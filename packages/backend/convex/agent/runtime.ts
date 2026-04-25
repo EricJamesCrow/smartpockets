@@ -10,6 +10,47 @@ import { agentLimiter } from "./rateLimits";
 
 const agent = internal.agent;
 
+type ToolEnvelope =
+  | { ok: true; data?: unknown; meta?: unknown }
+  | { ok: false; error?: { code?: unknown; message?: unknown; retryable?: unknown } };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeToolResult(raw: unknown): {
+  payload: unknown;
+  proposalId?: Id<"agentProposals">;
+} {
+  let payload = raw;
+
+  if (isRecord(raw) && "ok" in raw) {
+    const envelope = raw as ToolEnvelope;
+    if (envelope.ok === true) {
+      payload = envelope.data ?? null;
+    } else {
+      const err = envelope.error ?? {};
+      payload = {
+        error:
+          typeof err.message === "string"
+            ? err.message
+            : typeof err.code === "string"
+              ? err.code
+              : "tool_failed",
+        code: typeof err.code === "string" ? err.code : "tool_failed",
+        retryable: typeof err.retryable === "boolean" ? err.retryable : false,
+      };
+    }
+  }
+
+  const proposalId =
+    isRecord(payload) && typeof payload.proposalId === "string"
+      ? (payload.proposalId as Id<"agentProposals">)
+      : undefined;
+
+  return { payload, proposalId };
+}
+
 /**
  * Build per-turn tool closures that inject trusted `userId` + `threadId`
  * before dispatching to each registered handler. Wraps:
@@ -137,7 +178,7 @@ export const runAgentTurn = internalAction({
     userMessageId: v.id("agentMessages"),
   },
   returns: v.null(),
-  handler: async (ctx, { userId, threadId }) => {
+  handler: async (ctx, { userId, threadId, userMessageId }) => {
     const thread: { promptVersion?: string } = await ctx.runQuery(
       agent.threads.getForRun,
       { threadId },
@@ -150,6 +191,32 @@ export const runAgentTurn = internalAction({
     const modelId =
       process.env.AGENT_MODEL_DEFAULT ?? AGENT_DEFAULT_MODEL;
 
+    // M12: deterministic tool-hint path. The last user message may carry a
+    // `toolCallsJson` with `{ tool, args }`; surface it to the model as a
+    // directive so it calls that tool directly instead of re-deliberating.
+    let toolHintDirective = "";
+    try {
+      const msgs = await ctx.runQuery(agent.threads.listMessagesInternal, {
+        threadId,
+      });
+      const user = (msgs as Array<{ _id: string; role: string; toolCallsJson?: string }>)
+        .find((m) => m._id === (userMessageId as unknown as string));
+      if (user?.toolCallsJson) {
+        const parsed = JSON.parse(user.toolCallsJson) as {
+          tool?: string;
+          args?: Record<string, unknown>;
+        };
+        if (parsed.tool) {
+          toolHintDirective =
+            `\n\nThe user hinted at tool \`${parsed.tool}\` with args ` +
+            `\`${JSON.stringify(parsed.args ?? {})}\`. ` +
+            "Prefer calling this tool directly unless the context makes it infeasible.";
+        }
+      }
+    } catch (err) {
+      console.warn("[agent.runtime] toolHint parse failed:", err);
+    }
+
     try {
       const { streamText } = await import("ai");
       const messages: Array<{ role: string; content: string }> =
@@ -161,7 +228,7 @@ export const runAgentTurn = internalAction({
         system: renderSystemPrompt({
           promptVersion: thread.promptVersion ?? PROMPT_VERSION,
           context,
-        }),
+        }) + toolHintDirective,
         messages: messages as any,
         tools: tools as any,
         stopWhen: stepCountIs(6),
@@ -169,6 +236,11 @@ export const runAgentTurn = internalAction({
           role?: string;
           text?: string;
           toolCalls?: unknown;
+          toolResults?: Array<{
+            toolName?: string;
+            result?: unknown;
+            output?: unknown;
+          }>;
           usage?: {
             promptTokens?: number;
             completionTokens?: number;
@@ -196,6 +268,24 @@ export const runAgentTurn = internalAction({
               modelId,
             },
           });
+
+          if (Array.isArray(step.toolResults)) {
+            for (const tr of step.toolResults) {
+              const { payload, proposalId } = normalizeToolResult(
+                tr.output ?? tr.result ?? null,
+              );
+              await ctx.runMutation(agent.threads.persistStep, {
+                threadId,
+                step: {
+                  role: "tool" as const,
+                  toolName: tr.toolName,
+                  toolResultJson: JSON.stringify(payload),
+                  proposalId,
+                },
+              });
+            }
+          }
+
           if (tokensIn || tokensOut) {
             await ctx.runMutation(agent.budgets.recordUsage, {
               userId,

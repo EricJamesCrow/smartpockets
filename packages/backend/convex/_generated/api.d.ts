@@ -8,6 +8,20 @@
  * @module
  */
 
+import type * as agent_budgets from "../agent/budgets.js";
+import type * as agent_compaction from "../agent/compaction.js";
+import type * as agent_config from "../agent/config.js";
+import type * as agent_context from "../agent/context.js";
+import type * as agent_errors from "../agent/errors.js";
+import type * as agent_functions from "../agent/functions.js";
+import type * as agent_proposals from "../agent/proposals.js";
+import type * as agent_rag from "../agent/rag.js";
+import type * as agent_rateLimits from "../agent/rateLimits.js";
+import type * as agent_registry from "../agent/registry.js";
+import type * as agent_runtime from "../agent/runtime.js";
+import type * as agent_system from "../agent/system.js";
+import type * as agent_threads from "../agent/threads.js";
+import type * as agent_usage from "../agent/usage.js";
 import type * as creditCards_actions from "../creditCards/actions.js";
 import type * as creditCards_mutations from "../creditCards/mutations.js";
 import type * as creditCards_queries from "../creditCards/queries.js";
@@ -75,6 +89,20 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "agent/budgets": typeof agent_budgets;
+  "agent/compaction": typeof agent_compaction;
+  "agent/config": typeof agent_config;
+  "agent/context": typeof agent_context;
+  "agent/errors": typeof agent_errors;
+  "agent/functions": typeof agent_functions;
+  "agent/proposals": typeof agent_proposals;
+  "agent/rag": typeof agent_rag;
+  "agent/rateLimits": typeof agent_rateLimits;
+  "agent/registry": typeof agent_registry;
+  "agent/runtime": typeof agent_runtime;
+  "agent/system": typeof agent_system;
+  "agent/threads": typeof agent_threads;
+  "agent/usage": typeof agent_usage;
   "creditCards/actions": typeof creditCards_actions;
   "creditCards/mutations": typeof creditCards_mutations;
   "creditCards/queries": typeof creditCards_queries;

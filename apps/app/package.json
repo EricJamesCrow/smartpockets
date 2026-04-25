@@ -8,14 +8,16 @@
     "start": "next start",
     "clean": "rm -rf .next .turbo node_modules",
     "typecheck": "tsc --noEmit",
-    "lint": "bun scripts/check-tool-results.ts",
-    "check:tool-results": "bun scripts/check-tool-results.ts"
+    "lint": "bun scripts/check-tool-results.ts && node scripts/verify-reserved-slugs.mjs",
+    "check:tool-results": "bun scripts/check-tool-results.ts",
+    "verify:slugs": "node scripts/verify-reserved-slugs.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^2.24.0",
     "@clerk/nextjs": "^6.36.5",
     "@clerk/themes": "^2.4.40",
     "@clerk/types": "^4.101.14",
+    "@convex-dev/agent": "^0.3.2",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -34,9 +36,11 @@
     "qr-code-styling": "^1.9.2",
     "react": "19.1.1",
     "react-dom": "19.1.1",
+    "react-markdown": "^10.1.0",
     "react-plaid-link": "^4.1.1",
     "react-svg-credit-card-payment-icons": "^5.1.2",
     "recharts": "^3.7.0",
+    "remark-gfm": "^4.0.1",
     "resend": "^6.5.2",
     "tailwindcss": "^4.1.11",
     "zod": "^4.1.13"
