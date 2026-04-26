@@ -119,6 +119,56 @@ When given a task with multiple logical changes:
 | Tests go in the same PR as the code they test | Atomic logical units |
 | Max ~200-400 lines changed per PR in the stack | Keep reviews fast |
 
+### PR Links
+
+When creating, submitting, or summarizing PRs, display the **Graphite PR link** as the primary link. Do not present GitHub PR links as the main link unless Graphite is unavailable or the user explicitly asks for GitHub.
+
+For this repo, Graphite PR links use:
+
+```
+https://app.graphite.com/github/pr/EricJamesCrow/smartpockets/<PR_NUMBER>
+```
+
+After `gt submit`, use the Graphite URL printed by Graphite in the final response. If a command only returns a GitHub PR number or URL, convert it to the Graphite URL format above before showing it to the user. GitHub links may be included only as a secondary fallback.
+
+### Preview Deployments
+
+Every Graphite PR should have a working Vercel preview for `apps/app` before handoff.
+
+After `gt submit`, verify the PR checks and preview deployment:
+
+```bash
+gh pr checks <PR_NUMBER>
+```
+
+If `Vercel – smartpockets-app` fails, inspect the deployment before reporting success:
+
+```bash
+npx vercel inspect <DEPLOYMENT_ID_OR_URL> --logs
+```
+
+When summarizing submitted work, include:
+- Graphite PR link first
+- Vercel `smartpockets-app` preview URL or Vercel deployment link second
+- Any failed checks and the exact inspect command needed to debug them
+
+Vercel branch preview URLs are tied to the Git branch and should track the latest commit on that Graphite branch. Do not hand-compose the final user-facing preview URL unless Vercel printed or commented it; prefer the URL from Vercel checks/comments.
+
+### Clerk In Previews
+
+Never point Vercel Preview deployments at production Clerk keys or production Convex.
+
+For Vercel Preview environment variables, use a non-production auth/data stack:
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...`
+- `CLERK_SECRET_KEY=sk_test_...`
+- `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`
+- `NEXT_PUBLIC_CONVEX_URL=https://<dev-or-staging-convex>.convex.cloud`
+- `CONVEX_DEPLOYMENT=dev:<deployment>` or leave unset; never `prod:*`
+
+The error `Clerk: Production Keys are only allowed for domain "smartpockets.com"` means a non-production origin, usually a Vercel preview URL, is using production Clerk keys. Fix the Vercel Preview environment variables and redeploy. `apps/app/scripts/vercel-build.sh` already blocks Preview builds from using `CONVEX_DEPLOYMENT=prod:*`; keep that guardrail intact.
+
+Only use production Clerk keys on previews if the preview is hosted on an approved `smartpockets.com` subdomain and intentionally shares production auth settings/data. That is not the default workflow.
+
 ### Never Do
 
 | Action | Why |

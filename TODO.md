@@ -26,6 +26,7 @@
 - [ ] Set up Clerk auth handoff between domains
 - [ ] Remove marketing components from `apps/app`
 - [x] Update Vercel deployment config for both apps (preview deployments now use consistent Convex deployment)
+- [x] Document Graphite PR preview verification and Clerk preview environment requirements
 
 ### 3. App UI Refresh
 
