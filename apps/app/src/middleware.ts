@@ -6,8 +6,9 @@ const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 
 // Marketing site URL (use localhost in development)
 const MARKETING_URL =
-  process.env.NEXT_PUBLIC_MARKETING_URL ||
-  (process.env.NODE_ENV === "development" ? "http://localhost:3001" : "https://smartpockets.com");
+  process.env.NODE_ENV === "development"
+    ? process.env.NEXT_PUBLIC_LOCAL_MARKETING_URL || "http://localhost:3001"
+    : process.env.NEXT_PUBLIC_MARKETING_URL || "https://smartpockets.com";
 
 export default clerkMiddleware(async (auth, req) => {
   // Skip redirect for API routes
