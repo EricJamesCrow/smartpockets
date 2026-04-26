@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 APP_ENV="apps/app/.env.local"
 WEB_ENV="apps/web/.env.local"
+BACKEND_ENV="packages/backend/.env.local"
 
 say() {
     printf "%s\n" "$1"
@@ -90,6 +91,16 @@ if [ "$missing" -eq 0 ]; then
     fi
 fi
 
+if [ "$missing" -eq 0 ]; then
+    if [ ! -e "$BACKEND_ENV" ]; then
+        ln -s ../../apps/app/.env.local "$BACKEND_ENV"
+        say "Linked ${BACKEND_ENV} -> ../../apps/app/.env.local"
+    elif [ ! -L "$BACKEND_ENV" ]; then
+        say "Warning: ${BACKEND_ENV} already exists and is not a symlink."
+        say "Make sure it matches ${APP_ENV}, especially CONVEX_DEPLOYMENT and NEXT_PUBLIC_CLERK_FRONTEND_API_URL."
+    fi
+fi
+
 if [ "$missing" -ne 0 ]; then
     say ""
     say "Local env is incomplete. Do not commit secrets."
@@ -121,8 +132,12 @@ fi
 say "Starting local SmartPockets demo:"
 say "  app:       http://localhost:3000"
 say "  marketing: http://localhost:3001"
+say "  backend:   Convex dev deployment from ${BACKEND_ENV}"
 say ""
 say "Unauthenticated app routes should redirect to the local marketing site."
-say "Press Ctrl-C to stop both dev servers."
+say "Press Ctrl-C to stop all dev servers."
 
-exec bunx turbo dev --parallel --filter=@repo/app --filter=@repo/web
+export NEXT_PUBLIC_APP_URL="http://localhost:3000"
+export NEXT_PUBLIC_MARKETING_URL="http://localhost:3001"
+
+exec bunx turbo dev --parallel --filter=@repo/backend --filter=@repo/app --filter=@repo/web
