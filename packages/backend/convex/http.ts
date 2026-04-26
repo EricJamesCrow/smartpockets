@@ -473,7 +473,18 @@ const SendBody = z.object({
     .optional(),
 });
 
-const appOrigin = process.env.APP_ORIGIN ?? "";
+function parseAgentAllowedOrigins(): Set<string> {
+  const raw = process.env.AGENT_ALLOWED_ORIGINS ?? process.env.APP_ORIGIN ?? "";
+  return new Set(
+    raw
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  );
+}
+
+const agentAllowedOrigins = parseAgentAllowedOrigins();
+
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
   const headers: Record<string, string> = {
@@ -482,7 +493,7 @@ function corsHeaders(request: Request): Record<string, string> {
     "Access-Control-Allow-Credentials": "true",
     Vary: "Origin",
   };
-  if (appOrigin && origin === appOrigin) {
+  if (agentAllowedOrigins.has(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
   return headers;
@@ -491,7 +502,7 @@ function corsHeaders(request: Request): Record<string, string> {
 function isTrustedAgentOrigin(request: Request): boolean {
   const origin = request.headers.get("Origin");
   if (!origin) return true;
-  return Boolean(appOrigin && origin === appOrigin);
+  return agentAllowedOrigins.has(origin);
 }
 
 http.route({
