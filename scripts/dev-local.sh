@@ -28,6 +28,19 @@ require_env_key() {
     fi
 }
 
+env_value() {
+    local file="$1"
+    local key="$2"
+
+    awk -F= -v key="$key" '$1 == key { value = substr($0, index($0, "=") + 1); gsub(/^["'\'']|["'\'']$/, "", value); print value; exit }' "$file"
+}
+
+port_pids() {
+    local port="$1"
+
+    lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true
+}
+
 if ! command -v bun >/dev/null 2>&1; then
     say "Missing bun. Install Bun first: https://bun.sh/docs/installation"
     exit 1
@@ -56,6 +69,27 @@ if [ "$missing" -eq 0 ]; then
     require_env_key "$WEB_ENV" "NEXT_PUBLIC_APP_URL" || missing=1
 fi
 
+if [ "$missing" -eq 0 ]; then
+    app_clerk_key="$(env_value "$APP_ENV" "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")"
+    web_clerk_key="$(env_value "$WEB_ENV" "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")"
+    app_clerk_frontend="$(env_value "$APP_ENV" "NEXT_PUBLIC_CLERK_FRONTEND_API_URL")"
+
+    if [[ "$app_clerk_key" == pk_live_* || "$web_clerk_key" == pk_live_* || "$app_clerk_frontend" == *"clerk.smartpockets.com"* ]]; then
+        say "Local Clerk env is using production keys/domain, which Clerk rejects on localhost."
+        say ""
+        say "Replace the Clerk values in these local-only files with Clerk test/dev values:"
+        say "  ${APP_ENV}"
+        say "    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_..."
+        say "    CLERK_SECRET_KEY=sk_test_..."
+        say "    NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<test-clerk-domain>.clerk.accounts.dev"
+        say "  ${WEB_ENV}"
+        say "    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_..."
+        say ""
+        say "Do not commit .env.local files."
+        exit 1
+    fi
+fi
+
 if [ "$missing" -ne 0 ]; then
     say ""
     say "Local env is incomplete. Do not commit secrets."
@@ -68,6 +102,20 @@ fi
 if [ ! -d "node_modules" ]; then
     say "node_modules is missing; running bun install once."
     bun install
+fi
+
+app_port_pids="$(port_pids 3000 | tr "\n" " " | sed 's/[[:space:]]*$//')"
+web_port_pids="$(port_pids 3001 | tr "\n" " " | sed 's/[[:space:]]*$//')"
+
+if [ -n "$app_port_pids" ] || [ -n "$web_port_pids" ]; then
+    say "Local dev ports are already in use."
+    [ -n "$app_port_pids" ] && say "  port 3000: PID(s) ${app_port_pids}"
+    [ -n "$web_port_pids" ] && say "  port 3001: PID(s) ${web_port_pids}"
+    say ""
+    say "Stop the existing dev server first, or run:"
+    [ -n "$app_port_pids" ] && say "  kill ${app_port_pids}"
+    [ -n "$web_port_pids" ] && say "  kill ${web_port_pids}"
+    exit 1
 fi
 
 say "Starting local SmartPockets demo:"
