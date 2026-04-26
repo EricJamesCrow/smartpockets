@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "turbo dev --parallel --filter=!@crowdevelopment/convex-plaid",
+    "dev:local": "bash scripts/dev-local.sh",
     "dev:app": "turbo dev --filter=@repo/app",
     "dev:web": "turbo dev --filter=@repo/web",
     "dev:email": "turbo dev --filter=@repo/email",

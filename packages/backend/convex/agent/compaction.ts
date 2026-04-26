@@ -36,6 +36,8 @@ export const maybeCompact = internalAction({
     }
 
     const halfIdx = Math.floor(messages.length / 2);
+    if (halfIdx < 1) return null;
+
     const summaryText: string = await ctx.runAction(
       (internal as any).agent.compaction.runClassifierInternal,
       { messages: messages.slice(0, halfIdx) },
@@ -47,7 +49,7 @@ export const maybeCompact = internalAction({
         {
           threadId,
           summaryText,
-          summaryUpToMessageId: messages[halfIdx - 1]._id,
+          summaryUpToMessageId: messages[halfIdx - 1]!._id,
         },
       );
     }

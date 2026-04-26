@@ -856,6 +856,37 @@ export declare const getAllInstitutions: import("convex/server").RegisteredQuery
     lastFetched: number;
 }[]>>;
 /**
+ * Host-exposed internal entry points for webhook and cron state maintained by
+ * the component. These live in the public module because Convex components do
+ * not expose the private module across the host/component boundary.
+ */
+export declare const setNewAccountsAvailableInternal: import("convex/server").RegisteredMutation<"public", {
+    plaidItemId: string;
+}, Promise<null>>;
+export declare const clearNewAccountsAvailableInternal: import("convex/server").RegisteredMutation<"public", {
+    plaidItemId: string;
+}, Promise<null>>;
+export declare const markFirstErrorAtInternal: import("convex/server").RegisteredMutation<"public", {
+    plaidItemId: string;
+}, Promise<null>>;
+export declare const clearErrorTrackingInternal: import("convex/server").RegisteredMutation<"public", {
+    plaidItemId: string;
+}, Promise<null>>;
+export declare const markItemErrorDispatchedInternal: import("convex/server").RegisteredMutation<"public", {
+    plaidItemId: string;
+}, Promise<null>>;
+export declare const listErrorItemsInternal: import("convex/server").RegisteredQuery<"public", {
+    olderThanLastSyncedAt: number;
+    dispatchedBefore: number;
+}, Promise<{
+    plaidItemId: string;
+    userId: string;
+    institutionName: string | null;
+    firstErrorAt: number | null;
+    errorAt: number | null;
+    errorCode: string | null;
+}[]>>;
+/**
  * Get health for a single plaidItem.
  *
  * @security Components cannot access ctx.auth. Host apps must verify the caller

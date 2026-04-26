@@ -1,9 +1,9 @@
 "use client";
 
+import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-
+import { useMutation } from "convex/react";
 import { useChatInteraction } from "@/components/chat/ChatInteractionContext";
-
 import type { AgentProposalId } from "../types";
 
 /**
@@ -14,14 +14,14 @@ import type { AgentProposalId } from "../types";
  *
  * Spec: specs/W3-generative-ui.md §3.6.
  *
- * Reconciliation M12 requires that Confirm / Cancel / Undo on
- * `ProposalConfirmCard` route through the agent tool-path
- * (`execute_confirmed_proposal` / `cancel_proposal` / `undo_mutation`) via
- * `sendMessage` + `toolHint`, NOT via direct Convex mutations. Do not add
- * mutation equivalents for those three actions to this hook.
+ * Proposal confirmation must use the trusted public mutation. The backend
+ * executor only runs proposals after that mutation moves them into the
+ * `confirmed` state and persists any destructive-confirmation signal.
  */
 export function useToolHintSend() {
     const { sendMessage } = useChatInteraction();
+    const confirmProposalMutation = useMutation((api as any).agent.proposals.confirm);
+    const cancelProposalMutation = useMutation((api as any).agent.proposals.cancel);
 
     return {
         openTransaction: (transactionId: string) =>
@@ -49,12 +49,7 @@ export function useToolHintSend() {
                 text: "Show transactions for this institution",
                 toolHint: { tool: "list_transactions", args: { plaidItemId } },
             }),
-        createReminder: (prefill: {
-            title: string;
-            dueAt: number;
-            relatedResourceType?: string;
-            relatedResourceId?: string;
-        }) =>
+        createReminder: (prefill: { title: string; dueAt: number; relatedResourceType?: string; relatedResourceId?: string }) =>
             sendMessage({
                 text: `Create a reminder: ${prefill.title}`,
                 toolHint: { tool: "propose_reminder_create", args: prefill },
@@ -82,20 +77,8 @@ export function useToolHintSend() {
                 text: `Edit ${field} on this card`,
                 toolHint: { tool: "propose_credit_card_metadata_update", args: { cardId, field } },
             }),
-        // Proposal actions: all three route through the agent tool-path so W5's
-        // write-wrapper (rate limit, first-turn guard, audit log, workflow)
-        // fires. Do not add direct Convex mutation equivalents here; that would
-        // bypass contracts §2.3 tools 21-23 (reconciliation M12).
-        confirmProposal: (proposalId: AgentProposalId) =>
-            sendMessage({
-                text: "Confirm",
-                toolHint: { tool: "execute_confirmed_proposal", args: { proposalId } },
-            }),
-        cancelProposal: (proposalId: AgentProposalId) =>
-            sendMessage({
-                text: "Cancel",
-                toolHint: { tool: "cancel_proposal", args: { proposalId } },
-            }),
+        confirmProposal: (proposalId: AgentProposalId) => confirmProposalMutation({ proposalId }),
+        cancelProposal: (proposalId: AgentProposalId) => cancelProposalMutation({ proposalId }),
         undoMutation: (reversalToken: string) =>
             sendMessage({
                 text: "Undo",

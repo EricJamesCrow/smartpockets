@@ -21,7 +21,7 @@ const plaidModules = import.meta.glob(
 
 function setup() {
   const t = convexTest(schema, modules);
-  t.registerComponent("plaid", plaidSchema, plaidModules);
+  t.registerComponent("plaid", plaidSchema as any, plaidModules);
   return t;
 }
 
