@@ -1,5 +1,6 @@
 "use client";
 
+import { formatMoneyFromMilliunits } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveTransactions } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -14,8 +15,7 @@ type Preview = {
 const MAX_VISIBLE_ROWS = 500;
 
 function formatAmount(milliunits: number): string {
-    const dollars = milliunits / 1000;
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(dollars);
+    return formatMoneyFromMilliunits(milliunits);
 }
 
 function formatDate(dateString: string): string {
@@ -40,11 +40,8 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
     }
     if (output.ids.length === 0) {
         return (
-            <ToolCardShell
-                title={output.preview.summary ?? "Transactions"}
-                subtitle={formatWindow(output.window)}
-            >
-                <p className="text-sm text-tertiary">No transactions in the selected window.</p>
+            <ToolCardShell title={output.preview.summary ?? "Transactions"} subtitle={formatWindow(output.window)}>
+                <p className="text-tertiary text-sm">No transactions in the selected window.</p>
             </ToolCardShell>
         );
     }
@@ -56,13 +53,10 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
     const overflow = output.ids.length - visible.length;
 
     return (
-        <ToolCardShell
-            title={output.preview.summary ?? "Transactions"}
-            subtitle={formatWindow(output.window)}
-        >
+        <ToolCardShell title={output.preview.summary ?? "Transactions"} subtitle={formatWindow(output.window)}>
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="text-left text-xs uppercase text-tertiary">
+                    <tr className="text-tertiary text-left text-xs uppercase">
                         <th className="py-2 pr-2 font-medium">Date</th>
                         <th className="py-2 pr-2 font-medium">Merchant</th>
                         <th className="py-2 pr-2 text-right font-medium">Amount</th>
@@ -76,20 +70,18 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
                             onClick={() => {
                                 void hint.openTransaction(tx._id);
                             }}
-                            className="cursor-pointer border-t border-secondary hover:bg-secondary/40"
+                            className="border-secondary hover:bg-secondary/40 cursor-pointer border-t"
                         >
-                            <td className="py-2 pr-2 text-secondary tabular-nums">{formatDate(tx.date)}</td>
-                            <td className="py-2 pr-2 text-primary">{tx.merchantName ?? tx.name}</td>
-                            <td className="py-2 pr-2 text-right text-primary tabular-nums">
-                                {formatAmount(tx.amount)}
-                            </td>
-                            <td className="py-2 text-secondary">{tx.categoryPrimary ?? "-"}</td>
+                            <td className="text-secondary py-2 pr-2 tabular-nums">{formatDate(tx.date)}</td>
+                            <td className="text-primary py-2 pr-2">{tx.merchantName ?? tx.name}</td>
+                            <td className="text-primary py-2 pr-2 text-right tabular-nums">{formatAmount(tx.amount)}</td>
+                            <td className="text-secondary py-2">{tx.categoryPrimary ?? "-"}</td>
                         </tr>
                     ))}
                 </tbody>
             </table>
             {overflow > 0 && (
-                <footer className="mt-3 text-xs text-tertiary">
+                <footer className="text-tertiary mt-3 text-xs">
                     Showing {visible.length} of {output.ids.length}. Refine the window to narrow results.
                 </footer>
             )}

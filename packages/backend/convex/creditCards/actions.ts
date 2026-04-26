@@ -10,10 +10,10 @@
  * - Webhook events (http.ts - TRANSACTIONS, DEFAULT_UPDATE, LIABILITIES_UPDATE)
  * - Manual refresh (institution detail page)
  */
-
 import { v } from "convex/values";
+import { components, internal } from "../_generated/api";
 import { action, internalAction } from "../_generated/server";
-import { internal, components } from "../_generated/api";
+import { optionalMoneyMilliunits } from "../money";
 
 /**
  * Sync credit cards (denormalized data)
@@ -29,173 +29,162 @@ import { internal, components } from "../_generated/api";
  * @returns Sync stats (synced count, error count)
  */
 export const syncCreditCardsAction = action({
-  args: {
-    plaidItemId: v.string(), // Component returns string IDs
-  },
-  returns: v.object({
-    synced: v.number(),
-    errors: v.number(),
-  }),
-  handler: async (ctx, args): Promise<{ synced: number; errors: number }> => {
-    // Step 0: Auth check - derive userId from auth context
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Authentication required");
-    }
-    const userId = identity.subject; // Clerk user ID
-
-    // Verify plaidItemId belongs to authenticated user
-    const plaidItem = await ctx.runQuery(components.plaid.public.getItem, {
-      plaidItemId: args.plaidItemId,
-    });
-    if (!plaidItem || plaidItem.userId !== userId) {
-      throw new Error("Unauthorized: Plaid item does not belong to user");
-    }
-
-    console.log(`🔄 Syncing credit cards for plaidItem: ${args.plaidItemId}`);
-
-    // Step 1: Get all credit card accounts from the Plaid component
-    const accounts = await ctx.runQuery(components.plaid.public.getAccountsByItem, {
-      plaidItemId: args.plaidItemId,
-    });
-
-    // Filter for credit card accounts
-    const creditAccounts = accounts.filter(
-      (acc) => acc.type === "credit" && acc.subtype === "credit card"
-    );
-
-    if (creditAccounts.length === 0) {
-      console.log("ℹ️ No credit cards found for this plaidItem");
-      return { synced: 0, errors: 0 };
-    }
-
-    console.log(`📋 Found ${creditAccounts.length} credit card accounts`);
-
-    // Step 2: Get liabilities from the Plaid component
-    const accountIds = creditAccounts.map((a) => a.accountId);
-    const allLiabilities = await ctx.runQuery(
-      components.plaid.public.getLiabilitiesByItem,
-      { plaidItemId: args.plaidItemId }
-    );
-
-    // Filter to only liabilities for current accounts (handle orphans)
-    const validAccountIdSet = new Set(accountIds);
-    const liabilities = allLiabilities.filter((l) => validAccountIdSet.has(l.accountId));
-
-    console.log(`💳 Found ${liabilities.length} liability records`);
-
-    // Step 3: Merge account + liability data
-    const creditCardsData = creditAccounts.map((account) => {
-      const liability = liabilities.find((l) => l.accountId === account.accountId);
-
-      // Compute display fields - use institution name from plaidItem (e.g., "Chase")
-      const company = plaidItem.institutionName || "Unknown";
-      const accountLower = account.name.toLowerCase();
-      const brand: "visa" | "mastercard" | "amex" | "discover" | "other" = accountLower.includes(
-        "apple card"
-      )
-        ? "mastercard" // Apple Card is always Mastercard
-        : accountLower.includes("visa")
-          ? "visa"
-          : accountLower.includes("mastercard")
-            ? "mastercard"
-            : accountLower.includes("amex") || accountLower.includes("american express")
-              ? "amex"
-              : accountLower.includes("discover")
-                ? "discover"
-                : "other"; // Default fallback
-
-      // Helper to convert to dollars (Plaid returns amounts in tenths of cents)
-      const toDollars = (amount: number | null | undefined): number | undefined =>
-        amount != null ? amount / 1000 : undefined;
-
-      return {
-        userId,
-        plaidItemId: args.plaidItemId,
-        accountId: account.accountId,
-
-        // FROM plaidAccounts - Account data (convert cents to dollars)
-        accountName: account.name,
-        officialName: account.officialName,
-        mask: account.mask || "0000",
-        accountType: account.type,
-        accountSubtype: account.subtype,
-        currentBalance: toDollars(account.balances.current),
-        availableCredit: toDollars(account.balances.available),
-        creditLimit: toDollars(account.balances.limit),
-        isoCurrencyCode: account.balances.isoCurrencyCode,
-
-        // FROM plaidCreditCardLiabilities - Liability data (convert cents to dollars)
-        aprs: liability?.aprs ?? [],
-        isOverdue: liability?.isOverdue ?? false,
-        lastPaymentAmount: toDollars(liability?.lastPaymentAmount),
-        lastPaymentDate: liability?.lastPaymentDate,
-        lastStatementBalance: toDollars(liability?.lastStatementBalance),
-        lastStatementIssueDate: liability?.lastStatementIssueDate,
-        minimumPaymentAmount: toDollars(liability?.minimumPaymentAmount),
-        nextPaymentDueDate: liability?.nextPaymentDueDate,
-
-        // COMPUTED - Display fields (prefer officialName for actual card product name)
-        displayName: account.officialName || account.name,
-        company,
-        brand,
-        lastFour: account.mask || "0000",
-
-        // SYNC TRACKING
-        syncStatus: "synced" as const,
-        lastSyncError: undefined,
-        syncAttempts: 0,
-        lastSeenAt: Date.now(),
-
-        // METADATA
-        isActive: true, // New cards default to active
-      };
-    });
-
-    // Step 4: BATCH upsert using internal mutation (auth already verified above)
-    try {
-      await ctx.runMutation(internal.creditCards.mutations.bulkUpsertCreditCardsInternal, {
-        userId,
-        creditCards: creditCardsData,
-      });
-
-      console.log(`✅ Synced ${creditCardsData.length} credit cards`);
-      return { synced: creditCardsData.length, errors: 0 };
-    } catch (error) {
-      console.error("❌ Failed to bulk upsert credit cards:", error);
-
-      // Fallback: Try individual upserts with error tracking
-      let synced = 0;
-      let errors = 0;
-
-      for (const card of creditCardsData) {
-        try {
-          await ctx.runMutation(internal.creditCards.mutations.upsertCreditCardInternal, {
-            userId,
-            card,
-          });
-          synced++;
-        } catch (err) {
-          errors++;
-          console.error(`Failed to sync card ${card.accountId}:`, err);
-
-          // Store error in database for debugging
-          try {
-            await ctx.runMutation(internal.creditCards.mutations.updateSyncErrorInternal, {
-              userId,
-              accountId: card.accountId,
-              error: err instanceof Error ? err.message : "Unknown error",
-            });
-          } catch (updateError) {
-            console.error("Failed to update sync error:", updateError);
-          }
+    args: {
+        plaidItemId: v.string(), // Component returns string IDs
+    },
+    returns: v.object({
+        synced: v.number(),
+        errors: v.number(),
+    }),
+    handler: async (ctx, args): Promise<{ synced: number; errors: number }> => {
+        // Step 0: Auth check - derive userId from auth context
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Authentication required");
         }
-      }
+        const userId = identity.subject; // Clerk user ID
 
-      console.log(`⚠️ Partial sync: ${synced} synced, ${errors} errors`);
-      return { synced, errors };
-    }
-  },
+        // Verify plaidItemId belongs to authenticated user
+        const plaidItem = await ctx.runQuery(components.plaid.public.getItem, {
+            plaidItemId: args.plaidItemId,
+        });
+        if (!plaidItem || plaidItem.userId !== userId) {
+            throw new Error("Unauthorized: Plaid item does not belong to user");
+        }
+
+        console.log(`🔄 Syncing credit cards for plaidItem: ${args.plaidItemId}`);
+
+        // Step 1: Get all credit card accounts from the Plaid component
+        const accounts = await ctx.runQuery(components.plaid.public.getAccountsByItem, {
+            plaidItemId: args.plaidItemId,
+        });
+
+        // Filter for credit card accounts
+        const creditAccounts = accounts.filter((acc) => acc.type === "credit" && acc.subtype === "credit card");
+
+        if (creditAccounts.length === 0) {
+            console.log("ℹ️ No credit cards found for this plaidItem");
+            return { synced: 0, errors: 0 };
+        }
+
+        console.log(`📋 Found ${creditAccounts.length} credit card accounts`);
+
+        // Step 2: Get liabilities from the Plaid component
+        const accountIds = creditAccounts.map((a) => a.accountId);
+        const allLiabilities = await ctx.runQuery(components.plaid.public.getLiabilitiesByItem, { plaidItemId: args.plaidItemId });
+
+        // Filter to only liabilities for current accounts (handle orphans)
+        const validAccountIdSet = new Set(accountIds);
+        const liabilities = allLiabilities.filter((l) => validAccountIdSet.has(l.accountId));
+
+        console.log(`💳 Found ${liabilities.length} liability records`);
+
+        // Step 3: Merge account + liability data
+        const creditCardsData = creditAccounts.map((account) => {
+            const liability = liabilities.find((l) => l.accountId === account.accountId);
+
+            // Compute display fields - use institution name from plaidItem (e.g., "Chase")
+            const company = plaidItem.institutionName || "Unknown";
+            const accountLower = account.name.toLowerCase();
+            const brand: "visa" | "mastercard" | "amex" | "discover" | "other" = accountLower.includes("apple card")
+                ? "mastercard" // Apple Card is always Mastercard
+                : accountLower.includes("visa")
+                  ? "visa"
+                  : accountLower.includes("mastercard")
+                    ? "mastercard"
+                    : accountLower.includes("amex") || accountLower.includes("american express")
+                      ? "amex"
+                      : accountLower.includes("discover")
+                        ? "discover"
+                        : "other"; // Default fallback
+
+            return {
+                userId,
+                plaidItemId: args.plaidItemId,
+                accountId: account.accountId,
+
+                // FROM plaidAccounts - account money is already canonical milliunits.
+                accountName: account.name,
+                officialName: account.officialName,
+                mask: account.mask || "0000",
+                accountType: account.type,
+                accountSubtype: account.subtype,
+                currentBalance: optionalMoneyMilliunits(account.balances.current),
+                availableCredit: optionalMoneyMilliunits(account.balances.available),
+                creditLimit: optionalMoneyMilliunits(account.balances.limit),
+                isoCurrencyCode: account.balances.isoCurrencyCode,
+
+                // FROM plaidCreditCardLiabilities - liability money is canonical milliunits.
+                aprs: liability?.aprs ?? [],
+                isOverdue: liability?.isOverdue ?? false,
+                lastPaymentAmount: optionalMoneyMilliunits(liability?.lastPaymentAmount),
+                lastPaymentDate: liability?.lastPaymentDate,
+                lastStatementBalance: optionalMoneyMilliunits(liability?.lastStatementBalance),
+                lastStatementIssueDate: liability?.lastStatementIssueDate,
+                minimumPaymentAmount: optionalMoneyMilliunits(liability?.minimumPaymentAmount),
+                nextPaymentDueDate: liability?.nextPaymentDueDate,
+
+                // COMPUTED - Display fields (prefer officialName for actual card product name)
+                displayName: account.officialName || account.name,
+                company,
+                brand,
+                lastFour: account.mask || "0000",
+
+                // SYNC TRACKING
+                syncStatus: "synced" as const,
+                lastSyncError: undefined,
+                syncAttempts: 0,
+                lastSeenAt: Date.now(),
+
+                // METADATA
+                isActive: true, // New cards default to active
+            };
+        });
+
+        // Step 4: BATCH upsert using internal mutation (auth already verified above)
+        try {
+            await ctx.runMutation(internal.creditCards.mutations.bulkUpsertCreditCardsInternal, {
+                userId,
+                creditCards: creditCardsData,
+            });
+
+            console.log(`✅ Synced ${creditCardsData.length} credit cards`);
+            return { synced: creditCardsData.length, errors: 0 };
+        } catch (error) {
+            console.error("❌ Failed to bulk upsert credit cards:", error);
+
+            // Fallback: Try individual upserts with error tracking
+            let synced = 0;
+            let errors = 0;
+
+            for (const card of creditCardsData) {
+                try {
+                    await ctx.runMutation(internal.creditCards.mutations.upsertCreditCardInternal, {
+                        userId,
+                        card,
+                    });
+                    synced++;
+                } catch (err) {
+                    errors++;
+                    console.error(`Failed to sync card ${card.accountId}:`, err);
+
+                    // Store error in database for debugging
+                    try {
+                        await ctx.runMutation(internal.creditCards.mutations.updateSyncErrorInternal, {
+                            userId,
+                            accountId: card.accountId,
+                            error: err instanceof Error ? err.message : "Unknown error",
+                        });
+                    } catch (updateError) {
+                        console.error("Failed to update sync error:", updateError);
+                    }
+                }
+            }
+
+            console.log(`⚠️ Partial sync: ${synced} synced, ${errors} errors`);
+            return { synced, errors };
+        }
+    },
 });
 
 // =============================================================================
@@ -213,158 +202,147 @@ export const syncCreditCardsAction = action({
  * @returns Sync stats (synced count, error count)
  */
 export const syncCreditCardsInternal = internalAction({
-  args: {
-    userId: v.string(),
-    plaidItemId: v.string(), // Component returns string IDs
-  },
-  handler: async (ctx, args): Promise<{ synced: number; errors: number }> => {
-    console.log(`🔄 [Internal] Syncing credit cards for plaidItem: ${args.plaidItemId}`);
+    args: {
+        userId: v.string(),
+        plaidItemId: v.string(), // Component returns string IDs
+    },
+    handler: async (ctx, args): Promise<{ synced: number; errors: number }> => {
+        console.log(`🔄 [Internal] Syncing credit cards for plaidItem: ${args.plaidItemId}`);
 
-    // Step 0: Get plaidItem for institutionName
-    const plaidItem = await ctx.runQuery(components.plaid.public.getItem, {
-      plaidItemId: args.plaidItemId,
-    });
+        // Step 0: Get plaidItem for institutionName
+        const plaidItem = await ctx.runQuery(components.plaid.public.getItem, {
+            plaidItemId: args.plaidItemId,
+        });
 
-    // Step 1: Get all credit card accounts from the Plaid component
-    const accounts = await ctx.runQuery(components.plaid.public.getAccountsByItem, {
-      plaidItemId: args.plaidItemId,
-    });
+        // Step 1: Get all credit card accounts from the Plaid component
+        const accounts = await ctx.runQuery(components.plaid.public.getAccountsByItem, {
+            plaidItemId: args.plaidItemId,
+        });
 
-    // Filter for credit card accounts
-    const creditAccounts = accounts.filter(
-      (acc) => acc.type === "credit" && acc.subtype === "credit card"
-    );
+        // Filter for credit card accounts
+        const creditAccounts = accounts.filter((acc) => acc.type === "credit" && acc.subtype === "credit card");
 
-    if (creditAccounts.length === 0) {
-      console.log("ℹ️ No credit cards found for this plaidItem");
-      return { synced: 0, errors: 0 };
-    }
-
-    console.log(`📋 Found ${creditAccounts.length} credit card accounts`);
-
-    // Step 2: Get liabilities from the Plaid component
-    const accountIds = creditAccounts.map((a) => a.accountId);
-    const allLiabilities = await ctx.runQuery(
-      components.plaid.public.getLiabilitiesByItem,
-      { plaidItemId: args.plaidItemId }
-    );
-
-    // Filter to only liabilities for current accounts (handle orphans)
-    const validAccountIdSet = new Set(accountIds);
-    const liabilities = allLiabilities.filter((l) => validAccountIdSet.has(l.accountId));
-
-    console.log(`💳 Found ${liabilities.length} liability records`);
-
-    // Step 3: Merge account + liability data
-    const creditCardsData = creditAccounts.map((account) => {
-      const liability = liabilities.find((l) => l.accountId === account.accountId);
-
-      // Compute display fields - use institution name from plaidItem (e.g., "Chase")
-      const company = plaidItem?.institutionName || "Unknown";
-      const accountLower = account.name.toLowerCase();
-      const brand: "visa" | "mastercard" | "amex" | "discover" | "other" = accountLower.includes(
-        "apple card"
-      )
-        ? "mastercard" // Apple Card is always Mastercard
-        : accountLower.includes("visa")
-          ? "visa"
-          : accountLower.includes("mastercard")
-            ? "mastercard"
-            : accountLower.includes("amex") || accountLower.includes("american express")
-              ? "amex"
-              : accountLower.includes("discover")
-                ? "discover"
-                : "other"; // Default fallback
-
-      // Helper to convert to dollars (Plaid returns amounts in tenths of cents)
-      const toDollars = (amount: number | null | undefined): number | undefined =>
-        amount != null ? amount / 1000 : undefined;
-
-      return {
-        userId: args.userId,
-        plaidItemId: args.plaidItemId,
-        accountId: account.accountId,
-
-        // FROM plaidAccounts - Account data (convert cents to dollars)
-        accountName: account.name,
-        officialName: account.officialName,
-        mask: account.mask || "0000",
-        accountType: account.type,
-        accountSubtype: account.subtype,
-        currentBalance: toDollars(account.balances.current),
-        availableCredit: toDollars(account.balances.available),
-        creditLimit: toDollars(account.balances.limit),
-        isoCurrencyCode: account.balances.isoCurrencyCode,
-
-        // FROM plaidCreditCardLiabilities - Liability data (convert cents to dollars)
-        aprs: liability?.aprs ?? [],
-        isOverdue: liability?.isOverdue ?? false,
-        lastPaymentAmount: toDollars(liability?.lastPaymentAmount),
-        lastPaymentDate: liability?.lastPaymentDate,
-        lastStatementBalance: toDollars(liability?.lastStatementBalance),
-        lastStatementIssueDate: liability?.lastStatementIssueDate,
-        minimumPaymentAmount: toDollars(liability?.minimumPaymentAmount),
-        nextPaymentDueDate: liability?.nextPaymentDueDate,
-
-        // COMPUTED - Display fields (prefer officialName for actual card product name)
-        displayName: account.officialName || account.name,
-        company,
-        brand,
-        lastFour: account.mask || "0000",
-
-        // SYNC TRACKING
-        syncStatus: "synced" as const,
-        lastSyncError: undefined,
-        syncAttempts: 0,
-        lastSeenAt: Date.now(),
-
-        // METADATA
-        isActive: true, // New cards default to active
-      };
-    });
-
-    // Step 4: BATCH upsert using internal mutation (no auth required)
-    try {
-      await ctx.runMutation(internal.creditCards.mutations.bulkUpsertCreditCardsInternal, {
-        userId: args.userId,
-        creditCards: creditCardsData,
-      });
-
-      console.log(`✅ Synced ${creditCardsData.length} credit cards`);
-      return { synced: creditCardsData.length, errors: 0 };
-    } catch (error) {
-      console.error("❌ Failed to bulk upsert credit cards:", error);
-
-      // Fallback: Try individual upserts with error tracking
-      let synced = 0;
-      let errors = 0;
-
-      for (const card of creditCardsData) {
-        try {
-          await ctx.runMutation(internal.creditCards.mutations.upsertCreditCardInternal, {
-            userId: args.userId,
-            card,
-          });
-          synced++;
-        } catch (err) {
-          errors++;
-          console.error(`Failed to sync card ${card.accountId}:`, err);
-
-          // Store error in database for debugging
-          try {
-            await ctx.runMutation(internal.creditCards.mutations.updateSyncErrorInternal, {
-              userId: args.userId,
-              accountId: card.accountId,
-              error: err instanceof Error ? err.message : "Unknown error",
-            });
-          } catch (updateError) {
-            console.error("Failed to update sync error:", updateError);
-          }
+        if (creditAccounts.length === 0) {
+            console.log("ℹ️ No credit cards found for this plaidItem");
+            return { synced: 0, errors: 0 };
         }
-      }
 
-      console.log(`⚠️ Partial sync: ${synced} synced, ${errors} errors`);
-      return { synced, errors };
-    }
-  },
+        console.log(`📋 Found ${creditAccounts.length} credit card accounts`);
+
+        // Step 2: Get liabilities from the Plaid component
+        const accountIds = creditAccounts.map((a) => a.accountId);
+        const allLiabilities = await ctx.runQuery(components.plaid.public.getLiabilitiesByItem, { plaidItemId: args.plaidItemId });
+
+        // Filter to only liabilities for current accounts (handle orphans)
+        const validAccountIdSet = new Set(accountIds);
+        const liabilities = allLiabilities.filter((l) => validAccountIdSet.has(l.accountId));
+
+        console.log(`💳 Found ${liabilities.length} liability records`);
+
+        // Step 3: Merge account + liability data
+        const creditCardsData = creditAccounts.map((account) => {
+            const liability = liabilities.find((l) => l.accountId === account.accountId);
+
+            // Compute display fields - use institution name from plaidItem (e.g., "Chase")
+            const company = plaidItem?.institutionName || "Unknown";
+            const accountLower = account.name.toLowerCase();
+            const brand: "visa" | "mastercard" | "amex" | "discover" | "other" = accountLower.includes("apple card")
+                ? "mastercard" // Apple Card is always Mastercard
+                : accountLower.includes("visa")
+                  ? "visa"
+                  : accountLower.includes("mastercard")
+                    ? "mastercard"
+                    : accountLower.includes("amex") || accountLower.includes("american express")
+                      ? "amex"
+                      : accountLower.includes("discover")
+                        ? "discover"
+                        : "other"; // Default fallback
+
+            return {
+                userId: args.userId,
+                plaidItemId: args.plaidItemId,
+                accountId: account.accountId,
+
+                // FROM plaidAccounts - account money is already canonical milliunits.
+                accountName: account.name,
+                officialName: account.officialName,
+                mask: account.mask || "0000",
+                accountType: account.type,
+                accountSubtype: account.subtype,
+                currentBalance: optionalMoneyMilliunits(account.balances.current),
+                availableCredit: optionalMoneyMilliunits(account.balances.available),
+                creditLimit: optionalMoneyMilliunits(account.balances.limit),
+                isoCurrencyCode: account.balances.isoCurrencyCode,
+
+                // FROM plaidCreditCardLiabilities - liability money is canonical milliunits.
+                aprs: liability?.aprs ?? [],
+                isOverdue: liability?.isOverdue ?? false,
+                lastPaymentAmount: optionalMoneyMilliunits(liability?.lastPaymentAmount),
+                lastPaymentDate: liability?.lastPaymentDate,
+                lastStatementBalance: optionalMoneyMilliunits(liability?.lastStatementBalance),
+                lastStatementIssueDate: liability?.lastStatementIssueDate,
+                minimumPaymentAmount: optionalMoneyMilliunits(liability?.minimumPaymentAmount),
+                nextPaymentDueDate: liability?.nextPaymentDueDate,
+
+                // COMPUTED - Display fields (prefer officialName for actual card product name)
+                displayName: account.officialName || account.name,
+                company,
+                brand,
+                lastFour: account.mask || "0000",
+
+                // SYNC TRACKING
+                syncStatus: "synced" as const,
+                lastSyncError: undefined,
+                syncAttempts: 0,
+                lastSeenAt: Date.now(),
+
+                // METADATA
+                isActive: true, // New cards default to active
+            };
+        });
+
+        // Step 4: BATCH upsert using internal mutation (no auth required)
+        try {
+            await ctx.runMutation(internal.creditCards.mutations.bulkUpsertCreditCardsInternal, {
+                userId: args.userId,
+                creditCards: creditCardsData,
+            });
+
+            console.log(`✅ Synced ${creditCardsData.length} credit cards`);
+            return { synced: creditCardsData.length, errors: 0 };
+        } catch (error) {
+            console.error("❌ Failed to bulk upsert credit cards:", error);
+
+            // Fallback: Try individual upserts with error tracking
+            let synced = 0;
+            let errors = 0;
+
+            for (const card of creditCardsData) {
+                try {
+                    await ctx.runMutation(internal.creditCards.mutations.upsertCreditCardInternal, {
+                        userId: args.userId,
+                        card,
+                    });
+                    synced++;
+                } catch (err) {
+                    errors++;
+                    console.error(`Failed to sync card ${card.accountId}:`, err);
+
+                    // Store error in database for debugging
+                    try {
+                        await ctx.runMutation(internal.creditCards.mutations.updateSyncErrorInternal, {
+                            userId: args.userId,
+                            accountId: card.accountId,
+                            error: err instanceof Error ? err.message : "Unknown error",
+                        });
+                    } catch (updateError) {
+                        console.error("Failed to update sync error:", updateError);
+                    }
+                }
+            }
+
+            console.log(`⚠️ Partial sync: ${synced} synced, ${errors} errors`);
+            return { synced, errors };
+        }
+    },
 });

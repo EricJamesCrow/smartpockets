@@ -1,5 +1,6 @@
 "use client";
 
+import { formatMoneyFromMilliunits } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveTransactions } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -14,8 +15,7 @@ type Preview = {
 };
 
 function formatAmount(milliunits: number): string {
-    const dollars = milliunits / 1000;
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(dollars);
+    return formatMoneyFromMilliunits(milliunits);
 }
 
 function formatDateFull(dateString: string): string {
@@ -25,9 +25,7 @@ function formatDateFull(dateString: string): string {
     return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-export function TransactionDetailCard(
-    props: ToolResultComponentProps<unknown, ToolOutput<Preview>>,
-) {
+export function TransactionDetailCard(props: ToolResultComponentProps<unknown, ToolOutput<Preview>>) {
     const { output, state } = props;
     const rows = useLiveTransactions(output?.ids ?? []);
     const hint = useToolHintSend();
@@ -49,9 +47,7 @@ export function TransactionDetailCard(
     if (rows !== undefined && rows.length === 0) {
         return (
             <ToolCardShell title="Transaction not found">
-                <p className="text-sm text-tertiary">
-                    The transaction may have been deleted or you no longer have access.
-                </p>
+                <p className="text-tertiary text-sm">The transaction may have been deleted or you no longer have access.</p>
             </ToolCardShell>
         );
     }
@@ -63,7 +59,7 @@ export function TransactionDetailCard(
             action={
                 <button
                     type="button"
-                    className="rounded-md border border-secondary px-2 py-1 text-xs font-medium text-secondary hover:bg-secondary/50"
+                    className="border-secondary text-secondary hover:bg-secondary/50 rounded-md border px-2 py-1 text-xs font-medium"
                     onClick={() => {
                         if (id) void hint.editTransactionCategory(id, category);
                     }}
@@ -76,7 +72,7 @@ export function TransactionDetailCard(
                 {amount !== undefined && (
                     <div className="flex items-baseline justify-between">
                         <dt className="text-tertiary">Amount</dt>
-                        <dd className="font-semibold tabular-nums text-primary">{formatAmount(amount)}</dd>
+                        <dd className="text-primary font-semibold tabular-nums">{formatAmount(amount)}</dd>
                     </div>
                 )}
                 <div className="flex items-baseline justify-between">

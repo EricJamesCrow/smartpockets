@@ -1,7 +1,7 @@
 "use client";
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-
+import { formatMoneyFromDollars, milliunitsToDollars } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveTransactions } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -29,29 +29,23 @@ const PALETTE: string[] = [
 ];
 
 function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
+    return formatMoneyFromDollars(amount, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
-    }).format(amount);
+    });
 }
 
 function aggregateByCategory(transactions: { amount: number; categoryPrimary?: string | null }[]): Bucket[] {
     const totals = new Map<string, number>();
     for (const tx of transactions) {
         const key = tx.categoryPrimary ?? "Uncategorized";
-        const dollars = tx.amount / 1000;
+        const dollars = milliunitsToDollars(tx.amount);
         totals.set(key, (totals.get(key) ?? 0) + dollars);
     }
-    return Array.from(totals, ([category, amount]) => ({ category, amount })).sort(
-        (a, b) => b.amount - a.amount,
-    );
+    return Array.from(totals, ([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount);
 }
 
-export function SpendByCategoryChart(
-    props: ToolResultComponentProps<unknown, ToolOutput<Preview>>,
-) {
+export function SpendByCategoryChart(props: ToolResultComponentProps<unknown, ToolOutput<Preview>>) {
     const { output, state } = props;
     const transactions = useLiveTransactions(output?.ids ?? []);
     const hint = useToolHintSend();
@@ -60,14 +54,12 @@ export function SpendByCategoryChart(
         return <SpendByCategoryChartSkeleton />;
     }
 
-    const buckets: Bucket[] = transactions
-        ? aggregateByCategory(transactions)
-        : output.preview.buckets ?? [];
+    const buckets: Bucket[] = transactions ? aggregateByCategory(transactions) : (output.preview.buckets ?? []);
 
     if (buckets.length === 0) {
         return (
             <ToolCardShell title={output.preview.summary ?? "Spend by category"}>
-                <p className="text-sm text-tertiary">No spending in the selected window.</p>
+                <p className="text-tertiary text-sm">No spending in the selected window.</p>
             </ToolCardShell>
         );
     }
@@ -75,10 +67,7 @@ export function SpendByCategoryChart(
     const total = buckets.reduce((sum, b) => sum + b.amount, 0);
 
     return (
-        <ToolCardShell
-            title={output.preview.summary ?? "Spend by category"}
-            subtitle={formatCurrency(total)}
-        >
+        <ToolCardShell title={output.preview.summary ?? "Spend by category"} subtitle={formatCurrency(total)}>
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
                 <div className="h-40 w-40 shrink-0">
                     <ResponsiveContainer width="100%" height="100%">
@@ -99,11 +88,7 @@ export function SpendByCategoryChart(
                                 }}
                             >
                                 {buckets.map((entry, index) => (
-                                    <Cell
-                                        key={entry.category}
-                                        fill={PALETTE[index % PALETTE.length]}
-                                        className="cursor-pointer"
-                                    />
+                                    <Cell key={entry.category} fill={PALETTE[index % PALETTE.length]} className="cursor-pointer" />
                                 ))}
                             </Pie>
                             <Tooltip formatter={(value) => formatCurrency(Number(value))} />
@@ -113,22 +98,17 @@ export function SpendByCategoryChart(
                 <ul className="flex-1 space-y-2 text-sm">
                     {buckets.slice(0, 6).map((bucket, index) => (
                         <li key={bucket.category} className="flex items-center gap-2">
-                            <span
-                                className="h-3 w-3 shrink-0 rounded-full"
-                                style={{ backgroundColor: PALETTE[index % PALETTE.length] }}
-                            />
+                            <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: PALETTE[index % PALETTE.length] }} />
                             <button
                                 type="button"
                                 onClick={() => {
                                     void hint.filterTransactionsByCategory(bucket.category);
                                 }}
-                                className="flex-1 truncate text-left text-secondary hover:text-primary hover:underline"
+                                className="text-secondary hover:text-primary flex-1 truncate text-left hover:underline"
                             >
                                 {bucket.category}
                             </button>
-                            <span className="tabular-nums text-primary">
-                                {formatCurrency(bucket.amount)}
-                            </span>
+                            <span className="text-primary tabular-nums">{formatCurrency(bucket.amount)}</span>
                         </li>
                     ))}
                 </ul>

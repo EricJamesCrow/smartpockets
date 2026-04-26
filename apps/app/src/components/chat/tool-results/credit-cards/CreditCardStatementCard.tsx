@@ -1,9 +1,9 @@
 "use client";
 
 import type { Id } from "@convex/_generated/dataModel";
-
+import { formatMoneyFromMilliunits } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
-import { useLiveCreditCards, type CreditCardRow } from "../shared/liveRowsHooks";
+import { type CreditCardRow, useLiveCreditCards } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
 import type { ToolOutput, ToolResultComponentProps } from "../types";
 import { CreditCardStatementCardSkeleton } from "./CreditCardStatementCardSkeleton";
@@ -13,8 +13,7 @@ type Preview = {
 };
 
 function formatCurrency(amount: number | null | undefined): string {
-    if (amount == null) return "-";
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+    return formatMoneyFromMilliunits(amount, { nullDisplay: "-" });
 }
 
 function formatClosingDay(day?: number | null): string {
@@ -39,20 +38,12 @@ function ListView({ cards, onOpen }: { cards: CreditCardRow[]; onOpen: OpenCard 
                         key={card._id}
                         type="button"
                         onClick={() => onOpen(card._id)}
-                        className="flex flex-col items-start rounded-lg border border-secondary p-3 text-left transition-colors hover:bg-secondary/40"
+                        className="border-secondary hover:bg-secondary/40 flex flex-col items-start rounded-lg border p-3 text-left transition-colors"
                     >
-                        <span className="text-sm font-semibold text-primary">{card.displayName}</span>
-                        {card.mask && (
-                            <span className="text-xs text-tertiary">...{card.mask}</span>
-                        )}
-                        <span className="mt-2 text-sm tabular-nums text-primary">
-                            {formatCurrency(card.currentBalance)}
-                        </span>
-                        {card.creditLimit != null && (
-                            <span className="text-xs text-tertiary tabular-nums">
-                                / {formatCurrency(card.creditLimit)} limit
-                            </span>
-                        )}
+                        <span className="text-primary text-sm font-semibold">{card.displayName}</span>
+                        {card.mask && <span className="text-tertiary text-xs">...{card.mask}</span>}
+                        <span className="text-primary mt-2 text-sm tabular-nums">{formatCurrency(card.currentBalance)}</span>
+                        {card.creditLimit != null && <span className="text-tertiary text-xs tabular-nums">/ {formatCurrency(card.creditLimit)} limit</span>}
                     </button>
                 ))}
             </div>
@@ -63,23 +54,15 @@ function ListView({ cards, onOpen }: { cards: CreditCardRow[]; onOpen: OpenCard 
 function UpcomingStrip({ cards, onOpen }: { cards: CreditCardRow[]; onOpen: OpenCard }) {
     return (
         <ToolCardShell title="Upcoming statements">
-            <ul className="divide-y divide-secondary">
+            <ul className="divide-secondary divide-y">
                 {cards.map((card) => (
                     <li key={card._id} className="flex items-center justify-between gap-3 py-2">
-                        <button
-                            type="button"
-                            onClick={() => onOpen(card._id)}
-                            className="min-w-0 flex-1 text-left text-sm text-primary hover:underline"
-                        >
+                        <button type="button" onClick={() => onOpen(card._id)} className="text-primary min-w-0 flex-1 text-left text-sm hover:underline">
                             <span className="font-medium">{card.displayName}</span>
-                            {card.mask && <span className="ml-2 text-tertiary">...{card.mask}</span>}
+                            {card.mask && <span className="text-tertiary ml-2">...{card.mask}</span>}
                         </button>
-                        <span className="shrink-0 text-xs text-tertiary">{formatClosingDay(card.statementClosingDay)}</span>
-                        {card.nextPaymentDueDate && (
-                            <span className="shrink-0 text-xs tabular-nums text-primary">
-                                Due {card.nextPaymentDueDate}
-                            </span>
-                        )}
+                        <span className="text-tertiary shrink-0 text-xs">{formatClosingDay(card.statementClosingDay)}</span>
+                        {card.nextPaymentDueDate && <span className="text-primary shrink-0 text-xs tabular-nums">Due {card.nextPaymentDueDate}</span>}
                     </li>
                 ))}
             </ul>
@@ -97,7 +80,7 @@ function SingleStatement({ card, onOpen }: { card: CreditCardRow; onOpen: OpenCa
                 <button
                     type="button"
                     onClick={() => onOpen(card._id)}
-                    className="rounded-md border border-secondary px-2 py-1 text-xs font-medium text-secondary hover:bg-secondary/50"
+                    className="border-secondary text-secondary hover:bg-secondary/50 rounded-md border px-2 py-1 text-xs font-medium"
                 >
                     Open card
                 </button>
@@ -105,29 +88,27 @@ function SingleStatement({ card, onOpen }: { card: CreditCardRow; onOpen: OpenCa
         >
             <dl className="grid grid-cols-2 gap-y-2 text-sm">
                 <dt className="text-tertiary">Current balance</dt>
-                <dd className="text-right font-semibold tabular-nums text-primary">
-                    {formatCurrency(card.currentBalance)}
-                </dd>
+                <dd className="text-primary text-right font-semibold tabular-nums">{formatCurrency(card.currentBalance)}</dd>
                 <dt className="text-tertiary">Available credit</dt>
-                <dd className="text-right tabular-nums text-primary">{formatCurrency(card.availableCredit)}</dd>
+                <dd className="text-primary text-right tabular-nums">{formatCurrency(card.availableCredit)}</dd>
                 <dt className="text-tertiary">Credit limit</dt>
-                <dd className="text-right tabular-nums text-primary">{formatCurrency(card.creditLimit)}</dd>
+                <dd className="text-primary text-right tabular-nums">{formatCurrency(card.creditLimit)}</dd>
                 {pct != null && (
                     <>
                         <dt className="text-tertiary">Utilization</dt>
-                        <dd className="text-right tabular-nums text-primary">{pct.toFixed(0)}%</dd>
+                        <dd className="text-primary text-right tabular-nums">{pct.toFixed(0)}%</dd>
                     </>
                 )}
                 {card.nextPaymentDueDate && (
                     <>
                         <dt className="text-tertiary">Next payment due</dt>
-                        <dd className="text-right tabular-nums text-primary">{card.nextPaymentDueDate}</dd>
+                        <dd className="text-primary text-right tabular-nums">{card.nextPaymentDueDate}</dd>
                     </>
                 )}
                 {card.isOverdue && (
                     <>
                         <dt className="text-utility-error-700">Status</dt>
-                        <dd className="text-right text-utility-error-700">Overdue</dd>
+                        <dd className="text-utility-error-700 text-right">Overdue</dd>
                     </>
                 )}
             </dl>
@@ -135,9 +116,7 @@ function SingleStatement({ card, onOpen }: { card: CreditCardRow; onOpen: OpenCa
     );
 }
 
-export function CreditCardStatementCard(
-    props: ToolResultComponentProps<unknown, ToolOutput<Preview>>,
-) {
+export function CreditCardStatementCard(props: ToolResultComponentProps<unknown, ToolOutput<Preview>>) {
     const { output, state, toolName } = props;
     const cards = useLiveCreditCards((output?.ids ?? []) as Array<Id<"creditCards">>);
     const hint = useToolHintSend();
@@ -152,7 +131,7 @@ export function CreditCardStatementCard(
     if (output.ids.length === 0) {
         return (
             <ToolCardShell title="Credit cards">
-                <p className="text-sm text-tertiary">No cards connected.</p>
+                <p className="text-tertiary text-sm">No cards connected.</p>
             </ToolCardShell>
         );
     }
@@ -171,7 +150,7 @@ export function CreditCardStatementCard(
     if (!single) {
         return (
             <ToolCardShell title="Credit card">
-                <p className="text-sm text-tertiary">Card not found.</p>
+                <p className="text-tertiary text-sm">Card not found.</p>
             </ToolCardShell>
         );
     }

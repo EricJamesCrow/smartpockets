@@ -1,7 +1,7 @@
 "use client";
 
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-
+import { formatMoneyFromDollars, milliunitsToDollars } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveTransactions } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -17,12 +17,10 @@ type Preview = {
 };
 
 function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
+    return formatMoneyFromDollars(amount, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
-    }).format(amount);
+    });
 }
 
 function labelForBucket(bucket: Bucket, granularity: Granularity): string {
@@ -38,10 +36,7 @@ function labelForBucket(bucket: Bucket, granularity: Granularity): string {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function aggregateBuckets(
-    transactions: { amount: number; date: string }[],
-    window: { from: string; to: string; granularity?: Granularity },
-): Bucket[] {
+function aggregateBuckets(transactions: { amount: number; date: string }[], window: { from: string; to: string; granularity?: Granularity }): Bucket[] {
     const granularity: Granularity = window.granularity ?? "day";
     const buckets = new Map<string, Bucket>();
     for (const tx of transactions) {
@@ -65,7 +60,7 @@ function aggregateBuckets(
             to = tx.date;
         }
         const existing = buckets.get(from);
-        const dollars = tx.amount / 1000;
+        const dollars = milliunitsToDollars(tx.amount);
         if (existing) {
             existing.amount += dollars;
         } else {
@@ -75,9 +70,7 @@ function aggregateBuckets(
     return Array.from(buckets.values()).sort((a, b) => a.from.localeCompare(b.from));
 }
 
-export function SpendOverTimeChart(
-    props: ToolResultComponentProps<unknown, ToolOutput<Preview>>,
-) {
+export function SpendOverTimeChart(props: ToolResultComponentProps<unknown, ToolOutput<Preview>>) {
     const { output, state } = props;
     const transactions = useLiveTransactions(output?.ids ?? []);
     const hint = useToolHintSend();
@@ -87,14 +80,13 @@ export function SpendOverTimeChart(
     }
 
     const granularity: Granularity = output.window?.granularity ?? "day";
-    const buckets: Bucket[] = transactions && output.window
-        ? aggregateBuckets(transactions, { ...output.window, granularity })
-        : output.preview.buckets ?? [];
+    const buckets: Bucket[] =
+        transactions && output.window ? aggregateBuckets(transactions, { ...output.window, granularity }) : (output.preview.buckets ?? []);
 
     if (buckets.length === 0) {
         return (
             <ToolCardShell title={output.preview.summary ?? "Spend over time"}>
-                <p className="text-sm text-tertiary">No spending in the selected window.</p>
+                <p className="text-tertiary text-sm">No spending in the selected window.</p>
             </ToolCardShell>
         );
     }
@@ -103,10 +95,7 @@ export function SpendOverTimeChart(
     const total = buckets.reduce((sum, b) => sum + b.amount, 0);
 
     return (
-        <ToolCardShell
-            title={output.preview.summary ?? "Spend over time"}
-            subtitle={formatCurrency(total)}
-        >
+        <ToolCardShell title={output.preview.summary ?? "Spend over time"} subtitle={formatCurrency(total)}>
             <div className="h-48 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -116,13 +105,7 @@ export function SpendOverTimeChart(
                                 <stop offset="100%" stopColor="var(--color-utility-brand-500)" stopOpacity={0.05} />
                             </linearGradient>
                         </defs>
-                        <XAxis
-                            dataKey="label"
-                            stroke="var(--color-utility-gray-500)"
-                            tick={{ fontSize: 11 }}
-                            tickLine={false}
-                            interval="preserveStartEnd"
-                        />
+                        <XAxis dataKey="label" stroke="var(--color-utility-gray-500)" tick={{ fontSize: 11 }} tickLine={false} interval="preserveStartEnd" />
                         <YAxis
                             stroke="var(--color-utility-gray-500)"
                             tick={{ fontSize: 11 }}
@@ -154,9 +137,7 @@ export function SpendOverTimeChart(
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
-            <p className="mt-2 text-xs text-tertiary">
-                Click a point to filter transactions to that {granularity}.
-            </p>
+            <p className="text-tertiary mt-2 text-xs">Click a point to filter transactions to that {granularity}.</p>
         </ToolCardShell>
     );
 }

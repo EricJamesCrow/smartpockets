@@ -26,7 +26,7 @@ type TransactionRow = {
     _id: string;
     _updateTime?: number;
     date: string;
-    amount: number;
+    amount: number; // canonical milliunits
     merchantName?: string | null;
     name: string;
     categoryPrimary?: string | null;

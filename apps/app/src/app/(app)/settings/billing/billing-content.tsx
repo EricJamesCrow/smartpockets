@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { usePlans, useSubscription, useCheckout } from "@clerk/nextjs/experimental";
-import { LayersTwo01, LayersThree01, Zap } from "@untitledui/icons";
+import { useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
-import { toast } from "sonner";
+import { useCheckout, usePlans, useSubscription } from "@clerk/nextjs/experimental";
 import { IconNotification } from "@repo/ui/untitledui/application/notifications/notifications";
 import { SectionHeader } from "@repo/ui/untitledui/application/section-headers/section-headers";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import * as RadioGroups from "@repo/ui/untitledui/base/radio-groups/radio-groups";
+import { LayersThree01, LayersTwo01, Zap } from "@untitledui/icons";
+import { toast } from "sonner";
+import { formatMoneyFromCents } from "@/utils/money";
 
 // Icon mapping for plan names to UntitledUI icons
 const PLAN_ICON_MAP: Record<string, FC<{ className?: string }>> = {
@@ -31,11 +32,10 @@ const formatPlanPrice = (fee: { amount: number; currency: string } | null | unde
     if (!fee) return "$0";
     // Default to USD if currency is missing or invalid
     const currency = fee.currency && fee.currency.length === 3 ? fee.currency : "USD";
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
+    return formatMoneyFromCents(fee.amount, {
         currency,
         minimumFractionDigits: 0,
-    }).format(fee.amount / 100); // Clerk returns amounts in cents
+    }); // Clerk returns amounts in cents
 };
 
 export function BillingContent() {
@@ -146,19 +146,10 @@ export function BillingContent() {
             {/* Confirm button (only show when plan changed) */}
             {hasChanges && (
                 <div className="flex justify-end gap-3 px-4 lg:px-8">
-                    <Button
-                        color="secondary"
-                        size="md"
-                        onClick={() => setSelectedPlanId(currentPlanId)}
-                    >
+                    <Button color="secondary" size="md" onClick={() => setSelectedPlanId(currentPlanId)}>
                         Cancel
                     </Button>
-                    <Button
-                        color="primary"
-                        size="md"
-                        onClick={handleConfirmChange}
-                        isDisabled={checkoutLoading}
-                    >
+                    <Button color="primary" size="md" onClick={handleConfirmChange} isDisabled={checkoutLoading}>
                         {checkoutLoading ? "Processing..." : "Confirm change"}
                     </Button>
                 </div>

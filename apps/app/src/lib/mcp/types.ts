@@ -4,90 +4,91 @@
  * Authentication result with token for Convex passthrough
  */
 export interface MCPAuthResult {
-  userContext: MCPUserContext;
-  token: string;
+    userContext: MCPUserContext;
+    token: string;
 }
 
 /**
  * User context extracted from Clerk token
  */
 export interface MCPUserContext {
-  userId: string;
-  clerkUserId: string;
+    userId: string;
+    clerkUserId: string;
 }
 
 /**
  * Credit card data returned by MCP tools
  */
 export interface MCPCreditCard {
-  id: string;
-  accountId: string;
-  displayName: string;
-  company: string | null;
-  brand: "visa" | "mastercard" | "amex" | "discover" | "other";
-  lastFour: string | null;
+    id: string;
+    accountId: string;
+    displayName: string;
+    company: string | null;
+    brand: "visa" | "mastercard" | "amex" | "discover" | "other";
+    lastFour: string | null;
 
-  // Balances (in dollars)
-  currentBalance: number;
-  availableCredit: number | null;
-  creditLimit: number | null;
-  utilization: number | null;
+    // Balances passed to external model/tool callers in display dollars.
+    currentBalance: number;
+    availableCredit: number | null;
+    creditLimit: number | null;
+    utilization: number | null;
 
-  // Payment info
-  minimumPaymentAmount: number | null;
-  nextPaymentDueDate: string | null;
-  isOverdue: boolean;
+    // Payment info
+    minimumPaymentAmount: number | null;
+    nextPaymentDueDate: string | null;
+    isOverdue: boolean;
 
-  // Last statement
-  lastStatementBalance: number | null;
-  lastStatementIssueDate: string | null;
-  lastPaymentAmount: number | null;
-  lastPaymentDate: string | null;
+    // Last statement
+    lastStatementBalance: number | null;
+    lastStatementIssueDate: string | null;
+    lastPaymentAmount: number | null;
+    lastPaymentDate: string | null;
 
-  // APRs
-  aprs: Array<{
-    aprPercentage: number;
-    aprType: string;
-    balanceSubjectToApr: number | null;
-    interestChargeAmount: number | null;
-  }>;
+    // APRs
+    aprs: Array<{
+        aprPercentage: number;
+        aprType: string;
+        balanceSubjectToApr: number | null;
+        interestChargeAmount: number | null;
+    }>;
 
-  // Status
-  isLocked: boolean;
-  syncStatus: "synced" | "syncing" | "error" | "stale";
-  lastSyncedAt: number | null;
+    // Status
+    isLocked: boolean;
+    syncStatus: "synced" | "syncing" | "error" | "stale";
+    lastSyncedAt: number | null;
 }
 
 /**
  * Aggregated stats across all credit cards
  */
 export interface MCPCreditCardStats {
-  totalBalance: number;
-  totalAvailableCredit: number;
-  totalCreditLimit: number;
-  averageUtilization: number;
-  overdueCount: number;
-  lockedCount: number;
-  cardCount: number;
-  narrative: string;
+    totalBalance: number;
+    totalAvailableCredit: number;
+    totalCreditLimit: number;
+    averageUtilization: number;
+    overdueCount: number;
+    lockedCount: number;
+    cardCount: number;
+    narrative: string;
 }
 
 /**
  * Transaction data
  */
 export interface MCPTransaction {
-  id: string;
-  date: string;
-  merchant: string;
-  amount: number;
-  category: string | null;
-  pending: boolean;
+    id: string;
+    date: string;
+    merchant: string;
+    // Amount passed to external model/tool callers in display dollars.
+    amount: number;
+    category: string | null;
+    pending: boolean;
 }
 
 /**
  * Tool response wrapper with AI-friendly summary
  */
 export interface MCPToolResponse<T> {
-  data: T;
-  summary: string;
+    data: T;
+    summary: string;
 }
