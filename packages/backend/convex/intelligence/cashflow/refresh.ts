@@ -186,7 +186,7 @@ export const refreshForUserInternal = internalMutation({
         });
 
         const existing = await ctx
-            .table("cashflowForecasts", "by_userId", (q) =>
+            .table("cashflowForecasts", "userId", (q) =>
                 q.eq("userId", userId),
             )
             .first();

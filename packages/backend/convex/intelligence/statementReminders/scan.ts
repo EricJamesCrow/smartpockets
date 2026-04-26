@@ -91,7 +91,7 @@ export const scanForUserInternal = internalMutation({
             keptCardIds.add(card._id as unknown as string);
 
             const existing = await ctx
-                .table("statementReminders", "by_creditCardId", (q) =>
+                .table("statementReminders", "creditCardId", (q) =>
                     q.eq("creditCardId", card._id),
                 )
                 .first();

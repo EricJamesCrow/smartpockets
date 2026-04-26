@@ -205,11 +205,11 @@ export const completeReauthAction = action({
   handler: async (ctx, args) => {
     const result = await getPlaid().completeReauth(ctx, args);
     await ctx.runMutation(
-      components.plaid.private.clearErrorTrackingInternal,
+      components.plaid.public.clearErrorTrackingInternal,
       { plaidItemId: args.plaidItemId },
     );
     await ctx.runMutation(
-      components.plaid.private.clearNewAccountsAvailableInternal,
+      components.plaid.public.clearNewAccountsAvailableInternal,
       { plaidItemId: args.plaidItemId },
     );
     return result;

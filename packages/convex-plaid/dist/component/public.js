@@ -8,7 +8,7 @@
  * Security: accessToken is NEVER exposed in query results.
  */
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server.js";
+import { mutation, query } from "./_generated/server.js";
 import { internal } from "./_generated/api.js";
 // =============================================================================
 // VALIDATORS (Reusable)
@@ -25,6 +25,12 @@ const aprValidator = v.object({
     balanceSubjectToApr: v.optional(v.number()),
     interestChargeAmount: v.optional(v.number()),
 });
+async function getPlaidItemById(ctx, plaidItemId) {
+    const id = ctx.db.normalizeId("plaidItems", plaidItemId);
+    if (!id)
+        return null;
+    return await ctx.db.get(id);
+}
 // =============================================================================
 // PLAID ITEMS QUERIES
 // =============================================================================
@@ -1508,6 +1514,105 @@ export const getAllInstitutions = query({
             url: inst.url,
             products: inst.products,
             lastFetched: inst.lastFetched,
+        }));
+    },
+});
+// =============================================================================
+// W4: HOST-INTERNAL ITEM STATE MUTATIONS
+// =============================================================================
+/**
+ * Host-exposed internal entry points for webhook and cron state maintained by
+ * the component. These live in the public module because Convex components do
+ * not expose the private module across the host/component boundary.
+ */
+export const setNewAccountsAvailableInternal = mutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        await ctx.db.patch(item._id, { newAccountsAvailableAt: Date.now() });
+        return null;
+    },
+});
+export const clearNewAccountsAvailableInternal = mutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        await ctx.db.patch(item._id, { newAccountsAvailableAt: undefined });
+        return null;
+    },
+});
+export const markFirstErrorAtInternal = mutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        if (item.firstErrorAt == null) {
+            await ctx.db.patch(item._id, { firstErrorAt: Date.now() });
+        }
+        return null;
+    },
+});
+export const clearErrorTrackingInternal = mutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        await ctx.db.patch(item._id, {
+            firstErrorAt: undefined,
+            lastDispatchedAt: undefined,
+        });
+        return null;
+    },
+});
+export const markItemErrorDispatchedInternal = mutation({
+    args: { plaidItemId: v.string() },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item)
+            return null;
+        await ctx.db.patch(item._id, { lastDispatchedAt: Date.now() });
+        return null;
+    },
+});
+export const listErrorItemsInternal = query({
+    args: {
+        olderThanLastSyncedAt: v.number(),
+        dispatchedBefore: v.number(),
+    },
+    returns: v.array(v.object({
+        plaidItemId: v.string(),
+        userId: v.string(),
+        institutionName: v.union(v.string(), v.null()),
+        firstErrorAt: v.union(v.number(), v.null()),
+        errorAt: v.union(v.number(), v.null()),
+        errorCode: v.union(v.string(), v.null()),
+    })),
+    handler: async (ctx, args) => {
+        const items = await ctx.db
+            .query("plaidItems")
+            .withIndex("by_status", (q) => q.eq("status", "error"))
+            .collect();
+        return items
+            .filter((item) => (item.lastSyncedAt ?? 0) < args.olderThanLastSyncedAt)
+            .filter((item) => (item.lastDispatchedAt ?? 0) < args.dispatchedBefore)
+            .map((item) => ({
+            plaidItemId: String(item._id),
+            userId: item.userId,
+            institutionName: item.institutionName ?? null,
+            firstErrorAt: item.firstErrorAt ?? null,
+            errorAt: item.errorAt ?? null,
+            errorCode: item.errorCode ?? null,
         }));
     },
 });

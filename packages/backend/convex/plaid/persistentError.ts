@@ -25,7 +25,7 @@ export const runPersistentErrorCheckInternal = internalAction({
   handler: async (ctx) => {
     const now = Date.now();
     const items = await ctx.runQuery(
-      components.plaid.private.listErrorItemsInternal,
+      components.plaid.public.listErrorItemsInternal,
       {
         olderThanLastSyncedAt: now - STALE_SYNC_MS,
         dispatchedBefore: now - DISPATCH_COOLDOWN_MS,
@@ -39,7 +39,7 @@ export const runPersistentErrorCheckInternal = internalAction({
       // first email fires, which matches how fresh errors would behave.
       if (item.firstErrorAt == null) {
         await ctx.runMutation(
-          components.plaid.private.markFirstErrorAtInternal,
+          components.plaid.public.markFirstErrorAtInternal,
           { plaidItemId: item.plaidItemId },
         );
         console.warn(
@@ -68,7 +68,7 @@ export const runPersistentErrorCheckInternal = internalAction({
       );
 
       await ctx.runMutation(
-        components.plaid.private.markItemErrorDispatchedInternal,
+        components.plaid.public.markItemErrorDispatchedInternal,
         { plaidItemId: item.plaidItemId },
       );
     }

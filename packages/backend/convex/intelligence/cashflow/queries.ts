@@ -31,7 +31,7 @@ export const getForViewer = query({
     handler: async (ctx) => {
         const viewer = ctx.viewerX();
         const row = await ctx
-            .table("cashflowForecasts", "by_userId", (q) =>
+            .table("cashflowForecasts", "userId", (q) =>
                 q.eq("userId", viewer._id),
             )
             .first();

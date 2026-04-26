@@ -507,8 +507,7 @@ const schema = defineEntSchema(
         })
             .edge("user")
             .edge("creditCard")
-            .index("by_user_daysToClose", ["userId", "daysToClose"])
-            .index("by_creditCardId", ["creditCardId"]),
+            .index("by_user_daysToClose", ["userId", "daysToClose"]),
 
         anomalies: defineEnt({
             plaidTransactionId: v.string(),
@@ -539,8 +538,7 @@ const schema = defineEntSchema(
             lastScannedTransactionDate: v.string(),
             skippedNullMerchantCount: v.number(),
         })
-            .field("userId", v.id("users"), { unique: true })
-            .index("by_userId", ["userId"]),
+            .field("userId", v.id("users"), { unique: true }),
 
         detectedSubscriptions: defineEnt({
             normalizedMerchant: v.string(),
@@ -585,8 +583,7 @@ const schema = defineEntSchema(
             lineItemsJson: v.string(),
             generatedAt: v.number(),
         })
-            .edge("user")
-            .index("by_userId", ["userId"]),
+            .edge("user"),
 
         // === REMINDERS (W2 ships table; W5 owns CRUD) ===
         reminders: defineEnt({

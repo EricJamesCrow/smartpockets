@@ -255,7 +255,7 @@ http.route({
           console.log(`[Webhook] Item error: ${errorCode} - ${errorMessage}`);
 
           // W4: stamp firstErrorAt on first transition into error-class status.
-          await ctx.runMutation(components.plaid.private.markFirstErrorAtInternal, {
+          await ctx.runMutation(components.plaid.public.markFirstErrorAtInternal, {
             plaidItemId: plaidItem._id,
           });
 
@@ -289,7 +289,7 @@ http.route({
           console.log(`[Webhook] Item pending expiration: ${expirationDate}`);
 
           // W4: stamp firstErrorAt on first transition into needs_reauth.
-          await ctx.runMutation(components.plaid.private.markFirstErrorAtInternal, {
+          await ctx.runMutation(components.plaid.public.markFirstErrorAtInternal, {
             plaidItemId: plaidItem._id,
           });
 
@@ -339,7 +339,7 @@ http.route({
           // "Update accounts" CTA via the account_select update-mode flow.
           console.log("[Webhook] ITEM NEW_ACCOUNTS_AVAILABLE: stamping flag");
           await ctx.runMutation(
-            components.plaid.private.setNewAccountsAvailableInternal,
+            components.plaid.public.setNewAccountsAvailableInternal,
             { plaidItemId: plaidItem._id },
           );
         } else {

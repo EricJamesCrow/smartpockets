@@ -117,6 +117,7 @@ fi
 
 app_port_pids="$(port_pids 3000 | tr "\n" " " | sed 's/[[:space:]]*$//')"
 web_port_pids="$(port_pids 3001 | tr "\n" " " | sed 's/[[:space:]]*$//')"
+convex_deployment="$(env_value "$APP_ENV" "CONVEX_DEPLOYMENT")"
 
 if [ -n "$app_port_pids" ] || [ -n "$web_port_pids" ]; then
     say "Local dev ports are already in use."
@@ -132,12 +133,24 @@ fi
 say "Starting local SmartPockets demo:"
 say "  app:       http://localhost:3000"
 say "  marketing: http://localhost:3001"
-say "  backend:   Convex dev deployment from ${BACKEND_ENV}"
+if [[ "$convex_deployment" == prev:* ]]; then
+    say "  backend:   using existing Convex preview deployment (${convex_deployment})"
+    say ""
+    say "This checkout is configured for a Convex preview deployment, so convex dev is not started."
+    say "After backend changes, push them with:"
+    say "  cd packages/backend && npx convex deploy --env-file ../../apps/app/.env.local --yes"
+else
+    say "  backend:   Convex dev deployment from ${BACKEND_ENV}"
+fi
 say ""
 say "Unauthenticated app routes should redirect to the local marketing site."
 say "Press Ctrl-C to stop all dev servers."
 
 export NEXT_PUBLIC_APP_URL="http://localhost:3000"
 export NEXT_PUBLIC_MARKETING_URL="http://localhost:3001"
+
+if [[ "$convex_deployment" == prev:* ]]; then
+    exec bunx turbo dev --parallel --filter=@repo/app --filter=@repo/web
+fi
 
 exec bunx turbo dev --parallel --filter=@repo/backend --filter=@repo/app --filter=@repo/web
