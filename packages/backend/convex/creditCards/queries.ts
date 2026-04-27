@@ -399,8 +399,8 @@ export const computeInterestSavingBalance = query({
  * Scans the Plaid component's transaction data for the card's account,
  * filtering to the current year and summing BANK_FEES and INTEREST categories.
  *
- * Note: Plaid component stores amounts in canonical milliunits, and this query
- * returns milliunits for UI formatting consistency.
+ * Note: Plaid component stores transaction amounts in milliunits. Credit-card
+ * detail UI expects display dollars, so this query converts before returning.
  *
  * @param creditCardId - Credit card document ID
  * @returns YTD fee total, interest total, and the year
@@ -449,8 +449,8 @@ export const computeYtdFeesInterest = query({
         }
 
         return {
-            totalFees: totalFeesMilliunits,
-            totalInterest: totalInterestMilliunits,
+            totalFees: totalFeesMilliunits / 1000,
+            totalInterest: totalInterestMilliunits / 1000,
             year,
         };
     },

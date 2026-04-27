@@ -3,10 +3,10 @@
 import { api } from "@convex/_generated/api";
 import { cx } from "@repo/ui/utils";
 import { useConvexAuth, useQuery } from "convex/react";
-import { formatMoneyFromMilliunits } from "@/utils/money";
+import { formatMoneyFromDollars } from "@/utils/money";
 
 function formatCurrency(amount: number): string {
-    return formatMoneyFromMilliunits(amount, {
+    return formatMoneyFromDollars(amount, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     });

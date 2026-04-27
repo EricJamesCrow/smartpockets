@@ -8,7 +8,7 @@ import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Checkbox } from "@repo/ui/untitledui/base/checkbox/checkbox";
 import { cx } from "@repo/ui/utils";
 import { useMutation, useQuery } from "convex/react";
-import { formatMoneyFromMilliunits } from "@/utils/money";
+import { formatMoneyFromDollars } from "@/utils/money";
 
 // =============================================================================
 // TYPES
@@ -140,7 +140,7 @@ export function AddCardsSlideout({ walletId, walletName, isOpen, onClose }: AddC
                                         </div>
                                     </div>
                                     {card.currentBalance !== undefined && (
-                                        <div className="text-primary text-sm font-medium">{formatMoneyFromMilliunits(card.currentBalance)}</div>
+                                        <div className="text-primary text-sm font-medium">{formatMoneyFromDollars(card.currentBalance)}</div>
                                     )}
                                 </label>
                             ))}

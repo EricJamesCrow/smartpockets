@@ -7,12 +7,12 @@ import { Check } from "@untitledui/icons";
 import { useConvexAuth, useQuery } from "convex/react";
 import Link from "next/link";
 import { parseLocalDate } from "@/types/credit-cards";
-import { formatMoneyFromMilliunits } from "@/utils/money";
+import { formatMoneyFromDollars } from "@/utils/money";
 
 // apps/app/src/app/(app)/dashboard/components/UpcomingPayments.tsx
 
 function formatCurrency(amount: number): string {
-    return formatMoneyFromMilliunits(amount, {
+    return formatMoneyFromDollars(amount, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     });

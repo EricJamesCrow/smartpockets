@@ -1,9 +1,10 @@
 /**
- * SmartPockets canonical money unit.
+ * SmartPockets money-unit boundary.
  *
- * Internal financial amounts from Plaid and native credit-card tables are stored
- * as integer milliunits: dollars * 1000. Convert only at IO boundaries such as
- * Plaid ingestion, user input, display formatting, and model/tool summaries.
+ * Plaid component account and transaction amounts are stored as integer
+ * milliunits: dollars * 1000. Native denormalized credit-card top-level
+ * balances currently remain display dollars for compatibility with existing
+ * rows; do not silently migrate those values without an audited backfill.
  */
 export const MONEY_MILLIUNITS_PER_DOLLAR = 1000;
 export const MONEY_CENTS_PER_DOLLAR = 100;
@@ -43,6 +44,15 @@ export function milliunitsToDollarsOrUndefined(milliunits: number | null | undef
 
 export function optionalMoneyMilliunits(milliunits: number | null | undefined): number | undefined {
     return milliunits ?? undefined;
+}
+
+/**
+ * Boundary helper for denormalizing Plaid component money into native
+ * creditCards top-level fields. Those native fields are display dollars until
+ * an audited migration moves them to a different canonical unit.
+ */
+export function plaidComponentMoneyToCreditCardDollars(milliunits: number | null | undefined): number | undefined {
+    return milliunitsToDollarsOrUndefined(milliunits);
 }
 
 function formatMoneyFromNumber(

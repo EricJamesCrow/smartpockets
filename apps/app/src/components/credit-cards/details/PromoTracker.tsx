@@ -6,7 +6,6 @@ import type { Id } from "@convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { formatDisplayCurrency, parseLocalDate } from "@/types/credit-cards";
 import { cx } from "@/utils/cx";
-import { dollarsToMilliunits } from "@/utils/money";
 import { InlineEditableField } from "./InlineEditableField";
 
 function getMonthsRemaining(expirationDate: string): number {
@@ -228,8 +227,8 @@ function AddPromoForm({
             await onSave({
                 description: trimmedDescription,
                 aprPercentage: aprNum,
-                originalBalance: dollarsToMilliunits(balanceNum),
-                remainingBalance: dollarsToMilliunits(balanceNum),
+                originalBalance: balanceNum,
+                remainingBalance: balanceNum,
                 startDate,
                 expirationDate,
                 isDeferredInterest,

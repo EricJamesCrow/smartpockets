@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Id } from "@convex/_generated/dataModel";
-import { formatMoneyFromDollars, formatMoneyFromMilliunits } from "@/utils/money";
+import { formatMoneyFromDollars } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveInstallmentPlans } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -20,7 +20,6 @@ type PlanPreview = {
     remainingPayments: number;
     startDate: string;
     endDate: string;
-    moneyUnit?: "dollars";
 };
 
 type Preview = {
@@ -28,8 +27,8 @@ type Preview = {
     summary?: string;
 };
 
-function formatCurrency(amount: number, moneyUnit?: "dollars"): string {
-    return moneyUnit === "dollars" ? formatMoneyFromDollars(amount) : formatMoneyFromMilliunits(amount);
+function formatCurrency(amount: number): string {
+    return formatMoneyFromDollars(amount);
 }
 
 export function InstallmentPlansList(props: ToolResultComponentProps<unknown, ToolOutput<Preview>>) {
@@ -85,14 +84,14 @@ export function InstallmentPlansList(props: ToolResultComponentProps<unknown, To
                                     </p>
                                 </div>
                                 <div className="shrink-0 text-right">
-                                    <p className="text-primary text-sm tabular-nums">{formatCurrency(plan.monthlyPayment, plan.moneyUnit)} / mo</p>
-                                    <p className="text-tertiary text-xs">{formatCurrency(remainingOwed, plan.moneyUnit)} left</p>
+                                    <p className="text-primary text-sm tabular-nums">{formatCurrency(plan.monthlyPayment)} / mo</p>
+                                    <p className="text-tertiary text-xs">{formatCurrency(remainingOwed)} left</p>
                                 </div>
                             </button>
                             {isExpanded && (
                                 <dl className="bg-secondary/30 mt-2 grid grid-cols-2 gap-y-1 rounded-md p-3 text-xs">
                                     <dt className="text-tertiary">Total financed</dt>
-                                    <dd className="text-primary text-right tabular-nums">{formatCurrency(plan.totalAmount, plan.moneyUnit)}</dd>
+                                    <dd className="text-primary text-right tabular-nums">{formatCurrency(plan.totalAmount)}</dd>
                                     <dt className="text-tertiary">Payments remaining</dt>
                                     <dd className="text-primary text-right tabular-nums">{plan.remainingPayments}</dd>
                                     <dt className="text-tertiary">Start</dt>

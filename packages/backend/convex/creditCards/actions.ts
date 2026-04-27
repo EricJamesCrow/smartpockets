@@ -13,7 +13,7 @@
 import { v } from "convex/values";
 import { components, internal } from "../_generated/api";
 import { action, internalAction } from "../_generated/server";
-import { optionalMoneyMilliunits } from "../money";
+import { plaidComponentMoneyToCreditCardDollars } from "../money";
 
 /**
  * Sync credit cards (denormalized data)
@@ -103,25 +103,27 @@ export const syncCreditCardsAction = action({
                 plaidItemId: args.plaidItemId,
                 accountId: account.accountId,
 
-                // FROM plaidAccounts - account money is already canonical milliunits.
+                // FROM plaidAccounts - component money is milliunits; native creditCards
+                // top-level money remains dollars until an audited backfill migrates it.
                 accountName: account.name,
                 officialName: account.officialName,
                 mask: account.mask || "0000",
                 accountType: account.type,
                 accountSubtype: account.subtype,
-                currentBalance: optionalMoneyMilliunits(account.balances.current),
-                availableCredit: optionalMoneyMilliunits(account.balances.available),
-                creditLimit: optionalMoneyMilliunits(account.balances.limit),
+                currentBalance: plaidComponentMoneyToCreditCardDollars(account.balances.current),
+                availableCredit: plaidComponentMoneyToCreditCardDollars(account.balances.available),
+                creditLimit: plaidComponentMoneyToCreditCardDollars(account.balances.limit),
                 isoCurrencyCode: account.balances.isoCurrencyCode,
 
-                // FROM plaidCreditCardLiabilities - liability money is canonical milliunits.
+                // FROM plaidCreditCardLiabilities - top-level liability money is
+                // denormalized to dollars; nested APR money stays component milliunits.
                 aprs: liability?.aprs ?? [],
                 isOverdue: liability?.isOverdue ?? false,
-                lastPaymentAmount: optionalMoneyMilliunits(liability?.lastPaymentAmount),
+                lastPaymentAmount: plaidComponentMoneyToCreditCardDollars(liability?.lastPaymentAmount),
                 lastPaymentDate: liability?.lastPaymentDate,
-                lastStatementBalance: optionalMoneyMilliunits(liability?.lastStatementBalance),
+                lastStatementBalance: plaidComponentMoneyToCreditCardDollars(liability?.lastStatementBalance),
                 lastStatementIssueDate: liability?.lastStatementIssueDate,
-                minimumPaymentAmount: optionalMoneyMilliunits(liability?.minimumPaymentAmount),
+                minimumPaymentAmount: plaidComponentMoneyToCreditCardDollars(liability?.minimumPaymentAmount),
                 nextPaymentDueDate: liability?.nextPaymentDueDate,
 
                 // COMPUTED - Display fields (prefer officialName for actual card product name)
@@ -263,25 +265,27 @@ export const syncCreditCardsInternal = internalAction({
                 plaidItemId: args.plaidItemId,
                 accountId: account.accountId,
 
-                // FROM plaidAccounts - account money is already canonical milliunits.
+                // FROM plaidAccounts - component money is milliunits; native creditCards
+                // top-level money remains dollars until an audited backfill migrates it.
                 accountName: account.name,
                 officialName: account.officialName,
                 mask: account.mask || "0000",
                 accountType: account.type,
                 accountSubtype: account.subtype,
-                currentBalance: optionalMoneyMilliunits(account.balances.current),
-                availableCredit: optionalMoneyMilliunits(account.balances.available),
-                creditLimit: optionalMoneyMilliunits(account.balances.limit),
+                currentBalance: plaidComponentMoneyToCreditCardDollars(account.balances.current),
+                availableCredit: plaidComponentMoneyToCreditCardDollars(account.balances.available),
+                creditLimit: plaidComponentMoneyToCreditCardDollars(account.balances.limit),
                 isoCurrencyCode: account.balances.isoCurrencyCode,
 
-                // FROM plaidCreditCardLiabilities - liability money is canonical milliunits.
+                // FROM plaidCreditCardLiabilities - top-level liability money is
+                // denormalized to dollars; nested APR money stays component milliunits.
                 aprs: liability?.aprs ?? [],
                 isOverdue: liability?.isOverdue ?? false,
-                lastPaymentAmount: optionalMoneyMilliunits(liability?.lastPaymentAmount),
+                lastPaymentAmount: plaidComponentMoneyToCreditCardDollars(liability?.lastPaymentAmount),
                 lastPaymentDate: liability?.lastPaymentDate,
-                lastStatementBalance: optionalMoneyMilliunits(liability?.lastStatementBalance),
+                lastStatementBalance: plaidComponentMoneyToCreditCardDollars(liability?.lastStatementBalance),
                 lastStatementIssueDate: liability?.lastStatementIssueDate,
-                minimumPaymentAmount: optionalMoneyMilliunits(liability?.minimumPaymentAmount),
+                minimumPaymentAmount: plaidComponentMoneyToCreditCardDollars(liability?.minimumPaymentAmount),
                 nextPaymentDueDate: liability?.nextPaymentDueDate,
 
                 // COMPUTED - Display fields (prefer officialName for actual card product name)

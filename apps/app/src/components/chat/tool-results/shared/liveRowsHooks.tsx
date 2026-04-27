@@ -40,7 +40,7 @@ type CreditCardRow = {
     displayName: string;
     company?: string | null;
     mask?: string | null;
-    currentBalance?: number | null;
+    currentBalance?: number | null; // Native credit-card top-level dollars.
     creditLimit?: number | null;
     availableCredit?: number | null;
     isOverdue?: boolean;
@@ -70,7 +70,7 @@ type PromoRateRow = {
     apr: number;
     startDate: string;
     endDate: string;
-    balance?: number | null;
+    balance?: number | null; // Native promo dollars.
     note?: string | null;
 };
 
@@ -79,7 +79,7 @@ type InstallmentPlanRow = {
     _updateTime?: number;
     creditCardId: Id<"creditCards">;
     merchantName: string;
-    totalAmount: number;
+    totalAmount: number; // Native installment dollars.
     monthlyPayment: number;
     totalPayments: number;
     remainingPayments: number;

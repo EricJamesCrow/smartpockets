@@ -1,7 +1,7 @@
 "use client";
 
 import type { Id } from "@convex/_generated/dataModel";
-import { formatMoneyFromMilliunits } from "@/utils/money";
+import { formatMoneyFromDollars } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { type CreditCardRow, useLiveCreditCards } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -13,7 +13,7 @@ type Preview = {
 };
 
 function formatCurrency(amount: number | null | undefined): string {
-    return formatMoneyFromMilliunits(amount, { nullDisplay: "-" });
+    return formatMoneyFromDollars(amount, { nullDisplay: "-" });
 }
 
 function formatClosingDay(day?: number | null): string {
