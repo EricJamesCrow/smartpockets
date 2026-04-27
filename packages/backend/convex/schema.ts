@@ -76,13 +76,13 @@ const schema = defineEntSchema(
             accountType: v.optional(v.string()),
             accountSubtype: v.optional(v.string()),
 
-            // Balances (stored in milliunits for precision)
+            // Money fields use canonical milliunits (dollars * 1000).
             currentBalance: v.optional(v.number()),
             availableCredit: v.optional(v.number()),
             creditLimit: v.optional(v.number()),
             isoCurrencyCode: v.optional(v.string()),
 
-            // APR information
+            // APR information; money fields inside APRs use canonical milliunits.
             aprs: v.optional(
                 v.array(
                     v.object({
@@ -94,7 +94,7 @@ const schema = defineEntSchema(
                 ),
             ),
 
-            // Payment status
+            // Payment status; money fields use canonical milliunits.
             isOverdue: v.boolean(),
             lastPaymentAmount: v.optional(v.number()),
             lastPaymentDate: v.optional(v.string()),
@@ -165,6 +165,8 @@ const schema = defineEntSchema(
             .index("by_closingDay_active", ["statementClosingDay", "isActive"]),
 
         // === CREDIT CARD DETAILS ===
+        // Native statement, promo, and installment money fields also use
+        // canonical milliunits. Convert at user input and display boundaries.
         statementSnapshots: defineEnt({
             statementDate: v.string(),
             previousBalance: v.number(),
@@ -382,12 +384,7 @@ const schema = defineEntSchema(
 
         // === AGENT MESSAGES (W2) ===
         agentMessages: defineEnt({
-            role: v.union(
-                v.literal("user"),
-                v.literal("assistant"),
-                v.literal("system"),
-                v.literal("tool"),
-            ),
+            role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system"), v.literal("tool")),
             text: v.optional(v.string()),
             toolCallsJson: v.optional(v.string()),
             toolName: v.optional(v.string()),
@@ -602,9 +599,7 @@ const schema = defineEntSchema(
             ),
             relatedResourceId: v.optional(v.string()),
             triggerLeadDays: v.optional(v.number()),
-            channels: v.array(
-                v.union(v.literal("chat"), v.literal("email")),
-            ),
+            channels: v.array(v.union(v.literal("chat"), v.literal("email"))),
             createdByAgent: v.boolean(),
         })
             .edge("user")

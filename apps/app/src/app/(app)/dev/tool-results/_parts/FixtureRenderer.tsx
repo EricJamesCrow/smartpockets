@@ -1,24 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import type { Id } from "@convex/_generated/dataModel";
-
 import { ChatInteractionProvider } from "@/components/chat/ChatInteractionContext";
-import {
-    proposalFallback,
-    toolResultRegistry,
-} from "@/components/chat/tool-results";
-import {
-    LivePreviewOverrideProvider,
-    type LivePreviewOverrides,
-} from "@/components/chat/tool-results/shared/liveRowsHooks";
-import type {
-    AgentThreadId,
-    ProposalToolOutput,
-    ToolOutput,
-    ToolResultComponentProps,
-} from "@/components/chat/tool-results/types";
+import { proposalFallback, toolResultRegistry } from "@/components/chat/tool-results";
+import { LivePreviewOverrideProvider, type LivePreviewOverrides } from "@/components/chat/tool-results/shared/liveRowsHooks";
+import type { AgentThreadId, ProposalToolOutput, ToolOutput, ToolResultComponentProps } from "@/components/chat/tool-results/types";
 import { cx } from "@/utils/cx";
 
 type AnyProps = ToolResultComponentProps<unknown, unknown>;
@@ -29,19 +16,13 @@ type FixtureEntry = {
     overrides?: LivePreviewOverrides;
 };
 
-type FixtureModule = Record<
-    string,
-    | AnyProps
-    | { props: AnyProps; overrides?: LivePreviewOverrides }
->;
+type FixtureModule = Record<string, AnyProps | { props: AnyProps; overrides?: LivePreviewOverrides }>;
 
 const THREAD_ID = "fx-thread" as unknown as AgentThreadId;
 
 async function loadFixture(toolName: string): Promise<FixtureEntry[]> {
     try {
-        const mod = (await import(
-            `@/components/chat/tool-results/__fixtures__/${toolName}.fixture`
-        )) as FixtureModule;
+        const mod = (await import(`@/components/chat/tool-results/__fixtures__/${toolName}.fixture`)) as FixtureModule;
         const entries: FixtureEntry[] = [];
         for (const [name, value] of Object.entries(mod)) {
             if (name.startsWith("_")) continue;
@@ -91,12 +72,7 @@ type OutputPreviewShape = {
             dueAt: number;
             notes?: string | null;
             isDone: boolean;
-            relatedResourceType:
-                | "creditCard"
-                | "promoRate"
-                | "installmentPlan"
-                | "transaction"
-                | "none";
+            relatedResourceType: "creditCard" | "promoRate" | "installmentPlan" | "transaction" | "none";
             relatedResourceId?: string | null;
         }>;
         summary?: string;
@@ -107,12 +83,8 @@ type OutputPreviewShape = {
 // read-tool preview pages show real card layouts instead of skeletons while
 // the CR-5 live queries are still stubbed. Preserves any explicit overrides
 // the fixture already exports (richer values override the synthesized ones).
-function synthesizeOverrides(
-    props: AnyProps,
-    existing: LivePreviewOverrides | undefined,
-): LivePreviewOverrides {
-    const output = (props as ToolResultComponentProps<unknown, OutputPreviewShape | ProposalToolOutput | null>)
-        .output;
+function synthesizeOverrides(props: AnyProps, existing: LivePreviewOverrides | undefined): LivePreviewOverrides {
+    const output = (props as ToolResultComponentProps<unknown, OutputPreviewShape | ProposalToolOutput | null>).output;
     if (!output || typeof output !== "object" || !("ids" in output)) {
         return existing ?? {};
     }
@@ -153,7 +125,10 @@ function synthesizeOverrides(
                 mask: String(1000 + index),
                 type: "depository",
                 subtype: "checking",
-                balances: { current: 1000 + index * 1000, available: 900 + index * 1000 },
+                balances: {
+                    current: Math.round((1000 + index * 1000) * 1000),
+                    available: Math.round((900 + index * 1000) * 1000),
+                },
                 plaidItemId: `plaid:plaidItems:inst-${Math.floor(index / 2)}`,
                 institutionName: `Sample Bank ${Math.floor(index / 2) + 1}`,
             };
@@ -163,9 +138,9 @@ function synthesizeOverrides(
                 displayName: ["Chase Sapphire Reserve", "Amex Platinum", "Citi Double Cash"][index] ?? `Card ${index + 1}`,
                 company: ["Chase", "American Express", "Citibank"][index] ?? "Issuer",
                 mask: String(4000 + index * 1111),
-                currentBalance: 1200 + index * 400,
-                creditLimit: 10000 + index * 2000,
-                availableCredit: 8800 - index * 400,
+                currentBalance: Math.round((1200 + index * 400) * 1000),
+                creditLimit: Math.round((10000 + index * 2000) * 1000),
+                availableCredit: Math.round((8800 - index * 400) * 1000),
                 isOverdue: false,
                 nextPaymentDueDate: "2026-05-05",
                 statementClosingDay: 15 + index,
@@ -181,7 +156,7 @@ function synthesizeOverrides(
                     apr: promo.apr,
                     startDate: promo.startDate,
                     endDate: promo.endDate,
-                    balance: promo.balance ?? null,
+                    balance: promo.balance == null ? null : Math.round(promo.balance * 1000),
                     note: promo.note ?? null,
                 };
             }
@@ -192,8 +167,8 @@ function synthesizeOverrides(
                     _id: id,
                     creditCardId: plan.cardId,
                     merchantName: plan.merchantName,
-                    totalAmount: plan.totalAmount,
-                    monthlyPayment: plan.monthlyPayment,
+                    totalAmount: Math.round(plan.totalAmount * 1000),
+                    monthlyPayment: Math.round(plan.monthlyPayment * 1000),
                     totalPayments: plan.totalPayments,
                     remainingPayments: plan.remainingPayments,
                     startDate: plan.startDate,
@@ -243,24 +218,13 @@ function synthesizeOverrides(
     return result;
 }
 
-function ErrorPreview({
-    errorText,
-    toolName,
-}: {
-    errorText: string | undefined;
-    toolName: string;
-}) {
+function ErrorPreview({ errorText, toolName }: { errorText: string | undefined; toolName: string }) {
     return (
-        <div className="max-w-[640px] rounded-xl border border-utility-error-300 bg-utility-error-50 px-4 py-4 shadow-xs">
-            <h3 className="text-sm font-semibold text-utility-error-700">
-                Tool error: {toolName}
-            </h3>
-            <p className="mt-1 text-xs text-utility-error-700">
-                {errorText ?? "Tool returned output-error without errorText."}
-            </p>
-            <p className="mt-3 text-xs text-tertiary">
-                W1 renders this state through <code>ToolErrorRow</code> in the real chat path
-                (spec 3.4, 8). The harness shows the error payload verbatim.
+        <div className="border-utility-error-300 bg-utility-error-50 shadow-xs max-w-[640px] rounded-xl border px-4 py-4">
+            <h3 className="text-utility-error-700 text-sm font-semibold">Tool error: {toolName}</h3>
+            <p className="text-utility-error-700 mt-1 text-xs">{errorText ?? "Tool returned output-error without errorText."}</p>
+            <p className="text-tertiary mt-3 text-xs">
+                W1 renders this state through <code>ToolErrorRow</code> in the real chat path (spec 3.4, 8). The harness shows the error payload verbatim.
             </p>
         </div>
     );
@@ -276,7 +240,7 @@ function renderFixture(toolName: string, props: AnyProps) {
     }
     const entry = toolResultRegistry[toolName as keyof typeof toolResultRegistry];
     if (!entry) {
-        return <p className="text-sm text-utility-error-700">No registry entry for {toolName}.</p>;
+        return <p className="text-utility-error-700 text-sm">No registry entry for {toolName}.</p>;
     }
     const Component = entry.Component;
     return <Component {...props} />;
@@ -296,17 +260,14 @@ export function FixtureRenderer({ toolName }: { toolName: string }) {
     }, [toolName]);
 
     if (fixtures === null) {
-        return <p className="text-sm text-tertiary">Loading fixtures...</p>;
+        return <p className="text-tertiary text-sm">Loading fixtures...</p>;
     }
 
     if (fixtures.length === 0) {
         return (
-            <p className="text-sm text-tertiary">
+            <p className="text-tertiary text-sm">
                 No fixtures exported for {toolName}. Add a file at
-                <code className="ml-1 rounded bg-secondary/40 px-1">
-                    apps/app/src/components/chat/tool-results/__fixtures__/{toolName}.fixture.ts
-                </code>
-                .
+                <code className="bg-secondary/40 ml-1 rounded px-1">apps/app/src/components/chat/tool-results/__fixtures__/{toolName}.fixture.ts</code>.
             </p>
         );
     }
@@ -315,17 +276,12 @@ export function FixtureRenderer({ toolName }: { toolName: string }) {
         <ChatInteractionProvider threadId={THREAD_ID}>
             <div className="space-y-8">
                 {fixtures.map(({ name, props, overrides }) => {
-                    const mergedOverrides =
-                        props.state === "output-available"
-                            ? synthesizeOverrides(props, overrides)
-                            : overrides ?? {};
+                    const mergedOverrides = props.state === "output-available" ? synthesizeOverrides(props, overrides) : (overrides ?? {});
                     return (
                         <article key={name} className="space-y-3">
                             <header className="flex items-center justify-between">
-                                <h2 className={cx("text-xs font-semibold uppercase tracking-wide text-tertiary")}>
-                                    {name}
-                                </h2>
-                                <code className="text-xs text-tertiary">{props.state}</code>
+                                <h2 className={cx("text-tertiary text-xs font-semibold uppercase tracking-wide")}>{name}</h2>
+                                <code className="text-tertiary text-xs">{props.state}</code>
                             </header>
                             <LivePreviewOverrideProvider value={mergedOverrides}>
                                 {renderFixture(toolName, { ...props, threadId: THREAD_ID })}

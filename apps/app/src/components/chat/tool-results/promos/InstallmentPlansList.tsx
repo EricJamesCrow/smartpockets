@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-
 import type { Id } from "@convex/_generated/dataModel";
-
+import { formatMoneyFromDollars, formatMoneyFromMilliunits } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveInstallmentPlans } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -21,6 +20,7 @@ type PlanPreview = {
     remainingPayments: number;
     startDate: string;
     endDate: string;
+    moneyUnit?: "dollars";
 };
 
 type Preview = {
@@ -28,13 +28,11 @@ type Preview = {
     summary?: string;
 };
 
-function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+function formatCurrency(amount: number, moneyUnit?: "dollars"): string {
+    return moneyUnit === "dollars" ? formatMoneyFromDollars(amount) : formatMoneyFromMilliunits(amount);
 }
 
-export function InstallmentPlansList(
-    props: ToolResultComponentProps<unknown, ToolOutput<Preview>>,
-) {
+export function InstallmentPlansList(props: ToolResultComponentProps<unknown, ToolOutput<Preview>>) {
     const { output, state } = props;
     const live = useLiveInstallmentPlans(output?.ids ?? []);
     const hint = useToolHintSend();
@@ -56,22 +54,19 @@ export function InstallmentPlansList(
               startDate: p.startDate,
               endDate: p.endDate,
           }))
-        : output.preview.plans ?? [];
+        : (output.preview.plans ?? []);
 
     if (plans.length === 0) {
         return (
             <ToolCardShell title={output.preview.summary ?? "Installment plans"}>
-                <p className="text-sm text-tertiary">No active installment plans.</p>
+                <p className="text-tertiary text-sm">No active installment plans.</p>
             </ToolCardShell>
         );
     }
 
     return (
-        <ToolCardShell
-            title={output.preview.summary ?? "Installment plans"}
-            subtitle={`${plans.length} active plan${plans.length === 1 ? "" : "s"}`}
-        >
-            <ul className="divide-y divide-secondary">
+        <ToolCardShell title={output.preview.summary ?? "Installment plans"} subtitle={`${plans.length} active plan${plans.length === 1 ? "" : "s"}`}>
+            <ul className="divide-secondary divide-y">
                 {plans.map((plan) => {
                     const isExpanded = expanded === plan.id;
                     const paidPayments = plan.totalPayments - plan.remainingPayments;
@@ -84,43 +79,33 @@ export function InstallmentPlansList(
                                 className="flex w-full items-center justify-between gap-3 text-left"
                             >
                                 <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-medium text-primary">
-                                        {plan.merchantName}
-                                    </p>
-                                    <p className="text-xs text-tertiary">
+                                    <p className="text-primary truncate text-sm font-medium">{plan.merchantName}</p>
+                                    <p className="text-tertiary text-xs">
                                         {paidPayments} of {plan.totalPayments} payments made
                                     </p>
                                 </div>
                                 <div className="shrink-0 text-right">
-                                    <p className="text-sm tabular-nums text-primary">
-                                        {formatCurrency(plan.monthlyPayment)} / mo
-                                    </p>
-                                    <p className="text-xs text-tertiary">
-                                        {formatCurrency(remainingOwed)} left
-                                    </p>
+                                    <p className="text-primary text-sm tabular-nums">{formatCurrency(plan.monthlyPayment, plan.moneyUnit)} / mo</p>
+                                    <p className="text-tertiary text-xs">{formatCurrency(remainingOwed, plan.moneyUnit)} left</p>
                                 </div>
                             </button>
                             {isExpanded && (
-                                <dl className="mt-2 grid grid-cols-2 gap-y-1 rounded-md bg-secondary/30 p-3 text-xs">
+                                <dl className="bg-secondary/30 mt-2 grid grid-cols-2 gap-y-1 rounded-md p-3 text-xs">
                                     <dt className="text-tertiary">Total financed</dt>
-                                    <dd className="text-right tabular-nums text-primary">
-                                        {formatCurrency(plan.totalAmount)}
-                                    </dd>
+                                    <dd className="text-primary text-right tabular-nums">{formatCurrency(plan.totalAmount, plan.moneyUnit)}</dd>
                                     <dt className="text-tertiary">Payments remaining</dt>
-                                    <dd className="text-right tabular-nums text-primary">
-                                        {plan.remainingPayments}
-                                    </dd>
+                                    <dd className="text-primary text-right tabular-nums">{plan.remainingPayments}</dd>
                                     <dt className="text-tertiary">Start</dt>
-                                    <dd className="text-right text-primary">{plan.startDate}</dd>
+                                    <dd className="text-primary text-right">{plan.startDate}</dd>
                                     <dt className="text-tertiary">End</dt>
-                                    <dd className="text-right text-primary">{plan.endDate}</dd>
+                                    <dd className="text-primary text-right">{plan.endDate}</dd>
                                     <div className="col-span-2 mt-2">
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 void hint.openCard(plan.cardId);
                                             }}
-                                            className="text-xs font-medium text-utility-brand-700 hover:underline"
+                                            className="text-utility-brand-700 text-xs font-medium hover:underline"
                                         >
                                             Open card
                                         </button>

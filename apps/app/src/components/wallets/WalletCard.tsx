@@ -11,6 +11,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Pin01, Edit03, Trash01, DotsGrid } from "@untitledui/icons";
 import { Dropdown } from "@repo/ui/untitledui/base/dropdown/dropdown";
 import { cx } from "@repo/ui/utils";
+import { formatMoneyFromMilliunits } from "@/utils/money";
 
 // =============================================================================
 // TYPES
@@ -237,19 +238,22 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
               <div>
                 <p className="text-tertiary">Total Balance</p>
                 <p className="font-medium text-primary">
-                  ${(walletStats.totalBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatMoneyFromMilliunits(walletStats.totalBalance)}
                 </p>
               </div>
               <div>
                 <p className="text-tertiary">Credit Limit</p>
                 <p className="font-medium text-primary">
-                  ${(walletStats.totalCreditLimit ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  {formatMoneyFromMilliunits(walletStats.totalCreditLimit, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
                 </p>
               </div>
               <div>
                 <p className="text-tertiary">Available</p>
                 <p className="font-medium text-primary">
-                  ${(walletStats.totalAvailableCredit ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatMoneyFromMilliunits(walletStats.totalAvailableCredit)}
                 </p>
               </div>
               <div>

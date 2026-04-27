@@ -1,7 +1,8 @@
 "use client";
 
+import { formatMoneyFromMilliunits } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
-import { useLivePlaidAccounts, type PlaidAccountRow } from "../shared/liveRowsHooks";
+import { type PlaidAccountRow, useLivePlaidAccounts } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
 import type { ToolOutput, ToolResultComponentProps } from "../types";
 import { AccountsSummarySkeleton } from "./AccountsSummarySkeleton";
@@ -13,8 +14,7 @@ type Preview = {
 };
 
 function formatCurrency(amount: number | null | undefined): string {
-    if (amount == null) return "-";
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+    return formatMoneyFromMilliunits(amount, { nullDisplay: "-" });
 }
 
 type InstitutionGroup = {
@@ -53,7 +53,7 @@ export function AccountsSummary(props: ToolResultComponentProps<unknown, ToolOut
     if (output.ids.length === 0) {
         return (
             <ToolCardShell title="Accounts">
-                <p className="text-sm text-tertiary">No accounts connected.</p>
+                <p className="text-tertiary text-sm">No accounts connected.</p>
             </ToolCardShell>
         );
     }
@@ -68,30 +68,24 @@ export function AccountsSummary(props: ToolResultComponentProps<unknown, ToolOut
         if (!account) {
             return (
                 <ToolCardShell title="Account">
-                    <p className="text-sm text-tertiary">Account details unavailable.</p>
+                    <p className="text-tertiary text-sm">Account details unavailable.</p>
                 </ToolCardShell>
             );
         }
         return (
             <ToolCardShell
                 title={account.officialName ?? account.name}
-                subtitle={
-                    account.mask ? `${account.institutionName ?? "Bank"} ...${account.mask}` : account.institutionName ?? undefined
-                }
+                subtitle={account.mask ? `${account.institutionName ?? "Bank"} ...${account.mask}` : (account.institutionName ?? undefined)}
             >
                 <dl className="space-y-2 text-sm">
                     <div className="flex items-baseline justify-between">
                         <dt className="text-tertiary">Current balance</dt>
-                        <dd className="font-semibold tabular-nums text-primary">
-                            {formatCurrency(account.balances.current)}
-                        </dd>
+                        <dd className="text-primary font-semibold tabular-nums">{formatCurrency(account.balances.current)}</dd>
                     </div>
                     {account.balances.available != null && (
                         <div className="flex items-baseline justify-between">
                             <dt className="text-tertiary">Available</dt>
-                            <dd className="tabular-nums text-primary">
-                                {formatCurrency(account.balances.available)}
-                            </dd>
+                            <dd className="text-primary tabular-nums">{formatCurrency(account.balances.available)}</dd>
                         </div>
                     )}
                     <div className="flex items-baseline justify-between">
@@ -107,7 +101,7 @@ export function AccountsSummary(props: ToolResultComponentProps<unknown, ToolOut
                     onClick={() => {
                         void hint.filterByInstitution(account.plaidItemId);
                     }}
-                    className="mt-4 text-xs font-medium text-utility-brand-700 hover:underline"
+                    className="text-utility-brand-700 mt-4 text-xs font-medium hover:underline"
                 >
                     Show transactions for this institution
                 </button>
@@ -116,12 +110,12 @@ export function AccountsSummary(props: ToolResultComponentProps<unknown, ToolOut
     }
 
     const grouped = groupByInstitution(accounts);
-    const totalBalance = output.preview.totalBalance ?? accounts.reduce((sum, a) => sum + (a.balances.current ?? 0), 0);
+    const totalBalance = accounts.reduce((sum, a) => sum + (a.balances.current ?? 0), 0);
     const subtitle = `${grouped.length} institutions, ${formatCurrency(totalBalance)} total`;
 
     return (
         <ToolCardShell title="Accounts" subtitle={subtitle}>
-            <ul className="divide-y divide-secondary">
+            <ul className="divide-secondary divide-y">
                 {grouped.map((group) => {
                     const groupTotal = group.accounts.reduce((sum, a) => sum + (a.balances.current ?? 0), 0);
                     return (
@@ -131,17 +125,15 @@ export function AccountsSummary(props: ToolResultComponentProps<unknown, ToolOut
                                 onClick={() => {
                                     void hint.filterByInstitution(group.id);
                                 }}
-                                className="flex w-full items-center justify-between gap-3 text-left hover:bg-secondary/40"
+                                className="hover:bg-secondary/40 flex w-full items-center justify-between gap-3 text-left"
                             >
                                 <div>
-                                    <p className="text-sm font-medium text-primary">{group.name}</p>
-                                    <p className="text-xs text-tertiary">
+                                    <p className="text-primary text-sm font-medium">{group.name}</p>
+                                    <p className="text-tertiary text-xs">
                                         {group.accounts.length} account{group.accounts.length === 1 ? "" : "s"}
                                     </p>
                                 </div>
-                                <span className="text-sm tabular-nums text-secondary">
-                                    {formatCurrency(groupTotal)}
-                                </span>
+                                <span className="text-secondary text-sm tabular-nums">{formatCurrency(groupTotal)}</span>
                             </button>
                         </li>
                     );

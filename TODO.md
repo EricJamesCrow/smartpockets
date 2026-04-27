@@ -204,6 +204,8 @@ Ensure our transaction exports and statement downloads contain all of the inform
 
 ## UI/UX Fixes & Cleanup
 
+- [x] Fix money-unit display bug by standardizing Plaid/account/card amounts on milliunits with boundary conversion
+
 ### Sidebar Logo
 
 - [x] Fix logo to minimize and change to "SP" when sidebar is collapsed
