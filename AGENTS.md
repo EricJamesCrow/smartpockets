@@ -422,7 +422,61 @@ Things AI agents frequently get wrong in this codebase.
 | Large commits with multiple changes | One logical change per commit |
 | Amend after pre-commit hook failure | Create NEW commit (hook failure = no commit happened) |
 | `git add -A` or `git add .` | Stage specific files by name |
-| Push to main without PR | Create feature branch, open PR |
+| Push to main without PR | Create feature branch, open PR via Graphite |
+| Showing GitHub PR links as the primary link | Show the Graphite PR link first |
+
+### Graphite PR Links
+
+SmartPockets uses Graphite as the primary review surface. When creating, submitting, or summarizing PRs, display Graphite links instead of GitHub links unless the user explicitly asks for GitHub or Graphite is unavailable.
+
+Use the Graphite URL printed by `gt submit`. If only a GitHub PR number or URL is available, convert it to this repo's Graphite format:
+
+```
+https://app.graphite.com/github/pr/EricJamesCrow/smartpockets/<PR_NUMBER>
+```
+
+GitHub links may be included as secondary fallback context, but the user-facing PR link should point to Graphite.
+
+### Graphite PR Preview Verification
+
+Every Graphite branch/PR should have a working Vercel preview for `apps/app` before handoff.
+
+After `gt submit`, verify checks:
+
+```bash
+gh pr checks <PR_NUMBER>
+```
+
+If `Vercel – smartpockets-app` fails, inspect the deployment logs:
+
+```bash
+npx vercel inspect <DEPLOYMENT_ID_OR_URL> --logs
+```
+
+When reporting a submitted PR, include:
+- Graphite PR link first
+- Vercel `smartpockets-app` preview URL or Vercel deployment link second
+- Any failed checks and the exact inspect command needed for follow-up
+
+Use the preview URL from Vercel checks/comments. Do not invent the final public preview URL from the branch name unless Vercel printed it, because branch names are normalized in generated deployment URLs.
+
+### Clerk Preview Environment
+
+Vercel Preview deployments must not use production Clerk keys or production Convex.
+
+Use non-production values for the Vercel **Preview** environment:
+
+| Variable | Preview Value |
+|----------|---------------|
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk development key (`pk_test_...`) |
+| `CLERK_SECRET_KEY` | Clerk development key (`sk_test_...`) |
+| `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` | Dev Clerk issuer/FAPI domain (`https://<dev-clerk-domain>.clerk.accounts.dev`) |
+| `NEXT_PUBLIC_CONVEX_URL` | Dev/staging Convex URL |
+| `CONVEX_DEPLOYMENT` | `dev:<deployment>` or unset, never `prod:*` |
+
+The browser error `Clerk: Production Keys are only allowed for domain "smartpockets.com"` means a preview origin is using production Clerk keys. Fix the Vercel Preview environment variables and redeploy the branch.
+
+Only share production Clerk settings/data with a preview if the preview is intentionally hosted on an approved `smartpockets.com` subdomain. The default Graphite/Vercel preview workflow should use Clerk development keys and non-production Convex data.
 
 ## Schema Overview
 
