@@ -2,7 +2,7 @@
  * Type definitions and utilities for the credit cards feature
  */
 import type { Id } from "@convex/_generated/dataModel";
-import { formatMoneyFromMilliunits } from "@/utils/money";
+import { formatMoneyFromDollars } from "@/utils/money";
 
 // =============================================================================
 // FILTER TYPES
@@ -123,7 +123,7 @@ export interface ExtendedCreditCardData {
     lastFour: string;
     cardholderName: string;
 
-    // Financial data in canonical milliunits; format at display boundaries.
+    // Native credit-card top-level money fields are display dollars.
     currentBalance: number | null;
     availableCredit: number | null;
     creditLimit: number | null;
@@ -293,17 +293,17 @@ export function getPaymentUrgencyBadgeColor(urgency: PaymentUrgency | null): "su
 }
 
 /**
- * Format canonical milliunits to currency string.
+ * Format native credit-card display dollars to a currency string.
  */
-export function formatCurrency(milliunits: number | null | undefined): string {
-    return formatMoneyFromMilliunits(milliunits);
+export function formatCurrency(dollars: number | null | undefined): string {
+    return formatMoneyFromDollars(dollars);
 }
 
 /**
- * Format canonical milliunits to currency string for UI display.
+ * Format native credit-card display dollars to a currency string for UI display.
  */
-export function formatDisplayCurrency(milliunits: number | null | undefined): string {
-    return formatMoneyFromMilliunits(milliunits);
+export function formatDisplayCurrency(dollars: number | null | undefined): string {
+    return formatMoneyFromDollars(dollars);
 }
 
 /**
@@ -393,7 +393,7 @@ export interface PlaidTransactionItem {
     _id?: string;
     transactionId: string;
     accountId: string;
-    amount: number; // canonical milliunits
+    amount: number; // Plaid component milliunits
     date: string;
     datetime?: string;
     name: string;
@@ -482,7 +482,7 @@ export interface Transaction {
     date: string; // ISO date string
     merchant: string;
     category: TransactionCategory;
-    amount: number; // canonical milliunits
+    amount: number; // Display dollars for credit-card detail UI
     status: TransactionStatus;
     description?: string;
     isRecurring?: boolean;
@@ -639,7 +639,7 @@ export function toTransaction(plaidTx: PlaidTransactionItem, cardId: string): Tr
         date: plaidTx.date,
         merchant: plaidTx.merchantEnrichment?.merchantName ?? plaidTx.merchantName ?? plaidTx.name,
         category: mapPlaidCategory(plaidTx.categoryPrimary),
-        amount: Math.abs(plaidTx.amount), // Keep canonical milliunits for UI formatting.
+        amount: Math.abs(plaidTx.amount) / 1000, // Credit-card transaction UI expects display dollars.
         status: plaidTx.pending ? "Pending" : "Posted",
         description: plaidTx.name !== plaidTx.merchantName ? plaidTx.name : undefined,
         isRecurring,

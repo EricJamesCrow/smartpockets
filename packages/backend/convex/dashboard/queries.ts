@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { components } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { query } from "../functions";
-import { formatMoneyFromMilliunits } from "../money";
+import { formatMoneyFromDollars } from "../money";
 
 /**
  * Get hero metrics for dashboard: minimum due, total balance, utilization
@@ -229,7 +229,7 @@ export const getAlerts = query({
                     type: "overdue",
                     severity: "critical",
                     title: `${card.displayName} is overdue`,
-                    description: `${daysOverdue} days past due. Minimum payment: ${formatMoneyFromMilliunits(card.minimumPaymentAmount ?? 0)}`,
+                    description: `${daysOverdue} days past due. Minimum payment: ${formatMoneyFromDollars(card.minimumPaymentAmount ?? 0)}`,
                     cardId: card._id,
                     actionLabel: "View Card",
                     actionHref: `/credit-cards/${card._id}`,
@@ -247,7 +247,7 @@ export const getAlerts = query({
                         type: "due_soon",
                         severity: "warning",
                         title: `${card.displayName} due soon`,
-                        description: `Due in ${Math.ceil(hoursUntilDue / 24)} day${Math.ceil(hoursUntilDue / 24) === 1 ? "" : "s"}. Minimum: ${formatMoneyFromMilliunits(card.minimumPaymentAmount ?? 0)}`,
+                        description: `Due in ${Math.ceil(hoursUntilDue / 24)} day${Math.ceil(hoursUntilDue / 24) === 1 ? "" : "s"}. Minimum: ${formatMoneyFromDollars(card.minimumPaymentAmount ?? 0)}`,
                         cardId: card._id,
                         actionLabel: "View Card",
                         actionHref: `/credit-cards/${card._id}`,

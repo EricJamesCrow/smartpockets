@@ -76,13 +76,16 @@ const schema = defineEntSchema(
             accountType: v.optional(v.string()),
             accountSubtype: v.optional(v.string()),
 
-            // Money fields use canonical milliunits (dollars * 1000).
+            // Denormalized top-level credit-card money fields are display
+            // dollars for compatibility with existing rows. Plaid component
+            // account/liability source rows remain milliunits.
             currentBalance: v.optional(v.number()),
             availableCredit: v.optional(v.number()),
             creditLimit: v.optional(v.number()),
             isoCurrencyCode: v.optional(v.string()),
 
-            // APR information; money fields inside APRs use canonical milliunits.
+            // APR information; nested APR money fields still mirror the Plaid
+            // component and use milliunits.
             aprs: v.optional(
                 v.array(
                     v.object({
@@ -94,7 +97,7 @@ const schema = defineEntSchema(
                 ),
             ),
 
-            // Payment status; money fields use canonical milliunits.
+            // Payment status; top-level money fields are display dollars.
             isOverdue: v.boolean(),
             lastPaymentAmount: v.optional(v.number()),
             lastPaymentDate: v.optional(v.string()),
@@ -165,8 +168,8 @@ const schema = defineEntSchema(
             .index("by_closingDay_active", ["statementClosingDay", "isActive"]),
 
         // === CREDIT CARD DETAILS ===
-        // Native statement, promo, and installment money fields also use
-        // canonical milliunits. Convert at user input and display boundaries.
+        // Native statement, promo, and installment money fields are display
+        // dollars until a separate audited migration changes their unit.
         statementSnapshots: defineEnt({
             statementDate: v.string(),
             previousBalance: v.number(),

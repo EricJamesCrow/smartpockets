@@ -12,8 +12,8 @@ export async function listCreditCards(token: string): Promise<MCPToolResponse<MC
     const cards = await fetchQuery(api.creditCards.queries.list, {}, { token });
 
     const mappedCards: MCPCreditCard[] = cards.map((card) => {
-        const currentBalance = milliunitsToDollarsOrNull(card.currentBalance) ?? 0;
-        const creditLimit = milliunitsToDollarsOrNull(card.creditLimit);
+        const currentBalance = card.currentBalance ?? 0;
+        const creditLimit = card.creditLimit ?? null;
 
         return {
             id: card._id,
@@ -24,17 +24,17 @@ export async function listCreditCards(token: string): Promise<MCPToolResponse<MC
             lastFour: card.lastFour ?? null,
 
             currentBalance,
-            availableCredit: milliunitsToDollarsOrNull(card.availableCredit),
+            availableCredit: card.availableCredit ?? null,
             creditLimit,
             utilization: creditLimit ? (currentBalance / creditLimit) * 100 : null,
 
-            minimumPaymentAmount: milliunitsToDollarsOrNull(card.minimumPaymentAmount),
+            minimumPaymentAmount: card.minimumPaymentAmount ?? null,
             nextPaymentDueDate: card.nextPaymentDueDate ?? null,
             isOverdue: card.isOverdue,
 
-            lastStatementBalance: milliunitsToDollarsOrNull(card.lastStatementBalance),
+            lastStatementBalance: card.lastStatementBalance ?? null,
             lastStatementIssueDate: card.lastStatementIssueDate ?? null,
-            lastPaymentAmount: milliunitsToDollarsOrNull(card.lastPaymentAmount),
+            lastPaymentAmount: card.lastPaymentAmount ?? null,
             lastPaymentDate: card.lastPaymentDate ?? null,
 
             aprs: (card.aprs ?? []).map((apr) => ({

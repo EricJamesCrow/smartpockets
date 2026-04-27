@@ -22,12 +22,12 @@ export function creditCardPreviewForModel(card: any): any {
     const plain = toPlain(card);
     return {
         ...plain,
-        currentBalance: milliunitsToDollarsOrNull(plain.currentBalance),
-        availableCredit: milliunitsToDollarsOrNull(plain.availableCredit),
-        creditLimit: milliunitsToDollarsOrNull(plain.creditLimit),
-        lastPaymentAmount: milliunitsToDollarsOrNull(plain.lastPaymentAmount),
-        lastStatementBalance: milliunitsToDollarsOrNull(plain.lastStatementBalance),
-        minimumPaymentAmount: milliunitsToDollarsOrNull(plain.minimumPaymentAmount),
+        currentBalance: plain.currentBalance ?? null,
+        availableCredit: plain.availableCredit ?? null,
+        creditLimit: plain.creditLimit ?? null,
+        lastPaymentAmount: plain.lastPaymentAmount ?? null,
+        lastStatementBalance: plain.lastStatementBalance ?? null,
+        minimumPaymentAmount: plain.minimumPaymentAmount ?? null,
         aprs: (plain.aprs ?? []).map((apr: any) => ({
             ...apr,
             balanceSubjectToApr: milliunitsToDollarsOrNull(apr.balanceSubjectToApr),
@@ -41,10 +41,10 @@ export function promoPreviewForModel(promo: any): any {
     const plain = toPlain(promo);
     return {
         ...plain,
-        originalBalance: milliunitsToDollarsOrNull(plain.originalBalance),
-        remainingBalance: milliunitsToDollarsOrNull(plain.remainingBalance),
-        accruedDeferredInterest: milliunitsToDollarsOrNull(plain.accruedDeferredInterest),
-        monthlyMinimumPayment: milliunitsToDollarsOrNull(plain.monthlyMinimumPayment),
+        originalBalance: plain.originalBalance ?? null,
+        remainingBalance: plain.remainingBalance ?? null,
+        accruedDeferredInterest: plain.accruedDeferredInterest ?? null,
+        monthlyMinimumPayment: plain.monthlyMinimumPayment ?? null,
         moneyUnit: "dollars",
     };
 }
@@ -53,10 +53,10 @@ export function installmentPreviewForModel(plan: any): any {
     const plain = toPlain(plan);
     return {
         ...plain,
-        originalPrincipal: milliunitsToDollarsOrNull(plain.originalPrincipal),
-        remainingPrincipal: milliunitsToDollarsOrNull(plain.remainingPrincipal),
-        monthlyPrincipal: milliunitsToDollarsOrNull(plain.monthlyPrincipal),
-        monthlyFee: milliunitsToDollarsOrNull(plain.monthlyFee),
+        originalPrincipal: plain.originalPrincipal ?? null,
+        remainingPrincipal: plain.remainingPrincipal ?? null,
+        monthlyPrincipal: plain.monthlyPrincipal ?? null,
+        monthlyFee: plain.monthlyFee ?? null,
         moneyUnit: "dollars",
     };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMoneyFromMilliunits } from "@/utils/money";
+import { formatMoneyFromDollars } from "@/utils/money";
 
 interface PayOverTimeSectionProps {
     payOverTimeEnabled?: boolean;
@@ -13,8 +13,8 @@ export function PayOverTimeSection({ payOverTimeEnabled, payOverTimeLimit, payOv
     if (!payOverTimeEnabled) return null;
 
     const rows = [
-        { label: "Pay Over Time Limit", value: payOverTimeLimit != null ? formatMoneyFromMilliunits(payOverTimeLimit) : "—" },
-        { label: "Available Pay Over Time", value: availableCredit != null ? formatMoneyFromMilliunits(availableCredit) : "—" },
+        { label: "Pay Over Time Limit", value: payOverTimeLimit != null ? formatMoneyFromDollars(payOverTimeLimit) : "—" },
+        { label: "Available Pay Over Time", value: availableCredit != null ? formatMoneyFromDollars(availableCredit) : "—" },
         { label: "Pay Over Time APR", value: payOverTimeApr != null ? `${payOverTimeApr.toFixed(2)}% (v)` : "—" },
         { label: "Setting", value: "ON" },
     ];

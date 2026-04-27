@@ -12,4 +12,5 @@ export {
     milliunitsToDollarsOrNull,
     milliunitsToDollarsOrUndefined,
     optionalMoneyMilliunits,
+    plaidComponentMoneyToCreditCardDollars,
 } from "@convex/money";

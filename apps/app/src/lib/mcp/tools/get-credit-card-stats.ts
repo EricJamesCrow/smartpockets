@@ -1,7 +1,7 @@
 // apps/app/src/lib/mcp/tools/get-credit-card-stats.ts
 import { api } from "@convex/_generated/api";
 import { fetchQuery } from "convex/nextjs";
-import { formatMoneyFromDollars, milliunitsToDollars } from "@/utils/money";
+import { formatMoneyFromDollars } from "@/utils/money";
 import type { MCPCreditCardStats, MCPToolResponse } from "../types";
 
 /**
@@ -11,9 +11,9 @@ export async function getCreditCardStats(token: string): Promise<MCPToolResponse
     const stats = await fetchQuery(api.creditCards.queries.getStats, {}, { token });
 
     const mappedStats: MCPCreditCardStats = {
-        totalBalance: milliunitsToDollars(stats.totalBalance),
-        totalAvailableCredit: milliunitsToDollars(stats.totalAvailableCredit),
-        totalCreditLimit: milliunitsToDollars(stats.totalCreditLimit),
+        totalBalance: stats.totalBalance,
+        totalAvailableCredit: stats.totalAvailableCredit,
+        totalCreditLimit: stats.totalCreditLimit,
         averageUtilization: stats.averageUtilization,
         overdueCount: stats.overdueCount,
         lockedCount: stats.lockedCount,

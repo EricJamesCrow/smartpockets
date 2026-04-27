@@ -164,7 +164,8 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
             date: transaction.date,
             name: transaction.description ?? transaction.merchant,
             merchantName: transaction.merchant,
-            amount: transaction.amount,
+            // The shared transaction detail drawer still formats Plaid-style milliunits.
+            amount: Math.round(transaction.amount * 1000),
             pending: transaction.status === "Pending",
             categoryPrimary: undefined,
             category: transaction.category,
