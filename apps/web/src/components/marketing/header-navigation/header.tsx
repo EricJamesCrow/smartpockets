@@ -36,7 +36,11 @@ const MobileNavItem = ({ label, href, onClose }: { label: string; href: string; 
 
 const MobileFooter = () => (
     <div className="flex flex-col gap-3 px-4 pt-6 pb-8">
-        <Button href="/sign-up" size="lg">
+        <Button
+            href="/sign-up"
+            size="lg"
+            className="!bg-gradient-to-b !from-stone-50 !to-stone-200 !text-[#0a1410] !ring-white/30 hover:!from-white hover:!to-stone-100 shadow-[0_6px_18px_rgba(127,184,154,0.20),inset_0_1px_0_rgba(255,255,255,0.6)]"
+        >
             Request access
         </Button>
         <Button href="/sign-in" color="secondary" size="lg">
@@ -62,7 +66,7 @@ export const Header = () => {
             className={cx(
                 "sticky top-0 z-40 flex h-16 w-full items-center justify-center transition-all duration-300 md:h-18",
                 scrolled
-                    ? "bg-[#0a0b0d]/85 backdrop-blur-xl border-b border-white/[0.06]"
+                    ? "bg-[#080a0c]/85 backdrop-blur-xl border-b border-[#7fb89a]/[0.10]"
                     : "bg-transparent border-b border-transparent",
             )}
         >
@@ -82,7 +86,7 @@ export const Header = () => {
                                             href={item.href}
                                             className="group relative flex items-center gap-1.5 rounded-md px-3 py-1.5 font-[family-name:var(--font-geist)] text-[13px] font-medium text-white/65 outline-focus-ring transition-colors duration-150 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2"
                                         >
-                                            <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] text-white/25 transition-colors duration-150 group-hover:text-brand-400">
+                                            <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] text-[#a3d7bf]/35 transition-colors duration-150 group-hover:text-[#a3d7bf]">
                                                 /
                                             </span>
                                             {item.label}
@@ -98,7 +102,12 @@ export const Header = () => {
                         <Button href="/sign-in" color="link-gray" size="md">
                             Sign in
                         </Button>
-                        <Button href="/sign-up" color="primary" size="md">
+                        <Button
+                            href="/sign-up"
+                            color="primary"
+                            size="md"
+                            className="!bg-gradient-to-b !from-stone-50 !to-stone-200 !text-[#0a1410] !ring-white/30 hover:!from-white hover:!to-stone-100 shadow-[0_6px_18px_rgba(127,184,154,0.20),inset_0_1px_0_rgba(255,255,255,0.6)]"
+                        >
                             Request access
                         </Button>
                     </div>
@@ -144,7 +153,7 @@ export const Header = () => {
                         >
                             <AriaDialog className="outline-hidden">
                                 {({ close }) => (
-                                    <nav className="w-full border-b border-white/[0.06] bg-[#0a0b0d] shadow-[0_24px_60px_rgba(0,0,0,0.5)]">
+                                    <nav className="w-full border-b border-[#7fb89a]/[0.10] bg-[#080a0c] shadow-[0_24px_60px_rgba(8,10,12,0.6)]">
                                         <ul className="flex flex-col py-2">
                                             {headerNavItems.map((item) => (
                                                 <MobileNavItem key={item.label} label={item.label} href={item.href} onClose={close} />
