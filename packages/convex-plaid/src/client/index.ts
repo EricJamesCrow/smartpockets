@@ -19,6 +19,7 @@ import type {
   FetchAccountsResult,
   SyncTransactionsResult,
   SyncTransactionsOptions,
+  BackfillTransactionEnrichmentsResult,
   FetchLiabilitiesResult,
   OnboardItemResult,
   FetchRecurringStreamsResult,
@@ -354,6 +355,34 @@ export class Plaid {
       encryptionKey: this.config.ENCRYPTION_KEY,
     });
     return result as SyncTransactionsResult;
+  }
+
+  /**
+   * Backfill merchant enrichment for transactions that were synced before
+   * Plaid-provided merchant/logo fields were stored.
+   *
+   * This does not update item cursors or insert missing transactions.
+   *
+   * @param plaidItemId - Convex document ID of the plaidItem (as string)
+   * @param options - Optional pagination limits (maxPages, maxTransactions)
+   */
+  async backfillTransactionEnrichments(
+    ctx: ActionCtx,
+    args: {
+      plaidItemId: string;
+    } & SyncTransactionsOptions
+  ): Promise<BackfillTransactionEnrichmentsResult> {
+    const actions = this.component.actions as any;
+    const result = await ctx.runAction(actions.backfillTransactionEnrichments, {
+      plaidItemId: args.plaidItemId,
+      maxPages: args.maxPages,
+      maxTransactions: args.maxTransactions,
+      plaidClientId: this.config.PLAID_CLIENT_ID,
+      plaidSecret: this.config.PLAID_SECRET,
+      plaidEnv: this.config.PLAID_ENV,
+      encryptionKey: this.config.ENCRYPTION_KEY,
+    });
+    return result as BackfillTransactionEnrichmentsResult;
   }
 
   /**
