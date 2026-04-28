@@ -100,6 +100,28 @@ const accountValidator = v.object({
     subtype: v.optional(v.string()),
     balances: balancesValidator,
 });
+const confidenceLevelValidator = v.union(v.literal("VERY_HIGH"), v.literal("HIGH"), v.literal("MEDIUM"), v.literal("LOW"), v.literal("UNKNOWN"));
+const enrichmentDataValidator = v.object({
+    counterpartyName: v.optional(v.string()),
+    counterpartyType: v.optional(v.string()),
+    counterpartyEntityId: v.optional(v.string()),
+    counterpartyConfidence: v.optional(v.string()),
+    counterpartyLogoUrl: v.optional(v.string()),
+    counterpartyWebsite: v.optional(v.string()),
+    counterpartyPhoneNumber: v.optional(v.string()),
+    enrichedAt: v.optional(v.number()),
+});
+const transactionMerchantEnrichmentValidator = v.object({
+    merchantId: v.string(),
+    merchantName: v.string(),
+    logoUrl: v.optional(v.string()),
+    categoryPrimary: v.optional(v.string()),
+    categoryDetailed: v.optional(v.string()),
+    categoryIconUrl: v.optional(v.string()),
+    website: v.optional(v.string()),
+    phoneNumber: v.optional(v.string()),
+    confidenceLevel: confidenceLevelValidator,
+});
 const transactionValidator = v.object({
     accountId: v.string(),
     transactionId: v.string(),
@@ -114,6 +136,9 @@ const transactionValidator = v.object({
     categoryPrimary: v.optional(v.string()),
     categoryDetailed: v.optional(v.string()),
     paymentChannel: v.optional(v.string()),
+    merchantId: v.optional(v.string()),
+    enrichmentData: v.optional(enrichmentDataValidator),
+    merchantEnrichment: v.optional(transactionMerchantEnrichmentValidator),
 });
 const aprValidator = v.object({
     aprPercentage: v.number(),
@@ -138,6 +163,50 @@ const recurringStreamValidator = v.object({
     lastDate: v.optional(v.string()),
     predictedNextDate: v.optional(v.string()),
 });
+function buildMerchantEnrichmentPatch(merchant, now, existing) {
+    return {
+        merchantId: merchant.merchantId,
+        merchantName: merchant.merchantName,
+        logoUrl: merchant.logoUrl ?? existing?.logoUrl,
+        categoryPrimary: merchant.categoryPrimary ?? existing?.categoryPrimary,
+        categoryDetailed: merchant.categoryDetailed ?? existing?.categoryDetailed,
+        categoryIconUrl: merchant.categoryIconUrl ?? existing?.categoryIconUrl,
+        website: merchant.website ?? existing?.website,
+        phoneNumber: merchant.phoneNumber ?? existing?.phoneNumber,
+        confidenceLevel: merchant.confidenceLevel !== "UNKNOWN"
+            ? merchant.confidenceLevel
+            : existing?.confidenceLevel ?? "UNKNOWN",
+        lastEnriched: now,
+    };
+}
+async function upsertMerchantEnrichmentRecord(ctx, merchant) {
+    const now = Date.now();
+    const result = await safeUpsertWithDedup(ctx, () => ctx.db
+        .query("merchantEnrichments")
+        .withIndex("by_merchant", (q) => q.eq("merchantId", merchant.merchantId))
+        .first(), () => ctx.db
+        .query("merchantEnrichments")
+        .withIndex("by_merchant", (q) => q.eq("merchantId", merchant.merchantId))
+        .collect(), async () => {
+        const id = await ctx.db.insert("merchantEnrichments", buildMerchantEnrichmentPatch(merchant, now));
+        return String(id);
+    }, async (id) => {
+        const existing = (await ctx.db.get(id));
+        await ctx.db.patch(id, buildMerchantEnrichmentPatch(merchant, now, existing));
+    });
+    return result.id;
+}
+function splitTransactionForStorage(transaction) {
+    const { merchantEnrichment, merchantId, enrichmentData, ...transactionDoc } = transaction;
+    return {
+        merchantEnrichment,
+        transactionDoc: {
+            ...transactionDoc,
+            ...(merchantId ? { merchantId } : {}),
+            ...(enrichmentData ? { enrichmentData } : {}),
+        },
+    };
+}
 // =============================================================================
 // INTERNAL QUERIES
 // =============================================================================
@@ -727,23 +796,31 @@ export const bulkUpsertTransactions = internalMutation({
             .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", args.plaidItemId))
             .collect();
         // Build lookup map: transactionId -> document _id (O(1) lookup)
-        const transactionIdToDocId = new Map(existingTransactions.map((t) => [t.transactionId, t._id]));
+        const transactionIdToDoc = new Map(existingTransactions.map((t) => [t.transactionId, t]));
         // Insert added transactions
         for (const txn of args.added) {
+            const { merchantEnrichment, transactionDoc } = splitTransactionForStorage(txn);
+            if (merchantEnrichment) {
+                await upsertMerchantEnrichmentRecord(ctx, merchantEnrichment);
+            }
             await ctx.db.insert("plaidTransactions", {
                 userId: args.userId,
                 plaidItemId: args.plaidItemId,
-                ...txn,
+                ...transactionDoc,
                 createdAt: now,
             });
         }
         // Update modified transactions (no query in loop - use Map lookup)
         let modifiedCount = 0;
         for (const txn of args.modified) {
-            const docId = transactionIdToDocId.get(txn.transactionId);
-            if (docId) {
-                await ctx.db.patch(docId, {
-                    ...txn,
+            const existingTransaction = transactionIdToDoc.get(txn.transactionId);
+            if (existingTransaction) {
+                const { merchantEnrichment, transactionDoc } = splitTransactionForStorage(txn);
+                if (merchantEnrichment) {
+                    await upsertMerchantEnrichmentRecord(ctx, merchantEnrichment);
+                }
+                await ctx.db.patch(existingTransaction._id, {
+                    ...transactionDoc,
                     updatedAt: now,
                 });
                 modifiedCount++;
@@ -752,9 +829,9 @@ export const bulkUpsertTransactions = internalMutation({
         // Delete removed transactions (no query in loop - use Map lookup)
         let removedCount = 0;
         for (const transactionId of args.removed) {
-            const docId = transactionIdToDocId.get(transactionId);
-            if (docId) {
-                await ctx.db.delete(docId);
+            const transaction = transactionIdToDoc.get(transactionId);
+            if (transaction) {
+                await ctx.db.delete(transaction._id);
                 removedCount++;
             }
         }
@@ -762,6 +839,68 @@ export const bulkUpsertTransactions = internalMutation({
             added: args.added.length,
             modified: modifiedCount,
             removed: removedCount,
+        };
+    },
+});
+/**
+ * Backfill merchant enrichment fields for existing transaction rows.
+ *
+ * This intentionally does not insert missing transactions or touch item cursors.
+ * It is meant for one-time recovery when historical transactions were synced
+ * before merchant/logo fields were persisted.
+ */
+export const backfillTransactionEnrichments = internalMutation({
+    args: {
+        plaidItemId: v.string(),
+        transactions: v.array(transactionValidator),
+    },
+    returns: v.object({
+        scanned: v.number(),
+        matched: v.number(),
+        updated: v.number(),
+        merchantsUpserted: v.number(),
+    }),
+    handler: async (ctx, args) => {
+        const item = await getPlaidItemById(ctx, args.plaidItemId);
+        if (!item || item.status === "deleting") {
+            return {
+                scanned: args.transactions.length,
+                matched: 0,
+                updated: 0,
+                merchantsUpserted: 0,
+            };
+        }
+        const existingTransactions = await ctx.db
+            .query("plaidTransactions")
+            .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", args.plaidItemId))
+            .collect();
+        const transactionIdToDoc = new Map(existingTransactions.map((transaction) => [transaction.transactionId, transaction]));
+        let matched = 0;
+        let updated = 0;
+        let merchantsUpserted = 0;
+        const now = Date.now();
+        for (const transaction of args.transactions) {
+            const existingTransaction = transactionIdToDoc.get(transaction.transactionId);
+            if (!existingTransaction)
+                continue;
+            matched++;
+            const { merchantEnrichment, transactionDoc } = splitTransactionForStorage(transaction);
+            if (!merchantEnrichment || !transactionDoc.merchantId)
+                continue;
+            await upsertMerchantEnrichmentRecord(ctx, merchantEnrichment);
+            merchantsUpserted++;
+            await ctx.db.patch(existingTransaction._id, {
+                merchantId: transactionDoc.merchantId,
+                enrichmentData: transactionDoc.enrichmentData,
+                updatedAt: now,
+            });
+            updated++;
+        }
+        return {
+            scanned: args.transactions.length,
+            matched,
+            updated,
+            merchantsUpserted,
         };
     },
 });
@@ -1701,7 +1840,6 @@ export const bulkUpsertStudentLoanLiabilities = internalMutation({
 // =============================================================================
 // INTERNAL MUTATIONS - Merchant Enrichment
 // =============================================================================
-const confidenceLevelValidator = v.union(v.literal("VERY_HIGH"), v.literal("HIGH"), v.literal("MEDIUM"), v.literal("LOW"), v.literal("UNKNOWN"));
 /**
  * Upsert merchant enrichment by merchantId.
  * Shared across all users.
@@ -1723,34 +1861,7 @@ export const upsertMerchantEnrichment = internalMutation({
     },
     returns: v.string(),
     handler: async (ctx, args) => {
-        const now = Date.now();
-        const result = await safeUpsertWithDedup(ctx, 
-        // Query for existing record
-        () => ctx.db
-            .query("merchantEnrichments")
-            .withIndex("by_merchant", (q) => q.eq("merchantId", args.merchantId))
-            .first(), 
-        // Query for ALL matching records (for duplicate detection)
-        () => ctx.db
-            .query("merchantEnrichments")
-            .withIndex("by_merchant", (q) => q.eq("merchantId", args.merchantId))
-            .collect(), 
-        // Insert function
-        async () => {
-            const id = await ctx.db.insert("merchantEnrichments", {
-                ...args,
-                lastEnriched: now,
-            });
-            return String(id);
-        }, 
-        // Update function
-        async (id) => {
-            await ctx.db.patch(id, {
-                ...args,
-                lastEnriched: now,
-            });
-        });
-        return result.id;
+        return await upsertMerchantEnrichmentRecord(ctx, args);
     },
 });
 /**

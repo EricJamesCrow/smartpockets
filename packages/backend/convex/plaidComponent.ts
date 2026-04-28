@@ -410,6 +410,62 @@ export const syncTransactionsInternal = internalAction({
 });
 
 /**
+ * Internal action for one-time merchant/logo enrichment backfills.
+ *
+ * Refetches historical transactions without advancing the Plaid sync cursor,
+ * then patches matching existing rows with Plaid-provided merchant/logo fields.
+ */
+export const backfillTransactionEnrichmentsInternal = internalAction({
+  args: {
+    plaidItemId: v.string(),
+    maxPages: v.optional(v.number()),
+    maxTransactions: v.optional(v.number()),
+  },
+  returns: v.object({
+    scanned: v.number(),
+    matched: v.number(),
+    updated: v.number(),
+    merchantsUpserted: v.number(),
+    hasMore: v.boolean(),
+    pagesProcessed: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    console.log(`[backfillTransactionEnrichmentsInternal] Backfilling item ${args.plaidItemId}`);
+    return await getPlaid().backfillTransactionEnrichments(ctx, {
+      plaidItemId: args.plaidItemId,
+      maxPages: args.maxPages,
+      maxTransactions: args.maxTransactions,
+    });
+  },
+});
+
+/**
+ * Internal action for scheduling merchant/logo backfills across all active items.
+ */
+export const backfillAllTransactionEnrichmentsInternal = internalAction({
+  args: {
+    maxPages: v.optional(v.number()),
+    maxTransactions: v.optional(v.number()),
+  },
+  returns: v.object({
+    scheduled: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const items = await ctx.runQuery(components.plaid.public.getAllActiveItems, {});
+
+    for (const item of items) {
+      await ctx.scheduler.runAfter(0, internal.plaidComponent.backfillTransactionEnrichmentsInternal, {
+        plaidItemId: item._id,
+        maxPages: args.maxPages,
+        maxTransactions: args.maxTransactions,
+      });
+    }
+
+    return { scheduled: items.length };
+  },
+});
+
+/**
  * Internal action for webhook-triggered liabilities sync.
  */
 export const fetchLiabilitiesInternal = internalAction({

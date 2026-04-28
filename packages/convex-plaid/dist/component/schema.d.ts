@@ -18,6 +18,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
     plaidItems: import("convex/server").TableDefinition<import("convex/values").VObject<{
         institutionId?: string | undefined;
         isActive?: boolean | undefined;
+        circuitState?: "closed" | "open" | "half_open" | undefined;
         errorCode?: string | undefined;
         errorMessage?: string | undefined;
         cursor?: string | undefined;
@@ -32,7 +33,6 @@ declare const _default: import("convex/server").SchemaDefinition<{
         disconnectedAt?: number | undefined;
         syncVersion?: number | undefined;
         syncStartedAt?: number | undefined;
-        circuitState?: "closed" | "open" | "half_open" | undefined;
         consecutiveFailures?: number | undefined;
         consecutiveSuccesses?: number | undefined;
         lastFailureAt?: number | undefined;
@@ -77,7 +77,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         newAccountsAvailableAt: import("convex/values").VFloat64<number | undefined, "optional">;
         firstErrorAt: import("convex/values").VFloat64<number | undefined, "optional">;
         lastDispatchedAt: import("convex/values").VFloat64<number | undefined, "optional">;
-    }, "required", "products" | "userId" | "institutionId" | "isActive" | "itemId" | "status" | "errorCode" | "errorMessage" | "accessToken" | "cursor" | "institutionName" | "syncError" | "createdAt" | "lastSyncedAt" | "activatedAt" | "errorAt" | "reauthReason" | "reauthAt" | "disconnectedReason" | "disconnectedAt" | "syncVersion" | "syncStartedAt" | "circuitState" | "consecutiveFailures" | "consecutiveSuccesses" | "lastFailureAt" | "nextRetryAt" | "newAccountsAvailableAt" | "firstErrorAt" | "lastDispatchedAt">, {
+    }, "required", "products" | "userId" | "institutionId" | "isActive" | "itemId" | "circuitState" | "status" | "errorCode" | "errorMessage" | "accessToken" | "cursor" | "institutionName" | "syncError" | "createdAt" | "lastSyncedAt" | "activatedAt" | "errorAt" | "reauthReason" | "reauthAt" | "disconnectedReason" | "disconnectedAt" | "syncVersion" | "syncStartedAt" | "consecutiveFailures" | "consecutiveSuccesses" | "lastFailureAt" | "nextRetryAt" | "newAccountsAvailableAt" | "firstErrorAt" | "lastDispatchedAt">, {
         by_user: ["userId", "_creationTime"];
         by_item_id: ["itemId", "_creationTime"];
         by_status: ["status", "_creationTime"];

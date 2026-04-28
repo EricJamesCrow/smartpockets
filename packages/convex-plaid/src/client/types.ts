@@ -178,6 +178,20 @@ export interface SyncTransactionsOptions {
 }
 
 /**
+ * Result from backfillTransactionEnrichments.
+ */
+export interface BackfillTransactionEnrichmentsResult {
+  scanned: number;
+  matched: number;
+  updated: number;
+  merchantsUpserted: number;
+  /** True if more historical pages remain */
+  hasMore: boolean;
+  /** Number of pages processed in this backfill */
+  pagesProcessed: number;
+}
+
+/**
  * Result from fetchLiabilities.
  */
 export interface FetchLiabilitiesResult {

@@ -10,6 +10,18 @@
  * not from process.env. This enables component isolation.
  */
 import { PlaidApi, type Transaction, type RemovedTransaction } from "plaid";
+type ConfidenceLevel = "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+type TransactionMerchantEnrichment = {
+    merchantId: string;
+    merchantName: string;
+    logoUrl?: string;
+    categoryPrimary?: string;
+    categoryDetailed?: string;
+    categoryIconUrl?: string;
+    website?: string;
+    phoneNumber?: string;
+    confidenceLevel: ConfidenceLevel;
+};
 /**
  * Initialize Plaid client with provided credentials.
  *
@@ -35,12 +47,44 @@ export declare function convertAmountToMilliunits(amount: number): number;
  */
 export declare function convertMilliunitsToDollars(milliunits: number): number;
 /**
+ * Extract merchant enrichment fields that Plaid already returns from
+ * /transactions/sync. This avoids a separate Enrich API call for Plaid-sourced
+ * transactions while preserving the same normalized merchant storage model.
+ */
+export declare function extractTransactionMerchantEnrichment(txn: Transaction): TransactionMerchantEnrichment | undefined;
+/**
  * Transform Plaid transaction to component storage format.
  *
  * @param txn - Raw Plaid Transaction object
  * @returns Transformed transaction data for storage
  */
 export declare function transformTransaction(txn: Transaction): {
+    accountId: string;
+    transactionId: string;
+    amount: number;
+    isoCurrencyCode: string;
+    date: string;
+    datetime: string | undefined;
+    name: string;
+    merchantName: string | undefined;
+    pending: boolean;
+    pendingTransactionId: string | undefined;
+    categoryPrimary: string | undefined;
+    categoryDetailed: string | undefined;
+    paymentChannel: import("plaid").TransactionPaymentChannelEnum;
+} | {
+    merchantId: string;
+    enrichmentData: {
+        counterpartyName: string;
+        counterpartyType: string;
+        counterpartyEntityId: string;
+        counterpartyConfidence: ConfidenceLevel;
+        counterpartyLogoUrl: string | undefined;
+        counterpartyWebsite: string | undefined;
+        counterpartyPhoneNumber: string | undefined;
+        enrichedAt: number;
+    };
+    merchantEnrichment: TransactionMerchantEnrichment;
     accountId: string;
     transactionId: string;
     amount: number;
@@ -101,4 +145,5 @@ export declare function syncTransactionsPaginated(plaidClient: PlaidApi, accessT
  * @returns Array of chunks
  */
 export declare function chunkArray<T>(items: T[], chunkSize: number): T[][];
+export {};
 //# sourceMappingURL=utils.d.ts.map

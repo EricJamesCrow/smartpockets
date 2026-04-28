@@ -419,6 +419,57 @@ export const syncTransactions = action({
     },
 });
 // =============================================================================
+// BACKFILL TRANSACTION ENRICHMENTS
+// =============================================================================
+/**
+ * Backfill merchant enrichment for already-stored transactions.
+ *
+ * This refetches transaction history from an empty sync cursor, transforms only
+ * Plaid-provided merchant/logo fields, and patches matching existing rows. It
+ * intentionally does not update the Plaid item cursor or insert transactions.
+ */
+export const backfillTransactionEnrichments = action({
+    args: {
+        plaidItemId: v.string(),
+        maxPages: v.optional(v.number()),
+        maxTransactions: v.optional(v.number()),
+        ...plaidConfigArgs,
+    },
+    returns: v.object({
+        scanned: v.number(),
+        matched: v.number(),
+        updated: v.number(),
+        merchantsUpserted: v.number(),
+        hasMore: v.boolean(),
+        pagesProcessed: v.number(),
+    }),
+    handler: async (ctx, args) => {
+        console.log(`[Plaid Component] Backfilling transaction enrichments for ${args.plaidItemId}...`);
+        const item = await ctx.runQuery(internal.private.getPlaidItem, {
+            plaidItemId: args.plaidItemId,
+        });
+        if (!item) {
+            throw new Error(`Plaid item not found: ${args.plaidItemId}`);
+        }
+        const accessToken = await decryptToken(item.accessToken, args.encryptionKey);
+        const plaidClient = initPlaidClient(args.plaidClientId, args.plaidSecret, args.plaidEnv);
+        const syncResult = await syncTransactionsPaginated(plaidClient, accessToken, "", {
+            maxPages: args.maxPages,
+            maxTransactions: args.maxTransactions,
+        });
+        const transactions = [...syncResult.added, ...syncResult.modified].map((transaction) => transformTransaction(transaction));
+        const backfillResult = await ctx.runMutation(internal.private.backfillTransactionEnrichments, {
+            plaidItemId: args.plaidItemId,
+            transactions,
+        });
+        return {
+            ...backfillResult,
+            hasMore: syncResult.hasMore,
+            pagesProcessed: syncResult.pagesProcessed,
+        };
+    },
+});
+// =============================================================================
 // FETCH LIABILITIES
 // =============================================================================
 /**
@@ -927,16 +978,17 @@ export const enrichTransactions = action({
             let failed = 0;
             // Cast to any since Plaid SDK types may not include all enrichment properties
             for (const enrichedTx of response.data.enriched_transactions) {
-                const counterparty = enrichedTx.counterparties?.[0];
+                const enrichments = enrichedTx.enrichments ?? enrichedTx;
+                const counterparty = enrichments.counterparties?.[0];
                 if (counterparty?.entity_id) {
                     // Upsert merchant enrichment
                     await ctx.runMutation(internal.private.upsertMerchantEnrichment, {
                         merchantId: counterparty.entity_id,
                         merchantName: counterparty.name,
                         logoUrl: counterparty.logo_url ?? undefined,
-                        categoryPrimary: enrichedTx.personal_finance_category?.primary,
-                        categoryDetailed: enrichedTx.personal_finance_category?.detailed,
-                        categoryIconUrl: enrichedTx.personal_finance_category_icon_url ?? undefined,
+                        categoryPrimary: enrichments.personal_finance_category?.primary,
+                        categoryDetailed: enrichments.personal_finance_category?.detailed,
+                        categoryIconUrl: enrichments.personal_finance_category_icon_url ?? undefined,
                         website: counterparty.website ?? undefined,
                         phoneNumber: counterparty.phone_number ?? undefined,
                         confidenceLevel: counterparty.confidence_level ?? "UNKNOWN",

@@ -7,7 +7,7 @@
  * IMPORTANT: Components cannot access process.env.
  * All configuration must be provided via PlaidConfig.
  */
-import type { ActionCtx, PlaidConfig, HttpRouter, RegisterRoutesConfig, CreateLinkTokenResult, ExchangePublicTokenResult, FetchAccountsResult, SyncTransactionsResult, SyncTransactionsOptions, FetchLiabilitiesResult, OnboardItemResult, FetchRecurringStreamsResult, CreateUpdateLinkTokenResult, CompleteReauthResult, TriggerTransactionsRefreshResult, EnrichTransactionsResult, SyncType, SyncTrigger, SyncStatus, SyncResult, SyncStats, InstitutionMetadata, PlaidAccount, PlaidAccountFilters, PlaidItem, PlaidItemStatus, CircuitState, UserIdentity, AuthenticatedContext, SecureWrapper } from "./types.js";
+import type { ActionCtx, PlaidConfig, HttpRouter, RegisterRoutesConfig, CreateLinkTokenResult, ExchangePublicTokenResult, FetchAccountsResult, SyncTransactionsResult, SyncTransactionsOptions, BackfillTransactionEnrichmentsResult, FetchLiabilitiesResult, OnboardItemResult, FetchRecurringStreamsResult, CreateUpdateLinkTokenResult, CompleteReauthResult, TriggerTransactionsRefreshResult, EnrichTransactionsResult, SyncType, SyncTrigger, SyncStatus, SyncResult, SyncStats, InstitutionMetadata, PlaidAccount, PlaidAccountFilters, PlaidItem, PlaidItemStatus, CircuitState, UserIdentity, AuthenticatedContext, SecureWrapper } from "./types.js";
 import type { ComponentApi } from "../component/_generated/component.js";
 /**
  * Error thrown when Plaid configuration is invalid.
@@ -115,6 +115,18 @@ export declare class Plaid {
     syncTransactions(ctx: ActionCtx, args: {
         plaidItemId: string;
     } & SyncTransactionsOptions): Promise<SyncTransactionsResult>;
+    /**
+     * Backfill merchant enrichment for transactions that were synced before
+     * Plaid-provided merchant/logo fields were stored.
+     *
+     * This does not update item cursors or insert missing transactions.
+     *
+     * @param plaidItemId - Convex document ID of the plaidItem (as string)
+     * @param options - Optional pagination limits (maxPages, maxTransactions)
+     */
+    backfillTransactionEnrichments(ctx: ActionCtx, args: {
+        plaidItemId: string;
+    } & SyncTransactionsOptions): Promise<BackfillTransactionEnrichmentsResult>;
     /**
      * Fetch and store liability data (credit cards, mortgages, student loans).
      *

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { cx } from "@repo/ui/utils";
 
 interface MerchantLogoProps {
@@ -33,13 +35,15 @@ export function MerchantLogo({
   size = "sm",
   className,
 }: MerchantLogoProps) {
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
   const initials = merchantName.substring(0, 2).toUpperCase();
 
-  if (logoUrl) {
+  if (logoUrl && failedLogoUrl !== logoUrl) {
     return (
       <img
         src={logoUrl}
         alt={merchantName}
+        onError={() => setFailedLogoUrl(logoUrl)}
         className={cx(
           sizeClasses[size],
           "rounded-full object-cover",

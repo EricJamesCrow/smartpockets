@@ -40,8 +40,8 @@ export declare const syncAllActiveItems: import("convex/server").RegisteredActio
     syncType?: "transactions" | "liabilities" | "recurring" | "all" | undefined;
     plaidConfig: {
         plaidClientId: string;
-        plaidSecret: string;
         plaidEnv: string;
+        plaidSecret: string;
         encryptionKey: string;
     };
 }, Promise<{
@@ -55,13 +55,13 @@ export declare const syncAllActiveItems: import("convex/server").RegisteredActio
  */
 export declare const syncSingleItem: import("convex/server").RegisteredAction<"internal", {
     plaidItemId: string;
-    syncType: "transactions" | "liabilities" | "recurring" | "all";
     plaidConfig: {
         plaidClientId: string;
-        plaidSecret: string;
         plaidEnv: string;
+        plaidSecret: string;
         encryptionKey: string;
     };
+    syncType: "transactions" | "liabilities" | "recurring" | "all";
 }, Promise<{
     success: boolean;
     error?: string;
@@ -76,8 +76,8 @@ export declare const syncStaleItems: import("convex/server").RegisteredAction<"i
     maxAgeHours?: number | undefined;
     plaidConfig: {
         plaidClientId: string;
-        plaidSecret: string;
         plaidEnv: string;
+        plaidSecret: string;
         encryptionKey: string;
     };
 }, Promise<{

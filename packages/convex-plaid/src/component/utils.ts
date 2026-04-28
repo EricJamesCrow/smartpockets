@@ -18,6 +18,46 @@ import {
   type RemovedTransaction,
 } from "plaid";
 
+const CONFIDENCE_LEVELS = new Set([
+  "VERY_HIGH",
+  "HIGH",
+  "MEDIUM",
+  "LOW",
+  "UNKNOWN",
+]);
+
+type ConfidenceLevel = "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+
+type PlaidCounterparty = {
+  name?: string | null;
+  type?: string | null;
+  logo_url?: string | null;
+  website?: string | null;
+  entity_id?: string | null;
+  confidence_level?: string | null;
+  phone_number?: string | null;
+};
+
+type PlaidTransactionWithEnrichment = Transaction & {
+  merchant_entity_id?: string | null;
+  logo_url?: string | null;
+  website?: string | null;
+  personal_finance_category_icon_url?: string | null;
+  counterparties?: PlaidCounterparty[] | null;
+};
+
+type TransactionMerchantEnrichment = {
+  merchantId: string;
+  merchantName: string;
+  logoUrl?: string;
+  categoryPrimary?: string;
+  categoryDetailed?: string;
+  categoryIconUrl?: string;
+  website?: string;
+  phoneNumber?: string;
+  confidenceLevel: ConfidenceLevel;
+};
+
 // =============================================================================
 // PLAID CLIENT INITIALIZATION
 // =============================================================================
@@ -77,6 +117,50 @@ export function convertMilliunitsToDollars(milliunits: number): number {
 // TRANSACTION TRANSFORMATION
 // =============================================================================
 
+function optionalString(value: string | null | undefined): string | undefined {
+  return value && value.length > 0 ? value : undefined;
+}
+
+function normalizeConfidenceLevel(value: string | null | undefined): ConfidenceLevel {
+  return value && CONFIDENCE_LEVELS.has(value) ? (value as ConfidenceLevel) : "UNKNOWN";
+}
+
+function selectCounterparty(counterparties: PlaidCounterparty[] | null | undefined): PlaidCounterparty | undefined {
+  if (!counterparties?.length) return undefined;
+  return (
+    counterparties.find((counterparty) => counterparty.type === "merchant" && counterparty.entity_id) ??
+    counterparties.find((counterparty) => counterparty.entity_id)
+  );
+}
+
+/**
+ * Extract merchant enrichment fields that Plaid already returns from
+ * /transactions/sync. This avoids a separate Enrich API call for Plaid-sourced
+ * transactions while preserving the same normalized merchant storage model.
+ */
+export function extractTransactionMerchantEnrichment(txn: Transaction): TransactionMerchantEnrichment | undefined {
+  const enrichedTxn = txn as PlaidTransactionWithEnrichment;
+  const counterparty = selectCounterparty(enrichedTxn.counterparties);
+  const merchantId = optionalString(enrichedTxn.merchant_entity_id) ?? optionalString(counterparty?.entity_id);
+  const merchantName = optionalString(enrichedTxn.merchant_name) ?? optionalString(counterparty?.name);
+
+  if (!merchantId || !merchantName) {
+    return undefined;
+  }
+
+  return {
+    merchantId,
+    merchantName,
+    logoUrl: optionalString(enrichedTxn.logo_url) ?? optionalString(counterparty?.logo_url),
+    categoryPrimary: optionalString(txn.personal_finance_category?.primary),
+    categoryDetailed: optionalString(txn.personal_finance_category?.detailed),
+    categoryIconUrl: optionalString(enrichedTxn.personal_finance_category_icon_url),
+    website: optionalString(enrichedTxn.website) ?? optionalString(counterparty?.website),
+    phoneNumber: optionalString(counterparty?.phone_number),
+    confidenceLevel: normalizeConfidenceLevel(counterparty?.confidence_level),
+  };
+}
+
 /**
  * Transform Plaid transaction to component storage format.
  *
@@ -84,7 +168,8 @@ export function convertMilliunitsToDollars(milliunits: number): number {
  * @returns Transformed transaction data for storage
  */
 export function transformTransaction(txn: Transaction) {
-  return {
+  const merchantEnrichment = extractTransactionMerchantEnrichment(txn);
+  const transformed = {
     accountId: txn.account_id,
     transactionId: txn.transaction_id,
     amount: convertAmountToMilliunits(txn.amount),
@@ -98,6 +183,26 @@ export function transformTransaction(txn: Transaction) {
     categoryPrimary: txn.personal_finance_category?.primary ?? undefined,
     categoryDetailed: txn.personal_finance_category?.detailed ?? undefined,
     paymentChannel: txn.payment_channel ?? undefined,
+  };
+
+  if (!merchantEnrichment) {
+    return transformed;
+  }
+
+  return {
+    ...transformed,
+    merchantId: merchantEnrichment.merchantId,
+    enrichmentData: {
+      counterpartyName: merchantEnrichment.merchantName,
+      counterpartyType: "merchant",
+      counterpartyEntityId: merchantEnrichment.merchantId,
+      counterpartyConfidence: merchantEnrichment.confidenceLevel,
+      counterpartyLogoUrl: merchantEnrichment.logoUrl,
+      counterpartyWebsite: merchantEnrichment.website,
+      counterpartyPhoneNumber: merchantEnrichment.phoneNumber,
+      enrichedAt: Date.now(),
+    },
+    merchantEnrichment,
   };
 }
 

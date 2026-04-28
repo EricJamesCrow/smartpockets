@@ -198,6 +198,28 @@ export class Plaid {
         return result;
     }
     /**
+     * Backfill merchant enrichment for transactions that were synced before
+     * Plaid-provided merchant/logo fields were stored.
+     *
+     * This does not update item cursors or insert missing transactions.
+     *
+     * @param plaidItemId - Convex document ID of the plaidItem (as string)
+     * @param options - Optional pagination limits (maxPages, maxTransactions)
+     */
+    async backfillTransactionEnrichments(ctx, args) {
+        const actions = this.component.actions;
+        const result = await ctx.runAction(actions.backfillTransactionEnrichments, {
+            plaidItemId: args.plaidItemId,
+            maxPages: args.maxPages,
+            maxTransactions: args.maxTransactions,
+            plaidClientId: this.config.PLAID_CLIENT_ID,
+            plaidSecret: this.config.PLAID_SECRET,
+            plaidEnv: this.config.PLAID_ENV,
+            encryptionKey: this.config.ENCRYPTION_KEY,
+        });
+        return result;
+    }
+    /**
      * Fetch and store liability data (credit cards, mortgages, student loans).
      *
      * @param plaidItemId - Convex document ID of the plaidItem (as string)
