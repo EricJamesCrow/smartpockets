@@ -185,20 +185,20 @@ export const Header = ({ items = headerNavItems, isFullWidth, className }: Heade
                             href="https://github.com/EricJamesCrow/smartpockets"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="outline-focus-ring inline-flex items-center gap-2 rounded-xs border border-white/10 bg-white/[0.02] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-300 transition hover:border-brand-500/40 hover:bg-white/[0.04] hover:text-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                            className="outline-focus-ring inline-flex items-center gap-2 border border-white/10 bg-white/[0.02] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-300 transition-colors duration-150 hover:border-brand-500/40 hover:bg-white/[0.04] hover:text-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                             <span className="size-1.5 rounded-full bg-brand-400 shadow-[0_0_8px_rgba(60,203,127,0.6)]" aria-hidden="true" />
                             GitHub
                         </a>
                         <a
                             href="/sign-in"
-                            className="outline-focus-ring inline-flex items-center rounded-xs px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+                            className="outline-focus-ring inline-flex items-center px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors duration-150 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                             Sign in
                         </a>
                         <a
                             href="/sign-up"
-                            className="outline-focus-ring group inline-flex items-center gap-2 rounded-xs bg-brand-500 px-3.5 py-1.5 text-sm font-semibold text-[#04140a] shadow-[0_0_0_1px_rgba(60,203,127,0.45),0_8px_24px_-8px_rgba(22,179,100,0.55)] transition hover:bg-brand-400 hover:shadow-[0_0_0_1px_rgba(60,203,127,0.65),0_10px_28px_-8px_rgba(22,179,100,0.75)] focus-visible:outline-2 focus-visible:outline-offset-2"
+                            className="outline-focus-ring group inline-flex items-center gap-2 bg-brand-500 px-3.5 py-1.5 text-sm font-semibold text-[#04140a] shadow-[0_0_0_1px_rgba(60,203,127,0.45),0_8px_24px_-8px_rgba(22,179,100,0.55)] transition-[transform,background-color,box-shadow] duration-150 hover:bg-brand-400 hover:shadow-[0_0_0_1px_rgba(60,203,127,0.65),0_10px_28px_-8px_rgba(22,179,100,0.75)] active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                             Request access
                             <span className="font-mono text-[10px] tracking-[0.14em] text-[#04140a]/60">↵</span>

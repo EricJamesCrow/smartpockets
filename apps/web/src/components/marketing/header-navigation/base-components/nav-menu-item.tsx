@@ -21,7 +21,7 @@ export const NavMenuItemLink = ({ href, icon: Icon, iconClassName, title, badge,
         href={href}
         onClick={onClick}
         className={cx(
-            "inline-flex w-full gap-3 px-4 py-3 outline-focus-ring transition duration-100 ease-linear hover:bg-primary_hover focus-visible:outline-2 sm:max-w-80 sm:p-3 md:rounded-lg",
+            "inline-flex w-full gap-3 px-4 py-3 outline-focus-ring transition duration-100 ease-linear hover:bg-primary_hover focus-visible:outline-2 sm:max-w-80 sm:p-3",
             className,
         )}
     >

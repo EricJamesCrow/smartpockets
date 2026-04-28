@@ -74,7 +74,7 @@ const Hero = () => {
                     {/* Left column — copy */}
                     <div data-hero-stagger className="flex flex-col items-start">
                         <div className="flex items-center gap-3">
-                            <span className="inline-flex items-center gap-2 rounded-xs border border-white/10 bg-white/[0.03] px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-300">
+                            <span className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.03] px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-300">
                                 <span className="size-1.5 animate-pulse rounded-full bg-brand-400 shadow-[0_0_10px_rgba(60,203,127,0.7)]" />
                                 SP/01 · ALPHA
                             </span>
@@ -83,13 +83,13 @@ const Hero = () => {
                             </span>
                         </div>
 
-                        <h1 className="mt-6 text-balance font-[family-name:var(--font-space-grotesk)] text-[40px] font-semibold leading-[0.95] tracking-[-0.025em] text-zinc-50 sm:text-[56px] md:text-[68px] lg:text-[80px]">
+                        <h1 className="mt-6 text-balance font-[family-name:var(--font-display)] text-[44px] font-bold uppercase leading-[0.92] tracking-[-0.01em] text-zinc-50 sm:text-[64px] md:text-[78px] lg:text-[96px]">
                             Personal finance,
                             <br />
                             in <span className="text-brand-400">terminal</span>{" "}
                             <span className="relative inline-block">
                                 clarity
-                                <span aria-hidden="true" className="absolute -right-3 top-2 inline-block size-2 animate-pulse rounded-full bg-brand-400 shadow-[0_0_14px_rgba(60,203,127,0.9)]" />
+                                <span aria-hidden="true" className="absolute -right-3 top-2 inline-block size-2 animate-pulse bg-brand-400 shadow-[0_0_14px_rgba(60,203,127,0.9)]" />
                             </span>
                             .
                         </h1>
@@ -116,12 +116,12 @@ const Hero = () => {
                                     type="email"
                                     placeholder="you@firm.com"
                                     aria-label="Email address"
-                                    inputClassName="!pl-[88px] !font-[family-name:var(--font-jetbrains-mono)] !text-[13.5px] !tracking-[0.02em] !rounded-xs !bg-white/[0.03] !border-white/10 !text-zinc-100 placeholder:!text-zinc-600 focus:!border-brand-500/50"
+                                    inputClassName="!pl-[88px] !font-[family-name:var(--font-jetbrains-mono)] !text-[13.5px] !tracking-[0.02em] !rounded-none !bg-white/[0.03] !border-white/10 !text-zinc-100 placeholder:!text-zinc-600 focus:!border-brand-500/50"
                                 />
                             </div>
                             <button
                                 type="submit"
-                                className="outline-focus-ring group inline-flex items-center justify-center gap-2 rounded-xs bg-brand-500 px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.16em] text-[#04140a] shadow-[0_0_0_1px_rgba(60,203,127,0.45),0_18px_40px_-12px_rgba(22,179,100,0.6)] transition hover:bg-brand-400 hover:shadow-[0_0_0_1px_rgba(60,203,127,0.7),0_24px_48px_-12px_rgba(22,179,100,0.8)] focus-visible:outline-2 focus-visible:outline-offset-2"
+                                className="outline-focus-ring group inline-flex items-center justify-center gap-2 rounded-none bg-brand-500 px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.16em] text-[#04140a] shadow-[0_0_0_1px_rgba(60,203,127,0.45),0_18px_40px_-12px_rgba(22,179,100,0.6)] transition-[transform,background-color,box-shadow] duration-150 hover:bg-brand-400 hover:shadow-[0_0_0_1px_rgba(60,203,127,0.7),0_24px_48px_-12px_rgba(22,179,100,0.8)] active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2"
                             >
                                 Request seat
                                 <ArrowRight className="size-3.5 -translate-x-0.5 transition-transform duration-150 group-hover:translate-x-0.5" />
@@ -141,7 +141,7 @@ const Hero = () => {
 
                     {/* Right column — cockpit panel */}
                     <div className="relative w-full max-w-full">
-                        <div className="absolute inset-0 -translate-y-2 translate-x-3 rounded-md border border-brand-500/15 bg-brand-500/[0.02]" aria-hidden="true" />
+                        <div className="absolute inset-0 -translate-y-2 translate-x-3 border border-brand-500/15 bg-brand-500/[0.02]" aria-hidden="true" />
                         <HeroCockpit className="relative" />
                     </div>
                 </div>
@@ -177,7 +177,7 @@ const Stat = ({ label, valueProp, tone, suffix = "" }: { label: string; valuePro
    COCKPIT MODULES — left "wallet utilization", right feature grid
    ──────────────────────────────────────────────────────────── */
 const WalletPane = () => (
-    <div className="relative isolate overflow-hidden rounded-md border border-white/[0.08] bg-[#08100c]/95 p-5 sm:p-6">
+    <div className="relative isolate overflow-hidden border border-white/[0.08] bg-[#08100c]/95 p-5 transition-colors duration-150 hover:border-white/15 sm:p-6">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(60,203,127,0.12),transparent_60%)]" aria-hidden="true" />
         <div className="relative z-10 flex items-center justify-between border-b border-white/[0.06] pb-3 font-mono text-[10.5px] uppercase tracking-[0.18em]">
             <span className="text-zinc-400">PANE / WALLET_UTIL</span>
@@ -201,10 +201,10 @@ const WalletPane = () => (
                                 <span className={cx("font-semibold", row.tone === "up" ? "text-brand-400" : row.tone === "down" ? "text-rose-400" : "text-zinc-300")}>{pct}%</span>
                             </span>
                         </div>
-                        <div className="h-1.5 w-full overflow-hidden rounded-xs bg-white/[0.04] ring-1 ring-inset ring-white/[0.04]">
+                        <div className="h-1.5 w-full overflow-hidden bg-white/[0.04] ring-1 ring-inset ring-white/[0.04]">
                             <div
                                 className={cx(
-                                    "h-full rounded-xs transition-[width] duration-700 ease-out",
+                                    "h-full transition-[width] duration-700 ease-out",
                                     row.tone === "down"
                                         ? "bg-gradient-to-r from-rose-400/70 via-rose-400 to-rose-300"
                                         : row.tone === "up"
@@ -266,23 +266,23 @@ const FeatureGrid = () => {
     ];
 
     return (
-        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.04] sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-px overflow-hidden border border-white/[0.08] bg-white/[0.04] sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
                 <article
                     key={f.code}
-                    className="group relative bg-[#06090b] p-5 transition-colors duration-200 hover:bg-[#08100c] sm:p-6"
+                    className="group relative bg-[#06090b] p-5 transition-[background-color,transform] duration-150 hover:-translate-y-px hover:bg-[#0a1612] sm:p-6"
                 >
-                    <span className="absolute right-4 top-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600 transition-colors group-hover:text-brand-400">
+                    <span className="absolute right-4 top-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600 transition-colors duration-150 group-hover:text-brand-400">
                         {f.code}
                     </span>
-                    <FeaturedIcon icon={f.icon} size="md" color="brand" theme="dark" className="!rounded-xs !ring-brand-500/30" />
-                    <h3 className="mt-4 font-[family-name:var(--font-space-grotesk)] text-lg font-semibold text-zinc-100">
+                    <FeaturedIcon icon={f.icon} size="md" color="brand" theme="dark" className="!rounded-none !ring-brand-500/30 transition-[box-shadow] duration-150 group-hover:!ring-brand-500/60" />
+                    <h3 className="mt-4 font-[family-name:var(--font-display)] text-xl font-bold uppercase tracking-tight text-zinc-100">
                         {f.title}
                     </h3>
                     <p className="mt-2 text-sm text-zinc-400">{f.body}</p>
                     <span aria-hidden="true" className="mt-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700 transition-colors duration-150 group-hover:text-brand-400">
                         ↳ docs
-                        <ArrowUpRight className="size-3" />
+                        <ArrowUpRight className="size-3 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </span>
                 </article>
             ))}
@@ -298,7 +298,7 @@ const Cockpit = () => (
                     <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.2em] text-zinc-500">
                         <span className="size-1 rounded-full bg-brand-400" /> SECTION / 02
                     </span>
-                    <h2 className="mt-3 font-[family-name:var(--font-space-grotesk)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-5xl">
+                    <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-5xl">
                         Density is the <span className="text-brand-400">feature</span>.
                     </h2>
                     <p className="mt-3 max-w-xl text-zinc-400">
@@ -311,10 +311,10 @@ const Cockpit = () => (
                     href="https://github.com/EricJamesCrow/smartpockets"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="outline-focus-ring inline-flex items-center gap-2 self-start rounded-xs border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-300 transition hover:border-brand-500/40 hover:text-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                    className="outline-focus-ring group inline-flex items-center gap-2 self-start border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-300 transition-colors duration-150 hover:border-brand-500/40 hover:bg-brand-500/[0.06] hover:text-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
                     Source · GPL-3.0
-                    <ArrowUpRight className="size-3" />
+                    <ArrowUpRight className="size-3 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </a>
             </header>
 
@@ -337,7 +337,7 @@ const AgentSection = () => (
                     <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.2em] text-zinc-500">
                         <span className="size-1 rounded-full bg-brand-400" /> SECTION / 03
                     </span>
-                    <h2 className="mt-3 font-[family-name:var(--font-space-grotesk)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-5xl">
+                    <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-5xl">
                         An agent that <br className="hidden md:inline" />
                         <span className="text-brand-400">closes loops</span>.
                     </h2>
@@ -387,7 +387,7 @@ const SpecTable = () => {
                         <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.2em] text-zinc-500">
                             <span className="size-1 rounded-full bg-brand-400" /> SECTION / 04
                         </span>
-                        <h2 className="mt-3 font-[family-name:var(--font-space-grotesk)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-5xl">
+                        <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-5xl">
                             Read the <span className="text-brand-400">spec</span>, not the marketing.
                         </h2>
                         <p className="mt-4 max-w-md text-zinc-400">
@@ -396,7 +396,7 @@ const SpecTable = () => {
                         </p>
 
                         <div className="mt-6 inline-flex flex-col gap-4">
-                            <div className="flex items-center gap-3 rounded-xs border border-white/10 bg-white/[0.03] px-4 py-3">
+                            <div className="flex items-center gap-3 border border-white/10 bg-white/[0.03] px-4 py-3 transition-colors duration-150 hover:border-brand-500/40 hover:bg-brand-500/[0.05]">
                                 <Sparkline points={[12, 16, 14, 18, 22, 19, 26, 28, 32, 30, 35, 38]} width={120} height={36} fill={false} showHead={false} />
                                 <div className="flex flex-col">
                                     <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">REPO STARS</span>
@@ -408,17 +408,17 @@ const SpecTable = () => {
                         </div>
                     </div>
 
-                    <dl className="overflow-hidden rounded-md border border-white/[0.08] bg-[#06090b]">
+                    <dl className="overflow-hidden border border-white/[0.08] bg-[#06090b]">
                         {rows.map((r, i) => (
                             <div
                                 key={r.k}
                                 className={cx(
                                     "group grid grid-cols-[120px_1fr] items-center gap-4 px-4 py-3.5 font-mono text-[12px] tracking-[0.05em] sm:grid-cols-[160px_1fr] sm:px-6 sm:py-4 sm:text-[13px]",
-                                    i !== rows.length - 1 && "border-b border-white/[0.06]",
-                                    "transition-colors hover:bg-white/[0.02]",
+                                    i !== rows.length - 1 && "border-b border-dashed border-white/[0.07]",
+                                    "transition-[background-color,padding] duration-150 hover:bg-brand-500/[0.04] hover:pl-5 sm:hover:pl-7",
                                 )}
                             >
-                                <dt className="text-[10.5px] uppercase tracking-[0.2em] text-zinc-500 group-hover:text-brand-400 sm:text-[11px]">
+                                <dt className="text-[10.5px] uppercase tracking-[0.2em] text-zinc-500 transition-colors duration-150 group-hover:text-brand-400 sm:text-[11px]">
                                     {r.k}
                                 </dt>
                                 <dd className="text-zinc-200">{r.v}</dd>
@@ -437,7 +437,7 @@ const SpecTable = () => {
 const CTA = () => (
     <section className="relative">
         <div className="mx-auto w-full max-w-container px-4 pb-16 sm:px-6 md:px-8 md:pb-20 lg:pb-24">
-            <div className="relative isolate overflow-hidden rounded-md border border-white/[0.08] bg-[#06090b] p-6 sm:p-10 lg:p-14">
+            <div className="relative isolate overflow-hidden border border-white/[0.08] bg-[#06090b] p-6 sm:p-10 lg:p-14">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(60,203,127,0.22),transparent_55%)]" aria-hidden="true" />
                 <div
                     className="absolute inset-0 opacity-[0.18] mix-blend-screen [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_70%_60%_at_70%_30%,black,transparent_75%)]"
@@ -449,7 +449,7 @@ const CTA = () => (
                             <span className="size-1.5 animate-pulse rounded-full bg-brand-400 shadow-[0_0_10px_rgba(60,203,127,0.7)]" />
                             ALPHA · COHORT 01
                         </span>
-                        <h2 className="mt-3 font-[family-name:var(--font-space-grotesk)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-[44px]">
+                        <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-[44px]">
                             Stop paying a premium <br className="hidden md:inline" /> to read your own ledger.
                         </h2>
                         <p className="mt-3 max-w-xl text-zinc-400">
@@ -486,11 +486,11 @@ const CTAForm = () => {
                     type="email"
                     placeholder="you@firm.com"
                     aria-label="Email address"
-                    inputClassName="!font-[family-name:var(--font-jetbrains-mono)] !text-[13.5px] !rounded-xs !bg-white/[0.03] !border-white/10 !text-zinc-100 placeholder:!text-zinc-600 focus:!border-brand-500/50"
+                    inputClassName="!font-[family-name:var(--font-jetbrains-mono)] !text-[13.5px] !rounded-none !bg-white/[0.03] !border-white/10 !text-zinc-100 placeholder:!text-zinc-600 focus:!border-brand-500/50"
                 />
                 <button
                     type="submit"
-                    className="outline-focus-ring group inline-flex items-center justify-center gap-2 rounded-xs bg-brand-500 px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.16em] text-[#04140a] shadow-[0_0_0_1px_rgba(60,203,127,0.45),0_18px_40px_-12px_rgba(22,179,100,0.6)] transition hover:bg-brand-400 hover:shadow-[0_0_0_1px_rgba(60,203,127,0.7),0_24px_48px_-12px_rgba(22,179,100,0.8)] focus-visible:outline-2 focus-visible:outline-offset-2"
+                    className="outline-focus-ring group inline-flex items-center justify-center gap-2 rounded-none bg-brand-500 px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.16em] text-[#04140a] shadow-[0_0_0_1px_rgba(60,203,127,0.45),0_18px_40px_-12px_rgba(22,179,100,0.6)] transition-[transform,background-color,box-shadow] duration-150 hover:bg-brand-400 hover:shadow-[0_0_0_1px_rgba(60,203,127,0.7),0_24px_48px_-12px_rgba(22,179,100,0.8)] active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
                     {submitted ? "On the list ↵" : "Request seat"}
                     {!submitted && <ArrowRight className="size-3.5 -translate-x-0.5 transition-transform duration-150 group-hover:translate-x-0.5" />}

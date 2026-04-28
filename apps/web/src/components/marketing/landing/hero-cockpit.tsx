@@ -54,11 +54,11 @@ export function HeroCockpit({ className }: { className?: string }) {
     return (
         <div ref={rootRef} className={cx("relative", className)}>
             {/* Outer glass panel */}
-            <div className="relative isolate overflow-hidden rounded-md border border-white/[0.08] bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_30px_120px_-40px_rgba(60,203,127,0.35)] backdrop-blur-xl sm:p-5">
+            <div className="relative isolate overflow-hidden border border-white/[0.08] bg-gradient-to-br from-white/[0.04] via-white/[0.02] to-transparent p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_30px_120px_-40px_rgba(60,203,127,0.35)] backdrop-blur-xl sm:p-5">
                 {/* Glass scanlines */}
                 <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 rounded-[inherit] opacity-30 [background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.04)_0px,rgba(255,255,255,0.04)_1px,transparent_1px,transparent_3px)]"
+                    className="pointer-events-none absolute inset-0 opacity-30 [background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.04)_0px,rgba(255,255,255,0.04)_1px,transparent_1px,transparent_3px)]"
                 />
                 {/* Top row: ticker + delta */}
                 <div className="relative z-10 flex items-center justify-between border-b border-white/[0.06] pb-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-500">
@@ -144,9 +144,9 @@ export function HeroCockpit({ className }: { className?: string }) {
 
 function MiniRow({ label, detailLabel, values, tone }: { label: string; detailLabel: string; values: readonly string[]; tone: "up" | "down" | "neutral" }) {
     return (
-        <div className="group flex items-center justify-between gap-3 rounded-xs border border-white/[0.05] bg-white/[0.02] px-3 py-2 transition hover:border-brand-500/30 hover:bg-white/[0.04]">
+        <div className="group flex items-center justify-between gap-3 border border-white/[0.05] bg-white/[0.02] px-3 py-2 transition-[background-color,border-color,transform] duration-150 hover:-translate-y-px hover:border-brand-500/40 hover:bg-brand-500/[0.05]">
             <div className="flex flex-col">
-                <span className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-zinc-500">{label}</span>
+                <span className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-zinc-500 transition-colors duration-150 group-hover:text-zinc-300">{label}</span>
                 <span className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-zinc-700">{detailLabel}</span>
             </div>
             <TickingValue

@@ -58,7 +58,7 @@ export const Footer = () => {
                             Built by a power user for the people running real ledgers.
                         </p>
 
-                        <div className="inline-flex items-center gap-2 self-start rounded-xs border border-white/10 bg-white/[0.02] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-300">
+                        <div className="inline-flex items-center gap-2 self-start border border-white/10 bg-white/[0.02] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-300">
                             <span className="size-1.5 animate-pulse rounded-full bg-brand-400 shadow-[0_0_10px_rgba(60,203,127,0.7)]" />
                             STATUS · ALPHA
                         </div>
@@ -102,7 +102,7 @@ export const Footer = () => {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     aria-label={label}
-                                    className="outline-focus-ring inline-flex size-9 items-center justify-center rounded-xs border border-white/10 bg-white/[0.02] text-zinc-400 transition hover:border-brand-500/40 hover:bg-white/[0.04] hover:text-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                                    className="outline-focus-ring inline-flex size-9 items-center justify-center border border-white/10 bg-white/[0.02] text-zinc-400 transition-colors duration-150 hover:border-brand-500/40 hover:bg-white/[0.04] hover:text-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2"
                                 >
                                     <Icon size={16} aria-hidden="true" />
                                 </a>

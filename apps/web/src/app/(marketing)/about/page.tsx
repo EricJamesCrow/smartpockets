@@ -34,7 +34,7 @@ function HeaderCentered() {
 					</p>
 				</div>
 				<div className="mt-12 md:mt-16">
-					<div className="bg-tertiary aspect-video w-full rounded-2xl md:rounded-3xl" />
+					<div className="bg-tertiary aspect-video w-full" />
 				</div>
 			</div>
 		</section>

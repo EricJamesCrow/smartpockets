@@ -1,11 +1,16 @@
 import { ClerkProvider } from "@clerk/nextjs";
-import { JetBrains_Mono, Sora, Space_Grotesk } from "next/font/google";
+import { IBM_Plex_Sans_Condensed, JetBrains_Mono, Sora } from "next/font/google";
 import "@repo/ui/globals.css";
 import "@repo/ui/theme.css";
 
-const spaceGrotesk = Space_Grotesk({
+// IBM Plex Sans Condensed — IBM's own engineering typeface. Condensed, industrial,
+// and engineered for status readouts. Pairs cleanly with JetBrains Mono and
+// pushes the cockpit further into hardware-blueprint brutalism without veering
+// into poster territory.
+const ibmPlexCondensed = IBM_Plex_Sans_Condensed({
     subsets: ["latin"],
-    variable: "--font-space-grotesk",
+    weight: ["500", "600", "700"],
+    variable: "--font-display",
     display: "swap",
 });
 
@@ -33,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
         <ClerkProvider allowedRedirectOrigins={[APP_URL]} signInForceRedirectUrl={APP_URL} signUpForceRedirectUrl={APP_URL}>
             <html lang="en">
-                <body className={`${spaceGrotesk.variable} ${sora.variable} ${jetbrainsMono.variable} bg-primary text-primary antialiased`}>
+                <body className={`${ibmPlexCondensed.variable} ${sora.variable} ${jetbrainsMono.variable} bg-primary text-primary antialiased`}>
                     {children}
                 </body>
             </html>

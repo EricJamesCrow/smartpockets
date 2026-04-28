@@ -91,8 +91,8 @@ export function AgentTerminal({ className }: { className?: string }) {
         <div
             ref={containerRef}
             className={cx(
-                "relative isolate overflow-hidden rounded-md border border-white/[0.08] bg-[#08100c]/95 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_30px_80px_-30px_rgba(60,203,127,0.25)]",
-                "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-[radial-gradient(ellipse_at_top_right,rgba(60,203,127,0.18),transparent_55%)] before:opacity-80",
+                "relative isolate overflow-hidden border border-white/[0.08] bg-[#08100c]/95 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_30px_80px_-30px_rgba(60,203,127,0.25)]",
+                "before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_at_top_right,rgba(60,203,127,0.18),transparent_55%)] before:opacity-80",
                 className,
             )}
         >
