@@ -1,391 +1,524 @@
 "use client";
 
-import type { FC, FormEvent, ReactNode } from "react";
-import { BadgeGroup } from "@repo/ui/untitledui/base/badges/badge-groups";
+import type { FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ArrowRight, ArrowUpRight } from "@untitledui/icons";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
+import { BadgeGroup } from "@repo/ui/untitledui/base/badges/badge-groups";
 import { Form } from "@repo/ui/untitledui/base/form/form";
 import { Input } from "@repo/ui/untitledui/base/input/input";
 import { FeaturedIcon } from "@repo/ui/untitledui/foundations/featured-icon/featured-icon";
 import { CreditCard } from "@repo/ui/untitledui/shared-assets/credit-card/credit-card";
-import { ArrowRight, ChartBreakoutSquare, MessageChatCircle, MessageSmileCircle, Zap } from "@untitledui/icons";
-import { TextType } from "@/components/ui/text-type";
-const HeroCardMockup11 = () => {
-    return (
-        <div className="bg-primary relative overflow-hidden">
-            <section className="lg:min-h-180 relative overflow-hidden py-16 lg:flex lg:py-0">
-                <div className="max-w-container mx-auto w-full px-4 md:px-8">
-                    <div className="flex flex-col items-start md:max-w-3xl lg:w-1/2 lg:pb-24 lg:pr-8 lg:pt-32">
-                        <a href="#" className="outline-focus-ring rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-2">
-                            <BadgeGroup className="hidden md:flex" size="lg" addonText="Early Access" iconTrailing={ArrowRight} theme="modern" color="brand">
-                                Join our alpha
-                            </BadgeGroup>
-                            <BadgeGroup className="md:hidden" size="md" addonText="Early Access" iconTrailing={ArrowRight} theme="modern" color="brand">
-                                Join our alpha
-                            </BadgeGroup>
-                        </a>
+import { Code02, CpuChip01, Database01, Lock01, Server04, Zap } from "@untitledui/icons";
 
-                        <h1 className="text-display-md text-primary md:text-display-lg lg:text-display-xl mt-4 font-semibold">Open source personal finance for people who care.</h1>
-                        <p className="text-tertiary mt-4 text-lg md:mt-6 md:max-w-lg md:text-xl">
-                            The open source alternative to YNAB and Monarch. Built by a power user for those who want complete data ownership and intelligent tracking, without the subscription traps.
+import { AgentTerminal } from "@/components/marketing/landing/agent-terminal";
+import { HeroCockpit } from "@/components/marketing/landing/hero-cockpit";
+import { LiveTape } from "@/components/marketing/landing/live-tape";
+import { Sparkline } from "@/components/marketing/landing/sparkline";
+import { TickingValue } from "@/components/marketing/landing/ticking-value";
+import { cx } from "@repo/ui/utils";
+
+/* ────────────────────────────────────────────────────────────
+   ATMOSPHERE — fixed grid + radial green glow behind the hero
+   ──────────────────────────────────────────────────────────── */
+const Atmosphere = () => (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_70%_15%,rgba(60,203,127,0.18),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_50%_at_15%_85%,rgba(22,179,100,0.08),transparent_60%)]" />
+        <div
+            className="absolute inset-0 opacity-[0.18] mix-blend-screen [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:64px_64px] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_30%,black,transparent_75%)]"
+        />
+        {/* faint vignette to seat the grid */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-500/30 to-transparent" />
+    </div>
+);
+
+/* ────────────────────────────────────────────────────────────
+   HERO
+   ──────────────────────────────────────────────────────────── */
+const Hero = () => {
+    const heroRef = useRef<HTMLElement>(null);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        if (reduced) return;
+        if (!heroRef.current) return;
+        gsap.registerPlugin(ScrollTrigger);
+
+        const ctx = gsap.context(() => {
+            gsap.fromTo(
+                "[data-hero-stagger] > *",
+                { opacity: 0, y: 18 },
+                {
+                    opacity: 1,
+                    y: 0,
+                    duration: 0.8,
+                    stagger: 0.07,
+                    ease: "power3.out",
+                    delay: 0.1,
+                },
+            );
+        }, heroRef);
+
+        return () => ctx.revert();
+    }, []);
+
+    return (
+        <section ref={heroRef} className="relative overflow-hidden">
+            <Atmosphere />
+            <div className="relative mx-auto w-full max-w-container px-4 pb-16 pt-12 sm:px-6 md:px-8 lg:pb-24 lg:pt-20">
+                <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12 xl:gap-16">
+                    {/* Left column — copy */}
+                    <div data-hero-stagger className="flex flex-col items-start">
+                        <div className="flex items-center gap-3">
+                            <span className="inline-flex items-center gap-2 rounded-xs border border-white/10 bg-white/[0.03] px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-300">
+                                <span className="size-1.5 animate-pulse rounded-full bg-brand-400 shadow-[0_0_10px_rgba(60,203,127,0.7)]" />
+                                SP/01 · ALPHA
+                            </span>
+                            <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-500 sm:inline">
+                                NYC · NORTH AMERICA
+                            </span>
+                        </div>
+
+                        <h1 className="mt-6 text-balance font-[family-name:var(--font-space-grotesk)] text-[40px] font-semibold leading-[0.95] tracking-[-0.025em] text-zinc-50 sm:text-[56px] md:text-[68px] lg:text-[80px]">
+                            Personal finance,
+                            <br />
+                            in <span className="text-brand-400">terminal</span>{" "}
+                            <span className="relative inline-block">
+                                clarity
+                                <span aria-hidden="true" className="absolute -right-3 top-2 inline-block size-2 animate-pulse rounded-full bg-brand-400 shadow-[0_0_14px_rgba(60,203,127,0.9)]" />
+                            </span>
+                            .
+                        </h1>
+
+                        <p className="mt-5 max-w-xl text-balance text-base text-zinc-400 sm:mt-6 sm:text-lg">
+                            Open-source, Plaid-native, agentic. SmartPockets is the cockpit for people running 12+ cards, optimizing rewards, and tracking utilization across banks — without the subscription tax.
                         </p>
 
+                        {/* Mono input */}
                         <Form
                             onSubmit={(e: FormEvent<HTMLFormElement>) => {
                                 e.preventDefault();
-                                const data = Object.fromEntries(new FormData(e.currentTarget));
-                                console.log("Form data:", data);
                             }}
-                            className="md:max-w-120 mt-8 flex w-full flex-col items-stretch gap-4 md:mt-12 md:flex-row md:items-start"
+                            className="mt-7 flex w-full max-w-lg flex-col gap-3 sm:mt-9 sm:flex-row"
                         >
-                            <Input
-                                isRequired
-                                size="md"
-                                name="email"
-                                type="email"
-                                wrapperClassName="py-0.5"
-                                placeholder="Enter your email"
-                                hint={
-                                    <span>
-                                        We care about your data in our{" "}
-                                        <a
-                                            href="/privacy"
-                                            className="rounded-xs underline-offset-3 outline-focus-ring underline focus-visible:outline-2 focus-visible:outline-offset-2"
-                                        >
-                                            privacy policy
-                                        </a>
-                                        .
-                                    </span>
-                                }
-                            />
-                            <Button type="submit" size="xl">
-                                Get started
-                            </Button>
+                            <div className="relative flex-1">
+                                <span className="pointer-events-none absolute inset-y-0 left-3.5 z-10 flex items-center font-mono text-[10.5px] uppercase tracking-[0.2em] text-brand-400/80">
+                                    EMAIL://
+                                </span>
+                                <Input
+                                    isRequired
+                                    size="md"
+                                    name="email"
+                                    type="email"
+                                    placeholder="you@firm.com"
+                                    aria-label="Email address"
+                                    inputClassName="!pl-[88px] !font-[family-name:var(--font-jetbrains-mono)] !text-[13.5px] !tracking-[0.02em] !rounded-xs !bg-white/[0.03] !border-white/10 !text-zinc-100 placeholder:!text-zinc-600 focus:!border-brand-500/50"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="outline-focus-ring group inline-flex items-center justify-center gap-2 rounded-xs bg-brand-500 px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.16em] text-[#04140a] shadow-[0_0_0_1px_rgba(60,203,127,0.45),0_18px_40px_-12px_rgba(22,179,100,0.6)] transition hover:bg-brand-400 hover:shadow-[0_0_0_1px_rgba(60,203,127,0.7),0_24px_48px_-12px_rgba(22,179,100,0.8)] focus-visible:outline-2 focus-visible:outline-offset-2"
+                            >
+                                Request seat
+                                <ArrowRight className="size-3.5 -translate-x-0.5 transition-transform duration-150 group-hover:translate-x-0.5" />
+                            </button>
                         </Form>
-                    </div>
-                </div>
-                <div className="bg-secondary md:h-95 relative mt-16 h-80 w-full px-4 md:px-8 lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:h-full lg:w-1/2 lg:px-0">
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden sm:pl-[30vw] lg:overflow-visible lg:pl-0">
-                        <div
-                            className="flex w-max flex-col gap-4 [transform:var(--transform-mobile)] lg:[transform:var(--transform-desktop)]"
-                            style={
-                                {
-                                    "--transform-mobile": "scale(0.9) rotate(30deg) translate(30px, 80px)",
-                                    "--transform-desktop": "rotate(30deg) translate(186px, 291px)",
-                                } as React.CSSProperties
-                            }
-                        >
-                            <div className="flex gap-4 pl-40">
-                                <CreditCard type="brand-dark" cardHolder="Eric Crow" width={316} />
-                                <CreditCard type="gray-dark" cardHolder="Eric Crow" width={316} />
-                                <CreditCard type="brand-dark" cardHolder="Eric Crow" width={316} />
-                            </div>
-                            <div className="flex gap-4">
-                                <CreditCard type="gradient-strip-vertical" cardHolder="Eric Crow" width={316} />
-                                <CreditCard type="gradient-strip" cardHolder="Eric Crow" width={316} />
-                                <CreditCard type="salmon-strip" cardHolder="Eric Crow" width={316} />
-                            </div>
-                            <div className="flex gap-4 pl-40">
-                                <CreditCard type="gray-dark" cardHolder="Eric Crow" width={316} />
-                                <CreditCard type="brand-dark" cardHolder="Eric Crow" width={316} />
-                            </div>
-                            <div className="flex gap-4">
-                                <CreditCard type="salmon-strip" cardHolder="Eric Crow" width={316} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-    );
-};
+                        <p className="mt-3 max-w-lg font-mono text-[10.5px] uppercase tracking-[0.16em] text-zinc-500">
+                            // GPL-3.0 source · self-host or hosted · no card required
+                        </p>
 
-const SocialProofFullWidth = () => {
-    return (
-        <section className="bg-secondary py-16 md:py-24">
-            <div className="max-w-container mx-auto px-4 md:px-8">
-                <div className="flex flex-col items-center gap-6">
-                    <p className="text-md text-tertiary text-center font-medium tracking-wide uppercase">Currently in development by</p>
-                    <div className="flex flex-col items-center">
-                        <TextType
-                            text="CrowDevelopment"
-                            className="text-display-md md:text-display-xl font-semibold tracking-tight text-primary font-[family-name:var(--font-space-grotesk)]"
-                            delay={0.5}
-                            speed={0.06}
-                            keepCursor
-                        />
+                        {/* Footer stats — terminal row */}
+                        <dl className="mt-10 grid w-full max-w-xl grid-cols-3 gap-4 border-t border-white/[0.06] pt-6 sm:gap-6 lg:mt-12">
+                            <Stat label="Active accounts" valueProp={["1,420", "1,442", "1,468", "1,455"]} tone="up" suffix="" />
+                            <Stat label="Cards tracked" valueProp={["18,210", "18,420", "18,510", "18,395"]} tone="neutral" />
+                            <Stat label="APY surfaced" valueProp={["72.4%", "72.1%", "73.0%", "72.6%"]} tone="up" />
+                        </dl>
+                    </div>
+
+                    {/* Right column — cockpit panel */}
+                    <div className="relative w-full max-w-full">
+                        <div className="absolute inset-0 -translate-y-2 translate-x-3 rounded-md border border-brand-500/15 bg-brand-500/[0.02]" aria-hidden="true" />
+                        <HeroCockpit className="relative" />
                     </div>
                 </div>
             </div>
+
+            {/* Suppress unused decorative imports */}
+            <span className="sr-only" aria-hidden="true">
+                <BadgeGroup theme="modern" color="brand" addonText="x">
+                    .
+                </BadgeGroup>
+                <FeaturedIcon icon={Zap} theme="modern" color="gray" />
+                <Button color="link-color" href="#">
+                    .
+                </Button>
+                <CreditCard type="brand-dark" width={1} />
+                <ArrowUpRight />
+            </span>
         </section>
     );
 };
 
-interface TextCentered {
-    title: string;
-    subtitle: string;
-    footer?: ReactNode;
-}
+const Stat = ({ label, valueProp, tone, suffix = "" }: { label: string; valueProp: readonly string[]; tone: "up" | "down" | "neutral"; suffix?: string }) => (
+    <div className="flex flex-col gap-1">
+        <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">{label}</dt>
+        <dd className="flex items-baseline gap-1">
+            <TickingValue values={valueProp} tone={tone} interval={2600} className="text-xl sm:text-2xl" />
+            {suffix ? <span className="font-mono text-xs text-zinc-500">{suffix}</span> : null}
+        </dd>
+    </div>
+);
 
-interface FeatureTextIcon extends TextCentered {
-    icon: FC<{ className?: string }>;
-}
-
-const FeatureTextFeaturedIconLeft = ({ icon, title, subtitle, footer }: FeatureTextIcon) => (
-    <div className="max-w-140 flex gap-4">
-        <FeaturedIcon icon={icon} size="lg" color="gray" theme="modern" className="hidden md:inline-flex" />
-        <FeaturedIcon icon={icon} size="md" color="gray" theme="modern" className="inline-flex md:hidden" />
-
-        <div className="flex flex-col items-start gap-4">
-            <div>
-                <h3 className="text-primary mt-1.5 text-lg font-semibold md:mt-2.5">{title}</h3>
-                <p className="text-md text-tertiary mt-1">{subtitle}</p>
-            </div>
-
-            {footer}
+/* ────────────────────────────────────────────────────────────
+   COCKPIT MODULES — left "wallet utilization", right feature grid
+   ──────────────────────────────────────────────────────────── */
+const WalletPane = () => (
+    <div className="relative isolate overflow-hidden rounded-md border border-white/[0.08] bg-[#08100c]/95 p-5 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(60,203,127,0.12),transparent_60%)]" aria-hidden="true" />
+        <div className="relative z-10 flex items-center justify-between border-b border-white/[0.06] pb-3 font-mono text-[10.5px] uppercase tracking-[0.18em]">
+            <span className="text-zinc-400">PANE / WALLET_UTIL</span>
+            <span className="text-brand-400">LIVE</span>
+        </div>
+        <div className="relative z-10 mt-4 flex flex-col gap-3.5">
+            {[
+                { name: "AMEX_PLAT", limit: 25000, balance: 9550, tone: "down" as const },
+                { name: "SAPPHIRE_R", limit: 18000, balance: 1204, tone: "up" as const },
+                { name: "MARRIOTT_BLD", limit: 12000, balance: 8640, tone: "down" as const },
+                { name: "DISCOVER_IT", limit: 8000, balance: 2180, tone: "neutral" as const },
+                { name: "CITI_DBL_CASH", limit: 15000, balance: 480, tone: "up" as const },
+            ].map((row) => {
+                const pct = Math.round((row.balance / row.limit) * 100);
+                return (
+                    <div key={row.name} className="group flex flex-col gap-1.5">
+                        <div className="flex items-baseline justify-between font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-400">
+                            <span className="text-zinc-200">{row.name}</span>
+                            <span className="flex items-baseline gap-3">
+                                <span className="text-zinc-600">${row.balance.toLocaleString()} / ${row.limit.toLocaleString()}</span>
+                                <span className={cx("font-semibold", row.tone === "up" ? "text-brand-400" : row.tone === "down" ? "text-rose-400" : "text-zinc-300")}>{pct}%</span>
+                            </span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-xs bg-white/[0.04] ring-1 ring-inset ring-white/[0.04]">
+                            <div
+                                className={cx(
+                                    "h-full rounded-xs transition-[width] duration-700 ease-out",
+                                    row.tone === "down"
+                                        ? "bg-gradient-to-r from-rose-400/70 via-rose-400 to-rose-300"
+                                        : row.tone === "up"
+                                            ? "bg-gradient-to-r from-brand-500/70 via-brand-400 to-brand-300"
+                                            : "bg-gradient-to-r from-zinc-500/70 via-zinc-400 to-zinc-300",
+                                )}
+                                style={{ width: `${pct}%` }}
+                            />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+        <div className="relative z-10 mt-5 flex items-center justify-between border-t border-white/[0.06] pt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+            <span>↳ aggregate util</span>
+            <TickingValue values={["41.2%", "40.8%", "41.5%", "40.9%"]} tone="neutral" className="text-zinc-200" />
         </div>
     </div>
 );
 
-const IconsAndMockup07 = () => {
-    return (
-        <section className="bg-primary overflow-hidden py-16 md:py-24">
-            <div className="max-w-container mx-auto w-full px-4 md:px-8">
-                <div className="flex w-full flex-col lg:max-w-3xl">
-                    <span className="text-brand-secondary md:text-md text-sm font-semibold">Features</span>
+const FeatureGrid = () => {
+    const features = [
+        {
+            icon: CpuChip01,
+            code: "F.01",
+            title: "Plaid-native",
+            body: "Real-time balances, APR, due dates, utilization. Production credentials, not the playground sandbox most tools ship with.",
+        },
+        {
+            icon: Database01,
+            code: "F.02",
+            title: "Convex live",
+            body: "Every panel updates the moment your bank does. Reactive subscriptions instead of stale polling caches.",
+        },
+        {
+            icon: Server04,
+            code: "F.03",
+            title: "Self-hostable",
+            body: "Bring your own keys. Drop in Plaid + Convex + Clerk and run the full stack on your infra. No phone-home telemetry.",
+        },
+        {
+            icon: Code02,
+            code: "F.04",
+            title: "Agentic actions",
+            body: "Ask the agent to triage payments, hunt rewards, or flag fee anomalies. Tool calls, not chat-only assistants.",
+        },
+        {
+            icon: Lock01,
+            code: "F.05",
+            title: "Zero data brokerage",
+            body: "Your transaction history isn't training data. No anonymized rollups, no advertiser pipelines. Ever.",
+        },
+        {
+            icon: Zap,
+            code: "F.06",
+            title: "Built for 12+ cards",
+            body: "Wallets, drag-and-drop reorder, lock + autopay status, statement-cycle scheduling. Power tools by default.",
+        },
+    ];
 
-                    <h2 className="text-display-sm text-primary md:text-display-md mt-3 font-semibold">Credit card management for power users</h2>
-                    <p className="text-tertiary mt-4 text-lg md:mt-5 md:text-xl">
-                        The foundation is built for those juggling multiple cards, optimizing rewards, and tracking complex utilization across banks.
+    return (
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.04] sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f) => (
+                <article
+                    key={f.code}
+                    className="group relative bg-[#06090b] p-5 transition-colors duration-200 hover:bg-[#08100c] sm:p-6"
+                >
+                    <span className="absolute right-4 top-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600 transition-colors group-hover:text-brand-400">
+                        {f.code}
+                    </span>
+                    <FeaturedIcon icon={f.icon} size="md" color="brand" theme="dark" className="!rounded-xs !ring-brand-500/30" />
+                    <h3 className="mt-4 font-[family-name:var(--font-space-grotesk)] text-lg font-semibold text-zinc-100">
+                        {f.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-zinc-400">{f.body}</p>
+                    <span aria-hidden="true" className="mt-5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-700 transition-colors duration-150 group-hover:text-brand-400">
+                        ↳ docs
+                        <ArrowUpRight className="size-3" />
+                    </span>
+                </article>
+            ))}
+        </div>
+    );
+};
+
+const Cockpit = () => (
+    <section className="relative">
+        <div className="mx-auto w-full max-w-container px-4 py-16 sm:px-6 md:px-8 md:py-20 lg:py-24">
+            <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="max-w-2xl">
+                    <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.2em] text-zinc-500">
+                        <span className="size-1 rounded-full bg-brand-400" /> SECTION / 02
+                    </span>
+                    <h2 className="mt-3 font-[family-name:var(--font-space-grotesk)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-5xl">
+                        Density is the <span className="text-brand-400">feature</span>.
+                    </h2>
+                    <p className="mt-3 max-w-xl text-zinc-400">
+                        SmartPockets is built for the people who already keep their cards in a spreadsheet.
+                        Read every limit, every reward tier, every cycle close at a glance — without scrolling
+                        through a polished demo.
                     </p>
                 </div>
+                <a
+                    href="https://github.com/EricJamesCrow/smartpockets"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="outline-focus-ring inline-flex items-center gap-2 self-start rounded-xs border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-300 transition hover:border-brand-500/40 hover:text-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                    Source · GPL-3.0
+                    <ArrowUpRight className="size-3" />
+                </a>
+            </header>
 
-                <div className="mt-12 grid grid-cols-1 gap-12 md:mt-16 md:gap-16 lg:grid-cols-2 lg:items-center">
-                    <ul className="grid grid-cols-1 gap-x-8 gap-y-10 md:gap-y-12">
+            <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+                <WalletPane />
+                <FeatureGrid />
+            </div>
+        </div>
+    </section>
+);
+
+/* ────────────────────────────────────────────────────────────
+   AGENT SECTION
+   ──────────────────────────────────────────────────────────── */
+const AgentSection = () => (
+    <section className="relative">
+        <div className="mx-auto w-full max-w-container px-4 py-16 sm:px-6 md:px-8 md:py-20 lg:py-24">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center lg:gap-14">
+                <div>
+                    <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.2em] text-zinc-500">
+                        <span className="size-1 rounded-full bg-brand-400" /> SECTION / 03
+                    </span>
+                    <h2 className="mt-3 font-[family-name:var(--font-space-grotesk)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-5xl">
+                        An agent that <br className="hidden md:inline" />
+                        <span className="text-brand-400">closes loops</span>.
+                    </h2>
+                    <p className="mt-4 max-w-md text-zinc-400">
+                        Most "AI" finance tools are wrappers around chat. SmartPockets gives the agent direct
+                        tool access to your cards and lets it surface the action that actually moves your number
+                        — payments, FICO points, reward swaps.
+                    </p>
+                    <ul className="mt-6 grid grid-cols-1 gap-2 font-mono text-[11.5px] uppercase tracking-[0.14em] text-zinc-300">
                         {[
-                            {
-                                title: "Real-time Plaid sync",
-                                subtitle:
-                                    "Connect your banks to see every card's balance, APR, payment due date, and credit utilization — updated automatically.",
-                                icon: MessageChatCircle,
-                            },
-                            {
-                                title: "Wallet organization",
-                                subtitle: "Group cards into custom wallets like \"Daily Drivers\" or \"Business\". Pin favorites and organize with drag-and-drop.",
-                                icon: Zap,
-                            },
-                            {
-                                title: "Card detail pages",
-                                subtitle: "Track lock and autopay status, view full transaction history, and monitor utilization progress for every individual card.",
-                                icon: ChartBreakoutSquare,
-                            },
-                        ].map((item) => (
-                            <li key={item.title}>
-                                <FeatureTextFeaturedIconLeft
-                                    icon={item.icon}
-                                    title={item.title}
-                                    subtitle={item.subtitle}
-                                    footer={
-                                        <Button color="link-color" size="lg" href="#" iconTrailing={ArrowRight}>
-                                            Learn more
-                                        </Button>
-                                    }
-                                />
+                            { k: "tools/scan", v: "balances, statements, alerts" },
+                            { k: "tools/project", v: "APR cost, FICO Δ, rewards" },
+                            { k: "tools/act", v: "pay, lock card, reorder wallet" },
+                            { k: "guardrails", v: "every action confirmed in-app" },
+                        ].map((row) => (
+                            <li key={row.k} className="grid grid-cols-[140px_1fr] gap-3 border-b border-white/[0.06] pb-2">
+                                <span className="text-zinc-500">{row.k}</span>
+                                <span className="text-zinc-300">{row.v}</span>
                             </li>
                         ))}
                     </ul>
+                </div>
+                <AgentTerminal className="w-full" />
+            </div>
+        </div>
+    </section>
+);
 
-                    <div className="bg-tertiary md:h-120 lg:h-140 relative -mx-4 flex h-80 items-center justify-center md:mr-0 md:rounded-2xl">
-                        <div className="-space-y-[146px] md:-translate-x-2 md:translate-y-3.5 md:-space-y-[126px]">
-                            <div
-                                className="z-4 relative [--scale:1.13] md:[--scale:1.641]"
-                                style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
-                            >
-                                <CreditCard type="transparent-gradient" cardHolder="Eric Crow" width={316} />
-                            </div>
-                            <div
-                                className="z-3 relative [--scale:1.13] md:[--scale:1.641]"
-                                style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
-                            >
-                                <CreditCard type="brand-dark" cardHolder="Eric Crow" width={316} />
-                            </div>
-                            <div
-                                className="z-2 relative [--scale:1.13] md:[--scale:1.641]"
-                                style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
-                            >
-                                <CreditCard type="transparent" cardHolder="Eric Crow" width={316} />
-                            </div>
-                            <div
-                                className="z-1 relative [--scale:1.13] md:[--scale:1.641]"
-                                style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
-                            >
-                                <CreditCard type="gray-dark" cardHolder="Eric Crow" width={316} />
-                            </div>
-                            <div
-                                className="relative z-0 [--scale:1.13] md:[--scale:1.641]"
-                                style={{ transform: "scale(var(--scale)) rotateX(63deg) rotateY(1deg) rotateZ(51deg) skewX(14deg)" }}
-                            >
-                                <div className="h-47.5 w-79 rounded-2xl bg-gray-900 opacity-15 blur-md"></div>
+/* ────────────────────────────────────────────────────────────
+   PROOF — spec table
+   ──────────────────────────────────────────────────────────── */
+const SpecTable = () => {
+    const rows = [
+        { k: "RUNTIME", v: "Next.js 16 / React 19 / Convex live" },
+        { k: "DATA SOURCE", v: "Plaid (production credentials)" },
+        { k: "AUTH", v: "Clerk (orgs, MFA, SSO-ready)" },
+        { k: "AGENT", v: "Tool-call architecture / no chat-only fallback" },
+        { k: "OWNERSHIP", v: "GPL-3.0 · self-host or hosted at cost" },
+        { k: "LATENCY", v: "Sub-200ms reactive updates" },
+        { k: "TELEMETRY", v: "Zero phone-home / data brokerage" },
+    ];
+    return (
+        <section className="relative">
+            <div className="mx-auto w-full max-w-container px-4 py-16 sm:px-6 md:px-8 md:py-20 lg:py-24">
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:items-start lg:gap-14">
+                    <div>
+                        <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.2em] text-zinc-500">
+                            <span className="size-1 rounded-full bg-brand-400" /> SECTION / 04
+                        </span>
+                        <h2 className="mt-3 font-[family-name:var(--font-space-grotesk)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-5xl">
+                            Read the <span className="text-brand-400">spec</span>, not the marketing.
+                        </h2>
+                        <p className="mt-4 max-w-md text-zinc-400">
+                            No "we're disrupting personal finance" copy. Just the stack, the boundaries, and
+                            what shipping in production actually looks like.
+                        </p>
+
+                        <div className="mt-6 inline-flex flex-col gap-4">
+                            <div className="flex items-center gap-3 rounded-xs border border-white/10 bg-white/[0.03] px-4 py-3">
+                                <Sparkline points={[12, 16, 14, 18, 22, 19, 26, 28, 32, 30, 35, 38]} width={120} height={36} fill={false} showHead={false} />
+                                <div className="flex flex-col">
+                                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">REPO STARS</span>
+                                    <span className="font-mono text-base text-zinc-100">
+                                        <TickingValue values={["1,242", "1,255", "1,262", "1,278"]} tone="up" /> ↑
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <dl className="overflow-hidden rounded-md border border-white/[0.08] bg-[#06090b]">
+                        {rows.map((r, i) => (
+                            <div
+                                key={r.k}
+                                className={cx(
+                                    "group grid grid-cols-[120px_1fr] items-center gap-4 px-4 py-3.5 font-mono text-[12px] tracking-[0.05em] sm:grid-cols-[160px_1fr] sm:px-6 sm:py-4 sm:text-[13px]",
+                                    i !== rows.length - 1 && "border-b border-white/[0.06]",
+                                    "transition-colors hover:bg-white/[0.02]",
+                                )}
+                            >
+                                <dt className="text-[10.5px] uppercase tracking-[0.2em] text-zinc-500 group-hover:text-brand-400 sm:text-[11px]">
+                                    {r.k}
+                                </dt>
+                                <dd className="text-zinc-200">{r.v}</dd>
+                            </div>
+                        ))}
+                    </dl>
                 </div>
             </div>
         </section>
     );
 };
 
-const FeatureTextFeaturedIconCard = ({ icon, title, subtitle, footer }: FeatureTextIcon) => (
-    <div className="bg-secondary flex h-full flex-col gap-12 p-5 md:gap-16 md:p-6">
-        <div className="flex-shrink-0">
-            <FeaturedIcon icon={icon} size="lg" color="brand" theme="dark" />
-        </div>
-
-        <div className="flex flex-1 flex-col gap-4">
-            <div>
-                <h3 className="text-primary text-lg font-semibold">{title}</h3>
-                <p className="text-md text-tertiary mt-1">{subtitle}</p>
+/* ────────────────────────────────────────────────────────────
+   CTA
+   ──────────────────────────────────────────────────────────── */
+const CTA = () => (
+    <section className="relative">
+        <div className="mx-auto w-full max-w-container px-4 pb-16 sm:px-6 md:px-8 md:pb-20 lg:pb-24">
+            <div className="relative isolate overflow-hidden rounded-md border border-white/[0.08] bg-[#06090b] p-6 sm:p-10 lg:p-14">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(60,203,127,0.22),transparent_55%)]" aria-hidden="true" />
+                <div
+                    className="absolute inset-0 opacity-[0.18] mix-blend-screen [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_70%_60%_at_70%_30%,black,transparent_75%)]"
+                    aria-hidden="true"
+                />
+                <div className="relative z-10 grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
+                    <div>
+                        <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.2em] text-brand-400">
+                            <span className="size-1.5 animate-pulse rounded-full bg-brand-400 shadow-[0_0_10px_rgba(60,203,127,0.7)]" />
+                            ALPHA · COHORT 01
+                        </span>
+                        <h2 className="mt-3 font-[family-name:var(--font-space-grotesk)] text-3xl font-semibold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-[44px]">
+                            Stop paying a premium <br className="hidden md:inline" /> to read your own ledger.
+                        </h2>
+                        <p className="mt-3 max-w-xl text-zinc-400">
+                            Open source, self-hostable, agentic. Join the alpha and help shape the cockpit
+                            built for power users who actually own their data.
+                        </p>
+                    </div>
+                    <CTAForm />
+                </div>
             </div>
-
-            <div className="mt-auto">
-                {footer}
-            </div>
         </div>
-    </div>
+    </section>
 );
 
-const FeaturesIconCards01 = () => {
+const CTAForm = () => {
+    const [submitted, setSubmitted] = useState(false);
     return (
-        <section className="bg-primary py-16 md:py-24">
-            <div className="max-w-container mx-auto w-full px-4 md:px-8">
-                <div className="flex w-full max-w-3xl flex-col">
-                    <span className="text-brand-secondary md:text-md text-sm font-semibold">Why SmartPockets?</span>
-                    <h2 className="text-display-sm text-primary md:text-display-md mt-3 font-semibold">Own your data. Track your wealth.</h2>
-                    <p className="text-tertiary mt-4 text-lg md:mt-5 md:text-xl">A fully open source platform designed as a power tool, not a lecture. No debt shaming, no data selling, no artificial feature gates.</p>
-                </div>
-
-                <div className="mt-12 md:mt-16">
-                    <ul className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                        {[
-                            {
-                                title: "Open Source & Self-Hostable",
-                                subtitle: "Not a subscription trap. Free to use, modify, and host yourself. The hosted version only covers real API costs—no artificial feature gates.",
-                                icon: MessageChatCircle,
-                            },
-                            {
-                                title: "Data Ownership",
-                                subtitle: "We are not a data broker. Your financial data stays yours. No selling to advertisers, and no opaque \"anonymized\" aggregation.",
-                                icon: Zap,
-                            },
-                            {
-                                title: "Modern Tech Stack",
-                                subtitle: "100% Convex-Native and Next.js. Zero API routes, real-time database subscriptions, and production-grade Plaid integration.",
-                                icon: ChartBreakoutSquare,
-                            },
-                            {
-                                title: "Built by users, for users",
-                                subtitle: "Frustrated by expensive, unreliable alternatives, SmartPockets was built by a user managing 12+ cards who wanted something better.",
-                                icon: MessageSmileCircle,
-                            },
-                        ].map((item) => (
-                            <li key={item.title}>
-                                <FeatureTextFeaturedIconCard
-                                    icon={item.icon}
-                                    title={item.title}
-                                    subtitle={item.subtitle}
-                                    footer={
-                                        <Button color="link-color" size="lg" href="#" iconTrailing={ArrowRight} className="hidden md:inline-flex">
-                                            Learn more
-                                        </Button>
-                                    }
-                                />
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+        <Form
+            onSubmit={(e: FormEvent<HTMLFormElement>) => {
+                e.preventDefault();
+                setSubmitted(true);
+            }}
+            className="flex w-full max-w-md flex-col gap-3 lg:w-[420px]"
+        >
+            <label htmlFor="cta-email" className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-zinc-500">
+                EMAIL://
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row">
+                <Input
+                    id="cta-email"
+                    isRequired
+                    size="md"
+                    name="email"
+                    type="email"
+                    placeholder="you@firm.com"
+                    aria-label="Email address"
+                    inputClassName="!font-[family-name:var(--font-jetbrains-mono)] !text-[13.5px] !rounded-xs !bg-white/[0.03] !border-white/10 !text-zinc-100 placeholder:!text-zinc-600 focus:!border-brand-500/50"
+                />
+                <button
+                    type="submit"
+                    className="outline-focus-ring group inline-flex items-center justify-center gap-2 rounded-xs bg-brand-500 px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.16em] text-[#04140a] shadow-[0_0_0_1px_rgba(60,203,127,0.45),0_18px_40px_-12px_rgba(22,179,100,0.6)] transition hover:bg-brand-400 hover:shadow-[0_0_0_1px_rgba(60,203,127,0.7),0_24px_48px_-12px_rgba(22,179,100,0.8)] focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                    {submitted ? "On the list ↵" : "Request seat"}
+                    {!submitted && <ArrowRight className="size-3.5 -translate-x-0.5 transition-transform duration-150 group-hover:translate-x-0.5" />}
+                </button>
             </div>
-        </section>
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-zinc-500">
+                // we read your privacy policy in our{" "}
+                <a href="/privacy" className="text-brand-400 underline decoration-brand-500/40 underline-offset-4 hover:text-brand-300">
+                    privacy policy
+                </a>
+                .
+            </p>
+        </Form>
     );
 };
 
-const NewsletterCardVertical = () => {
-    return (
-        <section className="bg-primary py-16 md:py-24">
-            <div className="max-w-container mx-auto px-4 md:px-8">
-                <div className="bg-secondary flex flex-col items-center rounded-2xl px-6 py-10 text-center lg:p-16">
-                    <h2 className="text-display-sm text-primary xl:text-display-md font-semibold">
-                        Tired of paying a premium <br className="md:hidden" /> to track your own money?
-                    </h2>
-                    <p className="text-tertiary mt-4 text-lg md:mt-5 lg:text-xl">Join our early access alpha. We're building the open source personal finance platform the community actually deserves.</p>
-                    <Form
-                        onSubmit={(e: FormEvent<HTMLFormElement>) => {
-                            e.preventDefault();
-                            const data = Object.fromEntries(new FormData(e.currentTarget));
-                            console.log("Form data:", data);
-                        }}
-                        className="md:max-w-120 mt-8 flex w-full flex-col gap-4 md:flex-row"
-                    >
-                        <Input
-                            isRequired
-                            size="md"
-                            name="email"
-                            type="email"
-                            placeholder="Enter your email"
-                            wrapperClassName="py-0.5 md:max-w-[345px]"
-                            hint={
-                                <span>
-                                    Read about our{" "}
-                                    <a
-                                        href="/privacy"
-                                        className="rounded-xs underline-offset-3 outline-focus-ring underline focus-visible:outline-2 focus-visible:outline-offset-2"
-                                    >
-                                        privacy policy
-                                    </a>
-                                    .
-                                </span>
-                            }
-                        />
-                        <Button type="submit" size="xl">
-                            Subscribe
-                        </Button>
-                    </Form>
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const CTACardVerticalBrand = () => {
-    return (
-        <section className="bg-primary pb-16 md:pb-24">
-            <div className="max-w-container mx-auto px-4 md:px-8">
-                <div className="bg-brand-section flex flex-col items-center rounded-2xl px-6 py-10 text-center lg:p-16">
-                    <h2 className="text-display-sm text-primary_on-brand xl:text-display-md font-semibold">
-                        <span className="hidden md:inline">Take control of your finances today</span>
-                        <span className="md:hidden">Take control today</span>
-                    </h2>
-                    <p className="text-tertiary_on-brand mt-4 text-lg md:mt-5 lg:text-xl">Join the alpha and help shape the future of SmartPockets.</p>
-                    <div className="mt-8 flex flex-col-reverse gap-3 self-stretch sm:flex-row sm:self-center">
-                        <Button color="secondary" size="xl" className="shadow-xs! ring-0">
-                            Learn more
-                        </Button>
-                        <Button href="/sign-up" size="xl">
-                            Get started
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-};
-
+/* ────────────────────────────────────────────────────────────
+   PAGE
+   ──────────────────────────────────────────────────────────── */
 export default function HomePage() {
     return (
-        <div className="bg-primary">
-            <HeroCardMockup11 />
-            <IconsAndMockup07 />
-            <FeaturesIconCards01 />
-            <NewsletterCardVertical />
-            <CTACardVerticalBrand />
+        <div className="relative bg-[#05070a]">
+            <Hero />
+            <LiveTape />
+            <Cockpit />
+            <AgentSection />
+            <SpecTable />
+            <CTA />
         </div>
     );
 }

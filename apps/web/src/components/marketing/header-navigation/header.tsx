@@ -6,18 +6,19 @@ import { ChevronDown } from "@untitledui/icons";
 import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover } from "react-aria-components";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { SmartPocketsLogoWithBadge } from "@repo/ui/untitledui/foundations/logo/alpha-badge";
-import { ProductsDropdown, ResourcesDropdown } from "./dropdown-header-navigation";
+import { ProductsDropdown } from "./dropdown-header-navigation";
 import { cx } from "@repo/ui/utils";
 
 type HeaderNavItem = {
     label: string;
     href?: string;
     menu?: ReactNode;
+    code?: string;
 };
 
 const headerNavItems: HeaderNavItem[] = [
-    { label: "Products", href: "/products", menu: <ProductsDropdown /> },
-    { label: "About", href: "/about" },
+    { label: "Products", href: "/products", menu: <ProductsDropdown />, code: "01" },
+    { label: "About", href: "/about", code: "02" },
 ];
 
 const footerNavItems = [
@@ -30,13 +31,17 @@ const footerNavItems = [
     { label: "Cookie settings", href: "/cookies" },
 ];
 
-const MobileNavItem = (props: { className?: string; label: string; href?: string; children?: ReactNode }) => {
+const MobileNavItem = (props: { className?: string; label: string; code?: string; href?: string; children?: ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     if (props.href) {
         return (
             <li>
-                <a href={props.href} className="flex items-center justify-between px-4 py-3 text-md font-semibold text-primary hover:bg-primary_hover">
+                <a
+                    href={props.href}
+                    className="flex items-center gap-3 px-4 py-3 text-md font-semibold text-primary hover:bg-primary_hover"
+                >
+                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/70">{props.code ?? "//"}</span>
                     {props.label}
                 </a>
             </li>
@@ -48,9 +53,12 @@ const MobileNavItem = (props: { className?: string; label: string; href?: string
             <button
                 aria-expanded={isOpen}
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex w-full items-center justify-between px-4 py-3 text-md font-semibold text-primary hover:bg-primary_hover"
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-md font-semibold text-primary hover:bg-primary_hover"
             >
-                {props.label}{" "}
+                <span className="flex items-center gap-3">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/70">{props.code ?? "//"}</span>
+                    {props.label}
+                </span>
                 <ChevronDown
                     className={cx("size-4 stroke-[2.625px] text-fg-quaternary transition duration-100 ease-linear", isOpen ? "-rotate-180" : "rotate-0")}
                 />
@@ -76,10 +84,10 @@ const MobileFooter = () => {
             </div>
             <div className="flex flex-col gap-3">
                 <Button href="/sign-up" size="lg">
-                    Sign up
+                    Request access
                 </Button>
                 <Button href="/sign-in" color="secondary" size="lg">
-                    Log in
+                    Sign in
                 </Button>
             </div>
         </div>
@@ -89,46 +97,44 @@ const MobileFooter = () => {
 interface HeaderProps {
     items?: HeaderNavItem[];
     isFullWidth?: boolean;
-    isFloating?: boolean;
     className?: string;
 }
 
-export const Header = ({ items = headerNavItems, isFullWidth, isFloating, className }: HeaderProps) => {
+export const Header = ({ items = headerNavItems, isFullWidth, className }: HeaderProps) => {
     const headerRef = useRef<HTMLElement>(null);
 
     return (
         <header
             ref={headerRef}
             className={cx(
-                "relative flex h-18 w-full items-center justify-center md:h-20",
-                isFloating && "h-16 md:h-19 md:pt-3",
-                isFullWidth && !isFloating ? "has-aria-expanded:bg-primary" : "max-md:has-aria-expanded:bg-primary",
+                "relative z-30 flex h-16 w-full items-center justify-center border-b border-white/[0.05] bg-[#06090b]/80 backdrop-blur-xl md:h-18",
+                isFullWidth ? "has-aria-expanded:bg-primary" : "max-md:has-aria-expanded:bg-primary",
                 className,
             )}
         >
             <div className="flex size-full max-w-container flex-1 items-center pr-3 pl-4 md:px-8">
-                <div
-                    className={cx(
-                        "flex w-full justify-between gap-4",
-                        isFloating && "ring-secondary_alt md:rounded-2xl md:bg-primary md:py-3 md:pr-3 md:pl-4 md:shadow-xs md:ring-1",
-                    )}
-                >
-                    <div className="flex flex-1 items-center gap-5">
-                        <a href="/">
+                <div className="flex w-full items-center justify-between gap-4">
+                    <div className="flex flex-1 items-center gap-6">
+                        <a
+                            href="/"
+                            className="outline-focus-ring inline-flex items-center gap-2.5 rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2"
+                        >
                             <SmartPocketsLogoWithBadge size="md" />
                         </a>
 
                         {/* Desktop navigation */}
                         <nav className="max-md:hidden">
-                            <ul className="flex items-center gap-0.5">
+                            <ul className="flex items-center gap-1">
                                 {items.map((navItem) => (
                                     <li key={navItem.label}>
                                         {navItem.menu ? (
                                             <AriaDialogTrigger>
-                                                <AriaButton className="flex cursor-pointer items-center gap-0.5 rounded-lg px-1.5 py-1 text-md font-semibold text-secondary outline-focus-ring transition duration-100 ease-linear hover:text-secondary_hover focus-visible:outline-2 focus-visible:outline-offset-2">
-                                                    <span className="px-0.5">{navItem.label}</span>
-
-                                                    <ChevronDown className="size-4 rotate-0 stroke-[2.625px] text-fg-quaternary transition duration-100 ease-linear in-aria-expanded:-rotate-180" />
+                                                <AriaButton className="group flex cursor-pointer items-center gap-1.5 rounded-xs px-2.5 py-1.5 text-sm font-medium text-zinc-300 outline-focus-ring transition duration-100 ease-linear hover:bg-white/[0.04] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2">
+                                                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/60 transition group-hover:text-brand-400">
+                                                        {navItem.code}
+                                                    </span>
+                                                    <span>{navItem.label}</span>
+                                                    <ChevronDown className="size-3.5 rotate-0 stroke-[2.5px] text-zinc-500 transition duration-100 ease-linear in-aria-expanded:-rotate-180" />
                                                 </AriaButton>
 
                                                 <AriaPopover
@@ -140,15 +146,14 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                                                             isExiting && "duration-150 ease-in animate-out fade-out slide-out-to-top-1",
                                                         )
                                                     }
-                                                    offset={isFloating || isFullWidth ? 0 : 8}
+                                                    offset={8}
                                                     containerPadding={0}
-                                                    triggerRef={(isFloating && isFullWidth) || isFullWidth ? headerRef : undefined}
+                                                    triggerRef={isFullWidth ? headerRef : undefined}
                                                 >
                                                     {({ isEntering, isExiting }) => (
                                                         <AriaDialog
                                                             className={cx(
                                                                 "mx-auto origin-top outline-hidden",
-                                                                isFloating && "max-w-7xl px-8 pt-3",
                                                                 isEntering && !isFullWidth && "duration-200 ease-out animate-in zoom-in-95",
                                                                 isExiting && !isFullWidth && "duration-150 ease-in animate-out zoom-out-95",
                                                             )}
@@ -161,9 +166,12 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                                         ) : (
                                             <a
                                                 href={navItem.href}
-                                                className="flex cursor-pointer items-center gap-0.5 rounded-lg px-1.5 py-1 text-md font-semibold text-secondary outline-focus-ring transition duration-100 ease-linear hover:text-secondary_hover focus:outline-offset-2 focus-visible:outline-2"
+                                                className="group flex cursor-pointer items-center gap-1.5 rounded-xs px-2.5 py-1.5 text-sm font-medium text-zinc-300 outline-focus-ring transition duration-100 ease-linear hover:bg-white/[0.04] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2"
                                             >
-                                                <span className="px-0.5">{navItem.label}</span>
+                                                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/60 transition group-hover:text-brand-400">
+                                                    {navItem.code}
+                                                </span>
+                                                <span>{navItem.label}</span>
                                             </a>
                                         )}
                                     </li>
@@ -172,13 +180,29 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                         </nav>
                     </div>
 
-                    <div className="hidden items-center gap-3 md:flex">
-                        <Button href="/sign-in" color="secondary" size={isFloating ? "md" : "lg"}>
-                            Log in
-                        </Button>
-                        <Button href="/sign-up" color="primary" size={isFloating ? "md" : "lg"}>
-                            Sign up
-                        </Button>
+                    <div className="hidden items-center gap-2.5 md:flex">
+                        <a
+                            href="https://github.com/EricJamesCrow/smartpockets"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="outline-focus-ring inline-flex items-center gap-2 rounded-xs border border-white/10 bg-white/[0.02] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-300 transition hover:border-brand-500/40 hover:bg-white/[0.04] hover:text-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2"
+                        >
+                            <span className="size-1.5 rounded-full bg-brand-400 shadow-[0_0_8px_rgba(60,203,127,0.6)]" aria-hidden="true" />
+                            GitHub
+                        </a>
+                        <a
+                            href="/sign-in"
+                            className="outline-focus-ring inline-flex items-center rounded-xs px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+                        >
+                            Sign in
+                        </a>
+                        <a
+                            href="/sign-up"
+                            className="outline-focus-ring group inline-flex items-center gap-2 rounded-xs bg-brand-500 px-3.5 py-1.5 text-sm font-semibold text-[#04140a] shadow-[0_0_0_1px_rgba(60,203,127,0.45),0_8px_24px_-8px_rgba(22,179,100,0.55)] transition hover:bg-brand-400 hover:shadow-[0_0_0_1px_rgba(60,203,127,0.65),0_10px_28px_-8px_rgba(22,179,100,0.75)] focus-visible:outline-2 focus-visible:outline-offset-2"
+                        >
+                            Request access
+                            <span className="font-mono text-[10px] tracking-[0.14em] text-[#04140a]/60">↵</span>
+                        </a>
                     </div>
 
                     {/* Mobile menu and menu trigger */}
@@ -187,15 +211,15 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                             aria-label="Toggle navigation menu"
                             className={({ isFocusVisible, isHovered }) =>
                                 cx(
-                                    "group ml-auto cursor-pointer rounded-lg p-2 md:hidden",
-                                    isHovered && "bg-primary_hover",
+                                    "group ml-auto cursor-pointer rounded-xs p-2 md:hidden",
+                                    isHovered && "bg-white/[0.06]",
                                     isFocusVisible && "outline-2 outline-offset-2 outline-focus-ring",
                                 )
                             }
                         >
                             <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none">
                                 <path
-                                    className="hidden text-secondary group-aria-expanded:block"
+                                    className="hidden text-zinc-200 group-aria-expanded:block"
                                     d="M18 6L6 18M6 6L18 18"
                                     stroke="currentColor"
                                     strokeWidth="2"
@@ -203,7 +227,7 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                                     strokeLinejoin="round"
                                 />
                                 <path
-                                    className="text-secondary group-aria-expanded:hidden"
+                                    className="text-zinc-200 group-aria-expanded:hidden"
                                     d="M3 12H21M3 6H21M3 18H21"
                                     stroke="currentColor"
                                     strokeWidth="2"
@@ -225,11 +249,11 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                                     <ul className="flex flex-col gap-0.5 py-5">
                                         {items.map((navItem) =>
                                             navItem.menu ? (
-                                                <MobileNavItem key={navItem.label} label={navItem.label}>
+                                                <MobileNavItem key={navItem.label} label={navItem.label} code={navItem.code}>
                                                     {navItem.menu}
                                                 </MobileNavItem>
                                             ) : (
-                                                <MobileNavItem key={navItem.label} label={navItem.label} href={navItem.href} />
+                                                <MobileNavItem key={navItem.label} label={navItem.label} code={navItem.code} href={navItem.href} />
                                             ),
                                         )}
                                     </ul>
@@ -244,3 +268,4 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
         </header>
     );
 };
+
