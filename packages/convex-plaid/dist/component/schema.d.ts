@@ -205,6 +205,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         updatedAt: import("convex/values").VFloat64<number | undefined, "optional">;
     }, "required", "userId" | "pending" | "createdAt" | "plaidItemId" | "accountId" | "name" | "isoCurrencyCode" | "transactionId" | "amount" | "date" | "datetime" | "merchantName" | "pendingTransactionId" | "categoryPrimary" | "categoryDetailed" | "paymentChannel" | "merchantId" | "enrichmentData" | "updatedAt" | "enrichmentData.counterpartyName" | "enrichmentData.counterpartyType" | "enrichmentData.counterpartyEntityId" | "enrichmentData.counterpartyConfidence" | "enrichmentData.counterpartyLogoUrl" | "enrichmentData.counterpartyWebsite" | "enrichmentData.counterpartyPhoneNumber" | "enrichmentData.enrichedAt">, {
         by_account: ["accountId", "_creationTime"];
+        by_account_date: ["accountId", "date", "_creationTime"];
         by_transaction_id: ["transactionId", "_creationTime"];
         by_date: ["userId", "date", "_creationTime"];
         by_plaid_item: ["plaidItemId", "_creationTime"];
@@ -637,6 +638,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         retryCount: import("convex/values").VFloat64<number | undefined, "optional">;
     }, "required", "userId" | "status" | "errorCode" | "errorMessage" | "plaidItemId" | "syncType" | "trigger" | "startedAt" | "completedAt" | "durationMs" | "result" | "retryCount" | "result.transactionsAdded" | "result.transactionsModified" | "result.transactionsRemoved" | "result.accountsUpdated" | "result.streamsUpdated" | "result.creditCardsUpdated" | "result.mortgagesUpdated" | "result.studentLoansUpdated">, {
         by_plaid_item: ["plaidItemId", "_creationTime"];
+        by_plaid_item_startedAt: ["plaidItemId", "startedAt", "_creationTime"];
         by_user: ["userId", "_creationTime"];
         by_status: ["status", "_creationTime"];
         by_started_at: ["startedAt", "_creationTime"];

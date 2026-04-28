@@ -12,6 +12,115 @@ import { query } from "../functions";
 import { dollarsToMilliunits } from "../money";
 import { type MerchantEnrichmentResult, enrichTransactionWithMerchant } from "./helpers";
 
+const merchantEnrichmentValidator = v.union(
+    v.object({
+        merchantName: v.string(),
+        logoUrl: v.optional(v.string()),
+        categoryPrimary: v.optional(v.string()),
+        categoryIconUrl: v.optional(v.string()),
+        confidenceLevel: v.string(),
+    }),
+    v.null(),
+);
+
+const enrichmentDataValidator = v.object({
+    counterpartyName: v.optional(v.string()),
+    counterpartyType: v.optional(v.string()),
+    counterpartyEntityId: v.optional(v.string()),
+    counterpartyConfidence: v.optional(v.string()),
+    counterpartyLogoUrl: v.optional(v.string()),
+    counterpartyWebsite: v.optional(v.string()),
+    counterpartyPhoneNumber: v.optional(v.string()),
+    enrichedAt: v.optional(v.number()),
+});
+
+const transactionWithMerchantValidator = v.object({
+    _id: v.string(),
+    userId: v.string(),
+    plaidItemId: v.string(),
+    accountId: v.string(),
+    transactionId: v.string(),
+    amount: v.number(),
+    isoCurrencyCode: v.string(),
+    date: v.string(),
+    datetime: v.optional(v.string()),
+    name: v.string(),
+    merchantName: v.optional(v.string()),
+    pending: v.boolean(),
+    pendingTransactionId: v.optional(v.string()),
+    categoryPrimary: v.optional(v.string()),
+    categoryDetailed: v.optional(v.string()),
+    paymentChannel: v.optional(v.string()),
+    enrichmentData: v.optional(enrichmentDataValidator),
+    merchantId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+    merchantEnrichment: v.optional(merchantEnrichmentValidator),
+});
+
+const transactionOrStreamValidator = v.object({
+    _id: v.string(),
+    userId: v.string(),
+    plaidItemId: v.string(),
+    accountId: v.string(),
+    transactionId: v.string(),
+    amount: v.number(),
+    isoCurrencyCode: v.string(),
+    date: v.string(),
+    datetime: v.optional(v.string()),
+    authorizedDate: v.optional(v.string()),
+    authorizedDatetime: v.optional(v.string()),
+    name: v.string(),
+    merchantName: v.optional(v.string()),
+    pending: v.boolean(),
+    pendingTransactionId: v.optional(v.string()),
+    categoryId: v.optional(v.string()),
+    categoryPrimary: v.optional(v.string()),
+    categoryDetailed: v.optional(v.string()),
+    paymentChannel: v.optional(v.string()),
+    location: v.optional(v.any()),
+    enrichmentData: v.optional(enrichmentDataValidator),
+    merchantId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+    type: v.union(v.literal("transaction"), v.literal("recurring")),
+    frequency: v.optional(v.string()),
+    status: v.optional(v.string()),
+    streamType: v.optional(v.string()),
+    averageAmount: v.optional(v.number()),
+    firstDate: v.optional(v.string()),
+    predictedNextDate: v.optional(v.string()),
+    merchantEnrichment: v.optional(merchantEnrichmentValidator),
+});
+
+const transactionPaginationValidator = v.object({
+    page: v.number(),
+    pageSize: v.number(),
+    totalCount: v.number(),
+    totalPages: v.number(),
+    hasNextPage: v.boolean(),
+    hasPreviousPage: v.boolean(),
+});
+
+async function assertViewerOwnsAccount(ctx: any, accountId: string) {
+    const viewer = ctx.viewerX();
+    const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
+        userId: viewer.externalId,
+    });
+    const activeItemIds = new Set(userItems.filter((item: { isActive?: boolean }) => item.isActive !== false).map((item: { _id: string }) => item._id));
+
+    for (const itemId of activeItemIds) {
+        const itemAccounts = await ctx.runQuery(components.plaid.public.getAccountsByItem, {
+            plaidItemId: itemId,
+        });
+        if (itemAccounts.some((account: { accountId: string }) => account.accountId === accountId)) {
+            return viewer;
+        }
+    }
+
+    throw new Error("Unauthorized: Account does not belong to user");
+}
+
 /**
  * Get combined transactions and recurring streams for an account
  *
@@ -36,32 +145,14 @@ export const getTransactionsAndStreamsByAccountId = query({
         dateFrom: v.optional(v.string()),
         dateTo: v.optional(v.string()),
     },
+    returns: v.object({
+        items: v.array(transactionOrStreamValidator),
+        hasMore: v.boolean(),
+        pagination: transactionPaginationValidator,
+    }),
     handler: async (ctx, args) => {
-        // Auth check - derive userId from viewer context
-        const viewer = ctx.viewerX();
+        const viewer = await assertViewerOwnsAccount(ctx, args.accountId);
         const userId = viewer.externalId; // Clerk user ID
-
-        // Get user's active Plaid items to verify ownership
-        const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
-            userId,
-        });
-        const activeItemIds = new Set(userItems.filter((item) => item.isActive !== false).map((item) => item._id));
-
-        // Get all accounts for user's active items and verify accountId belongs to user
-        let accountBelongsToUser = false;
-        for (const itemId of activeItemIds) {
-            const itemAccounts = await ctx.runQuery(components.plaid.public.getAccountsByItem, {
-                plaidItemId: itemId,
-            });
-            if (itemAccounts.some((acc) => acc.accountId === args.accountId)) {
-                accountBelongsToUser = true;
-                break;
-            }
-        }
-
-        if (!accountBelongsToUser) {
-            throw new Error("Unauthorized: Account does not belong to user");
-        }
 
         // Get regular transactions from component
         const rawTransactions = await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId: args.accountId });
@@ -212,7 +303,10 @@ export const getTransactionsAndStreamsByAccountId = query({
  */
 export const getTransactionsByAccountId = query({
     args: { accountId: v.string() },
+    returns: v.array(transactionWithMerchantValidator),
     handler: async (ctx, args) => {
+        await assertViewerOwnsAccount(ctx, args.accountId);
+
         // Get transactions from component
         const transactions = await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId: args.accountId });
 
