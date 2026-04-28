@@ -63,6 +63,19 @@ async function updatePlaidWebhookLog(
   });
 }
 
+async function resolveNativeUserIdFromExternalId(
+  ctx: any,
+  externalId: string,
+  context: string,
+): Promise<Id<"users"> | null> {
+  const user = await ctx.runQuery(internal.users.getByExternalId, { externalId });
+  if (!user) {
+    console.warn(`[Webhook] ${context} email skipped: missing native user`);
+    return null;
+  }
+  return user._id;
+}
+
 http.route({
   path: "/clerk-users-webhook",
   method: "POST",
@@ -172,6 +185,7 @@ http.route({
     const rawBody = await request.text();
     let webhookLogId: string | undefined;
     const scheduledFunctionIds: string[] = [];
+    const processingNotes: string[] = [];
 
     try {
       // =================================================================
@@ -363,17 +377,26 @@ http.route({
               reason: errorMessage,
             });
             // W4: dispatch reconsent-required email per contracts §15.
-            const emailId = await ctx.scheduler.runAfter(
-              0,
-              internal.email.dispatch.dispatchReconsentRequired,
-              {
-                userId: plaidItem.userId as Id<"users">,
-                plaidItemId: plaidItem._id,
-                institutionName: plaidItem.institutionName ?? "your bank",
-                reason: "ITEM_LOGIN_REQUIRED",
-              },
+            const nativeUserId = await resolveNativeUserIdFromExternalId(
+              ctx,
+              plaidItem.userId,
+              "reconsent",
             );
-            scheduledFunctionIds.push(String(emailId));
+            if (nativeUserId) {
+              const emailId = await ctx.scheduler.runAfter(
+                0,
+                internal.email.dispatch.dispatchReconsentRequired,
+                {
+                  userId: nativeUserId,
+                  plaidItemId: plaidItem._id,
+                  institutionName: plaidItem.institutionName ?? "your bank",
+                  reason: "ITEM_LOGIN_REQUIRED",
+                },
+              );
+              scheduledFunctionIds.push(String(emailId));
+            } else {
+              processingNotes.push("missing_native_user:reconsent");
+            }
           } else {
             await ctx.runMutation(internal.plaidComponent.setItemErrorInternal, {
               itemId: plaidItem._id,
@@ -397,17 +420,26 @@ http.route({
           });
 
           // W4: dispatch reconsent-required email per contracts §15.
-          const emailId = await ctx.scheduler.runAfter(
-            0,
-            internal.email.dispatch.dispatchReconsentRequired,
-            {
-              userId: plaidItem.userId as Id<"users">,
-              plaidItemId: plaidItem._id,
-              institutionName: plaidItem.institutionName ?? "your bank",
-              reason: "PENDING_EXPIRATION",
-            },
+          const nativeUserId = await resolveNativeUserIdFromExternalId(
+            ctx,
+            plaidItem.userId,
+            "reconsent",
           );
-          scheduledFunctionIds.push(String(emailId));
+          if (nativeUserId) {
+            const emailId = await ctx.scheduler.runAfter(
+              0,
+              internal.email.dispatch.dispatchReconsentRequired,
+              {
+                userId: nativeUserId,
+                plaidItemId: plaidItem._id,
+                institutionName: plaidItem.institutionName ?? "your bank",
+                reason: "PENDING_EXPIRATION",
+              },
+            );
+            scheduledFunctionIds.push(String(emailId));
+          } else {
+            processingNotes.push("missing_native_user:reconsent");
+          }
         } else if (webhookCode === "USER_PERMISSION_REVOKED") {
           // User revoked access in their bank's settings
           console.log("[Webhook] User permission revoked");
@@ -483,6 +515,7 @@ http.route({
       await updatePlaidWebhookLog(ctx, {
         webhookLogId,
         status: "processed",
+        errorMessage: processingNotes.length > 0 ? processingNotes.join(",") : undefined,
         scheduledFunctionIds,
       });
       return new Response(

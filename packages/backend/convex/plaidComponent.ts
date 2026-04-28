@@ -18,7 +18,6 @@ import { query as viewerQuery } from "./functions";
 import { v } from "convex/values";
 import { Plaid } from "@crowdevelopment/convex-plaid";
 import { components } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 
 // =============================================================================
@@ -316,15 +315,22 @@ export const onboardNewConnectionAction = action({
           Date.now() - newItem._creationTime < 60_000;
         if (isFirstLinkEver) {
           const institutionName = newItem.institutionName ?? "your bank";
-          await ctx.scheduler.runAfter(
-            0,
-            internal.email.dispatch.dispatchWelcomeOnboarding,
-            {
-              userId: args.userId as Id<"users">,
-              variant: "plaid-linked",
-              firstLinkedInstitutionName: institutionName,
-            },
-          );
+          const nativeUser = await ctx.runQuery(internal.users.getByExternalId, {
+            externalId: args.userId,
+          });
+          if (!nativeUser) {
+            console.warn("[onboardNewConnectionAction] welcome dispatch skipped: missing native user");
+          } else {
+            await ctx.scheduler.runAfter(
+              0,
+              internal.email.dispatch.dispatchWelcomeOnboarding,
+              {
+                userId: nativeUser._id,
+                variant: "plaid-linked",
+                firstLinkedInstitutionName: institutionName,
+              },
+            );
+          }
         }
       } catch (error) {
         console.error(
