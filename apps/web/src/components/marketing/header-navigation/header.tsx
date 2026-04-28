@@ -1,245 +1,117 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useRef, useState } from "react";
-import { ChevronDown } from "@untitledui/icons";
-import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover } from "react-aria-components";
+import { useState } from "react";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { SmartPocketsLogoWithBadge } from "@repo/ui/untitledui/foundations/logo/alpha-badge";
-import { ProductsDropdown, ResourcesDropdown } from "./dropdown-header-navigation";
 import { cx } from "@repo/ui/utils";
+import { ArrowRight } from "@untitledui/icons";
+import Link from "next/link";
 
-type HeaderNavItem = {
-    label: string;
-    href?: string;
-    menu?: ReactNode;
-};
-
-const headerNavItems: HeaderNavItem[] = [
-    { label: "Products", href: "/products", menu: <ProductsDropdown /> },
+const navItems = [
+    { label: "Features", href: "/#features" },
+    { label: "Agent assist", href: "/#agentic" },
     { label: "About", href: "/about" },
+    { label: "Privacy", href: "/privacy" },
 ];
 
-const footerNavItems = [
-    { label: "About us", href: "/" },
-    { label: "Press", href: "/products" },
-    { label: "Legal", href: "/legal" },
-    { label: "Support", href: "/support" },
-    { label: "Contact", href: "/contact" },
-    { label: "Sitemap", href: "/sitemap" },
-    { label: "Cookie settings", href: "/cookies" },
-];
-
-const MobileNavItem = (props: { className?: string; label: string; href?: string; children?: ReactNode }) => {
+export const Header = () => {
     const [isOpen, setIsOpen] = useState(false);
 
-    if (props.href) {
-        return (
-            <li>
-                <a href={props.href} className="flex items-center justify-between px-4 py-3 text-md font-semibold text-primary hover:bg-primary_hover">
-                    {props.label}
-                </a>
-            </li>
-        );
-    }
-
     return (
-        <li className="flex flex-col gap-0.5">
-            <button
-                aria-expanded={isOpen}
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex w-full items-center justify-between px-4 py-3 text-md font-semibold text-primary hover:bg-primary_hover"
-            >
-                {props.label}{" "}
-                <ChevronDown
-                    className={cx("size-4 stroke-[2.625px] text-fg-quaternary transition duration-100 ease-linear", isOpen ? "-rotate-180" : "rotate-0")}
-                />
-            </button>
-            {isOpen && <div>{props.children}</div>}
-        </li>
-    );
-};
-
-const MobileFooter = () => {
-    return (
-        <div className="flex flex-col gap-8 border-t border-secondary px-4 py-6">
-            <div>
-                <ul className="grid grid-flow-col grid-cols-2 grid-rows-4 gap-x-6 gap-y-3">
-                    {footerNavItems.map((navItem) => (
-                        <li key={navItem.label}>
-                            <Button color="link-gray" size="lg" href={navItem.href}>
-                                {navItem.label}
-                            </Button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-            <div className="flex flex-col gap-3">
-                <Button href="/sign-up" size="lg">
-                    Sign up
-                </Button>
-                <Button href="/sign-in" color="secondary" size="lg">
-                    Log in
-                </Button>
-            </div>
-        </div>
-    );
-};
-
-interface HeaderProps {
-    items?: HeaderNavItem[];
-    isFullWidth?: boolean;
-    isFloating?: boolean;
-    className?: string;
-}
-
-export const Header = ({ items = headerNavItems, isFullWidth, isFloating, className }: HeaderProps) => {
-    const headerRef = useRef<HTMLElement>(null);
-
-    return (
-        <header
-            ref={headerRef}
-            className={cx(
-                "relative flex h-18 w-full items-center justify-center md:h-20",
-                isFloating && "h-16 md:h-19 md:pt-3",
-                isFullWidth && !isFloating ? "has-aria-expanded:bg-primary" : "max-md:has-aria-expanded:bg-primary",
-                className,
-            )}
-        >
-            <div className="flex size-full max-w-container flex-1 items-center pr-3 pl-4 md:px-8">
-                <div
-                    className={cx(
-                        "flex w-full justify-between gap-4",
-                        isFloating && "ring-secondary_alt md:rounded-2xl md:bg-primary md:py-3 md:pr-3 md:pl-4 md:shadow-xs md:ring-1",
-                    )}
+        <header className="sticky top-3 z-40 px-3 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-7xl">
+                <nav
+                    aria-label="Primary navigation"
+                    className="rounded-full border border-white/10 bg-white/[0.07] px-3 py-2 shadow-[0_24px_80px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl"
                 >
-                    <div className="flex flex-1 items-center gap-5">
-                        <a href="/">
+                    <div className="flex items-center justify-between gap-4">
+                        <Link href="/" className="outline-focus-ring rounded-full focus-visible:outline-2 focus-visible:outline-offset-4">
                             <SmartPocketsLogoWithBadge size="md" />
-                        </a>
+                        </Link>
 
-                        {/* Desktop navigation */}
-                        <nav className="max-md:hidden">
-                            <ul className="flex items-center gap-0.5">
-                                {items.map((navItem) => (
-                                    <li key={navItem.label}>
-                                        {navItem.menu ? (
-                                            <AriaDialogTrigger>
-                                                <AriaButton className="flex cursor-pointer items-center gap-0.5 rounded-lg px-1.5 py-1 text-md font-semibold text-secondary outline-focus-ring transition duration-100 ease-linear hover:text-secondary_hover focus-visible:outline-2 focus-visible:outline-offset-2">
-                                                    <span className="px-0.5">{navItem.label}</span>
+                        <ul className="hidden items-center gap-1 lg:flex">
+                            {navItems.map((item) => (
+                                <li key={item.href}>
+                                    <Link
+                                        href={item.href}
+                                        className="outline-focus-ring rounded-full px-4 py-2 text-sm font-medium text-gray-300 transition-colors duration-200 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+                                    >
+                                        {item.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
 
-                                                    <ChevronDown className="size-4 rotate-0 stroke-[2.625px] text-fg-quaternary transition duration-100 ease-linear in-aria-expanded:-rotate-180" />
-                                                </AriaButton>
+                        <div className="hidden items-center gap-2 md:flex">
+                            <Button
+                                href="/sign-in"
+                                color="secondary"
+                                size="md"
+                                className="rounded-full border-white/10 bg-white/[0.06] text-white ring-white/10 transition-[background-color,transform,color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/[0.12] active:scale-[0.98]"
+                            >
+                                Log in
+                            </Button>
+                            <Button
+                                href="/sign-up"
+                                size="md"
+                                iconTrailing={ArrowRight}
+                                className="rounded-full bg-white text-gray-950 ring-white/20 transition-[background-color,transform,color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-emerald-100 active:scale-[0.98]"
+                            >
+                                Sign up
+                            </Button>
+                        </div>
 
-                                                <AriaPopover
-                                                    className={({ isEntering, isExiting }) =>
-                                                        cx(
-                                                            "hidden origin-top will-change-transform md:block",
-                                                            isFullWidth && "w-full",
-                                                            isEntering && "duration-200 ease-out animate-in fade-in slide-in-from-top-1",
-                                                            isExiting && "duration-150 ease-in animate-out fade-out slide-out-to-top-1",
-                                                        )
-                                                    }
-                                                    offset={isFloating || isFullWidth ? 0 : 8}
-                                                    containerPadding={0}
-                                                    triggerRef={(isFloating && isFullWidth) || isFullWidth ? headerRef : undefined}
-                                                >
-                                                    {({ isEntering, isExiting }) => (
-                                                        <AriaDialog
-                                                            className={cx(
-                                                                "mx-auto origin-top outline-hidden",
-                                                                isFloating && "max-w-7xl px-8 pt-3",
-                                                                isEntering && !isFullWidth && "duration-200 ease-out animate-in zoom-in-95",
-                                                                isExiting && !isFullWidth && "duration-150 ease-in animate-out zoom-out-95",
-                                                            )}
-                                                        >
-                                                            {navItem.menu}
-                                                        </AriaDialog>
-                                                    )}
-                                                </AriaPopover>
-                                            </AriaDialogTrigger>
-                                        ) : (
-                                            <a
-                                                href={navItem.href}
-                                                className="flex cursor-pointer items-center gap-0.5 rounded-lg px-1.5 py-1 text-md font-semibold text-secondary outline-focus-ring transition duration-100 ease-linear hover:text-secondary_hover focus:outline-offset-2 focus-visible:outline-2"
-                                            >
-                                                <span className="px-0.5">{navItem.label}</span>
-                                            </a>
-                                        )}
+                        <button
+                            type="button"
+                            aria-label="Toggle navigation menu"
+                            aria-expanded={isOpen}
+                            onClick={() => setIsOpen((value) => !value)}
+                            className="outline-focus-ring group relative ml-auto inline-flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.07] transition-[background-color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/[0.12] focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98] md:hidden"
+                        >
+                            <span
+                                className={cx(
+                                    "absolute h-px w-4 rounded-full bg-white transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                                    isOpen ? "translate-y-0 rotate-45" : "-translate-y-1.5 rotate-0",
+                                )}
+                            />
+                            <span
+                                className={cx("absolute h-px w-4 rounded-full bg-white transition-opacity duration-200", isOpen ? "opacity-0" : "opacity-100")}
+                            />
+                            <span
+                                className={cx(
+                                    "absolute h-px w-4 rounded-full bg-white transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                                    isOpen ? "translate-y-0 -rotate-45" : "translate-y-1.5 rotate-0",
+                                )}
+                            />
+                        </button>
+                    </div>
+
+                    {isOpen && (
+                        <div className="mt-3 rounded-[1.5rem] border border-white/10 bg-[#07100d]/95 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] md:hidden">
+                            <ul className="flex flex-col gap-1">
+                                {navItems.map((item) => (
+                                    <li key={item.href}>
+                                        <Link
+                                            href={item.href}
+                                            onClick={() => setIsOpen(false)}
+                                            className="outline-focus-ring block rounded-2xl px-4 py-3 text-base font-semibold text-gray-100 transition-colors duration-200 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2"
+                                        >
+                                            {item.label}
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>
-                        </nav>
-                    </div>
-
-                    <div className="hidden items-center gap-3 md:flex">
-                        <Button href="/sign-in" color="secondary" size={isFloating ? "md" : "lg"}>
-                            Log in
-                        </Button>
-                        <Button href="/sign-up" color="primary" size={isFloating ? "md" : "lg"}>
-                            Sign up
-                        </Button>
-                    </div>
-
-                    {/* Mobile menu and menu trigger */}
-                    <AriaDialogTrigger>
-                        <AriaButton
-                            aria-label="Toggle navigation menu"
-                            className={({ isFocusVisible, isHovered }) =>
-                                cx(
-                                    "group ml-auto cursor-pointer rounded-lg p-2 md:hidden",
-                                    isHovered && "bg-primary_hover",
-                                    isFocusVisible && "outline-2 outline-offset-2 outline-focus-ring",
-                                )
-                            }
-                        >
-                            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path
-                                    className="hidden text-secondary group-aria-expanded:block"
-                                    d="M18 6L6 18M6 6L18 18"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                                <path
-                                    className="text-secondary group-aria-expanded:hidden"
-                                    d="M3 12H21M3 6H21M3 18H21"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            </svg>
-                        </AriaButton>
-                        <AriaPopover
-                            triggerRef={headerRef}
-                            className="h-calc(100%-72px) scrollbar-hide w-full overflow-y-auto shadow-lg md:hidden"
-                            offset={0}
-                            crossOffset={20}
-                            containerPadding={0}
-                            placement="bottom left"
-                        >
-                            <AriaDialog className="outline-hidden">
-                                <nav className="w-full bg-primary shadow-lg">
-                                    <ul className="flex flex-col gap-0.5 py-5">
-                                        {items.map((navItem) =>
-                                            navItem.menu ? (
-                                                <MobileNavItem key={navItem.label} label={navItem.label}>
-                                                    {navItem.menu}
-                                                </MobileNavItem>
-                                            ) : (
-                                                <MobileNavItem key={navItem.label} label={navItem.label} href={navItem.href} />
-                                            ),
-                                        )}
-                                    </ul>
-
-                                    <MobileFooter />
-                                </nav>
-                            </AriaDialog>
-                        </AriaPopover>
-                    </AriaDialogTrigger>
-                </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                <Button href="/sign-in" color="secondary" size="lg" className="rounded-full bg-white/[0.06] text-white ring-white/10">
+                                    Log in
+                                </Button>
+                                <Button href="/sign-up" size="lg" className="rounded-full bg-white text-gray-950 hover:bg-emerald-100">
+                                    Sign up
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </nav>
             </div>
         </header>
     );

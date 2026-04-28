@@ -3,9 +3,7 @@ import { BookClosed, CreditCard02, FileCode01, LifeBuoy01, PlayCircle, Receipt, 
 import { NavMenuItemLink } from "./base-components/nav-menu-item";
 
 const ComingSoonBadge = () => (
-    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-        Coming soon
-    </span>
+    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">Coming soon</span>
 );
 
 interface DropdownItem {
@@ -19,27 +17,24 @@ interface DropdownItem {
 
 const productItems: DropdownItem[] = [
     {
-        title: "Credit Card Management",
-        subtitle: "Track your cards, compare benefits, and maximize rewards effortlessly.",
-        href: "#",
+        title: "Credit card command center",
+        subtitle: "Track balances, utilization, APRs, due dates, and transactions across connected accounts.",
+        href: "/#features",
         Icon: CreditCard02,
-        disabled: true,
     },
     {
-        title: "Transactions",
-        subtitle: "Monitor spending across all your accounts in one unified dashboard.",
-        href: "#",
+        title: "Agent-assisted planning",
+        subtitle: "Future-facing assistance for insight, organization, reminders, and portfolio hygiene.",
+        href: "/#agentic",
         Icon: Receipt,
         badge: <ComingSoonBadge />,
         disabled: true,
     },
     {
-        title: "Form 568",
-        subtitle: "File your California LLC annual tax form in minutes, not hours.",
-        href: "#",
+        title: "Open source roadmap",
+        subtitle: "Follow the product direction and contribute to the personal finance stack.",
+        href: "/about",
         Icon: FileCode01,
-        badge: <ComingSoonBadge />,
-        disabled: true,
     },
 ];
 
@@ -72,21 +67,23 @@ const resourceItems: DropdownItem[] = [
 
 const DropdownMenu = ({ items }: { items: DropdownItem[] }) => {
     return (
-        <div className="px-3 pb-2 md:max-w-84 md:p-0">
-            <nav className="overflow-hidden rounded-2xl bg-primary py-2 shadow-xs ring-1 ring-secondary_alt md:p-2 md:shadow-lg">
+        <div className="md:max-w-84 px-3 pb-2 md:p-0">
+            <nav className="bg-primary shadow-xs ring-secondary_alt overflow-hidden rounded-2xl py-2 ring-1 md:p-2 md:shadow-lg">
                 <ul className="flex flex-col gap-0.5">
                     {items.map(({ title, subtitle, href, Icon, badge, disabled }) => (
                         <li key={title} className={disabled && badge ? "opacity-50" : undefined}>
                             {disabled ? (
-                                <div className={`inline-flex w-full gap-3 px-4 py-3 sm:max-w-80 sm:p-3 md:rounded-lg ${badge ? "cursor-not-allowed" : "cursor-default"}`}>
-                                    <Icon className="mt-0.5 size-4 shrink-0 stroke-[2.3px] text-fg-brand-primary" />
+                                <div
+                                    className={`inline-flex w-full gap-3 px-4 py-3 sm:max-w-80 sm:p-3 md:rounded-lg ${badge ? "cursor-not-allowed" : "cursor-default"}`}
+                                >
+                                    <Icon className="text-fg-brand-primary mt-0.5 size-4 shrink-0 stroke-[2.3px]" />
                                     <div className="flex flex-col gap-3">
                                         <div className="flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-md font-semibold text-primary">{title}</span>
+                                                <span className="text-md text-primary font-semibold">{title}</span>
                                                 {badge}
                                             </div>
-                                            <span className="line-clamp-2 text-sm text-tertiary">{subtitle}</span>
+                                            <span className="text-tertiary line-clamp-2 text-sm">{subtitle}</span>
                                         </div>
                                     </div>
                                 </div>

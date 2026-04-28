@@ -1,7 +1,12 @@
 import { ClerkProvider } from "@clerk/nextjs";
-import { Space_Grotesk } from "next/font/google";
 import "@repo/ui/globals.css";
 import "@repo/ui/theme.css";
+import { Geist, Space_Grotesk } from "next/font/google";
+
+const geist = Geist({
+    subsets: ["latin"],
+    variable: "--font-inter",
+});
 
 const spaceGrotesk = Space_Grotesk({
     subsets: ["latin"],
@@ -18,8 +23,8 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <ClerkProvider allowedRedirectOrigins={[APP_URL]} signInForceRedirectUrl={APP_URL} signUpForceRedirectUrl={APP_URL}>
-            <html lang="en">
-                <body className={`${spaceGrotesk.variable} bg-primary text-primary antialiased`}>{children}</body>
+            <html lang="en" className="dark-mode scroll-smooth bg-[#05070a]">
+                <body className={`${geist.variable} ${spaceGrotesk.variable} text-primary bg-[#05070a] antialiased`}>{children}</body>
             </html>
         </ClerkProvider>
     );
