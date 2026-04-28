@@ -18,6 +18,8 @@ import {
   type RemovedTransaction,
 } from "plaid";
 
+export const DEFAULT_PLAID_PRODUCTS = ["transactions", "liabilities"] as const;
+
 const CONFIDENCE_LEVELS = new Set([
   "VERY_HIGH",
   "HIGH",
@@ -86,6 +88,17 @@ export function initPlaidClient(
   });
 
   return new PlaidApi(configuration);
+}
+
+/**
+ * Normalize the Plaid products this component needs for credit-card tracking.
+ *
+ * Transactions power balances/activity and liabilities power APR/payment data,
+ * so both must be persisted on component items even when the host app omits
+ * products during public-token exchange.
+ */
+export function normalizePlaidProducts(products?: string[]): string[] {
+  return Array.from(new Set([...(products ?? []), ...DEFAULT_PLAID_PRODUCTS]));
 }
 
 // =============================================================================

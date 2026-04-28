@@ -14,7 +14,7 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server.js";
 import { internal } from "./_generated/api.js";
-import { initPlaidClient, convertAmountToMilliunits, transformTransaction, syncTransactionsPaginated, } from "./utils.js";
+import { initPlaidClient, convertAmountToMilliunits, transformTransaction, syncTransactionsPaginated, normalizePlaidProducts, } from "./utils.js";
 import { encryptToken, decryptToken } from "./encryption.js";
 import { categorizeError, requiresReauth, formatErrorForLog } from "./errors.js";
 // =============================================================================
@@ -59,7 +59,7 @@ export const createLinkToken = action({
                 client_user_id: args.userId,
             },
             client_name: args.clientName ?? "App",
-            products: (args.products ?? ["transactions", "liabilities"]),
+            products: normalizePlaidProducts(args.products),
             account_filters: args.accountFilters,
             country_codes: (args.countryCodes ?? ["US"]),
             language: args.language ?? "en",
@@ -148,15 +148,15 @@ export const exchangePublicToken = action({
         // Encrypt access token before storage
         console.log("[Plaid Component] Encrypting access token...");
         const encryptedToken = await encryptToken(accessToken, args.encryptionKey);
-        // Create plaidItem in component database
-        // products defaults to ["transactions"] if not specified
+        // Create plaidItem in component database.
+        // Credit-card tracking requires both transactions and liabilities data.
         const plaidItemId = await ctx.runMutation(internal.private.createPlaidItem, {
             userId: args.userId,
             itemId,
             accessToken: encryptedToken,
             institutionId,
             institutionName,
-            products: args.products ?? ["transactions"],
+            products: normalizePlaidProducts(args.products),
             isActive: true, // Default to active when created
             status: "pending",
         });

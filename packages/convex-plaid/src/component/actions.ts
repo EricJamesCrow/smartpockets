@@ -20,6 +20,7 @@ import {
   convertAmountToMilliunits,
   transformTransaction,
   syncTransactionsPaginated,
+  normalizePlaidProducts,
 } from "./utils.js";
 import { encryptToken, decryptToken } from "./encryption.js";
 import { categorizeError, requiresReauth, formatErrorForLog } from "./errors.js";
@@ -84,7 +85,7 @@ export const createLinkToken = action({
         client_user_id: args.userId,
       },
       client_name: args.clientName ?? "App",
-      products: (args.products ?? ["transactions", "liabilities"]) as any[],
+      products: normalizePlaidProducts(args.products) as any[],
       account_filters: args.accountFilters as any,
       country_codes: (args.countryCodes ?? ["US"]) as any[],
       language: args.language ?? "en",
@@ -190,15 +191,15 @@ export const exchangePublicToken = action({
     console.log("[Plaid Component] Encrypting access token...");
     const encryptedToken = await encryptToken(accessToken, args.encryptionKey);
 
-    // Create plaidItem in component database
-    // products defaults to ["transactions"] if not specified
+    // Create plaidItem in component database.
+    // Credit-card tracking requires both transactions and liabilities data.
     const plaidItemId: string = await ctx.runMutation(internal.private.createPlaidItem, {
       userId: args.userId,
       itemId,
       accessToken: encryptedToken,
       institutionId,
       institutionName,
-      products: args.products ?? ["transactions"],
+      products: normalizePlaidProducts(args.products),
       isActive: true, // Default to active when created
       status: "pending",
     });
