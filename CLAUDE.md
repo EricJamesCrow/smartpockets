@@ -4,6 +4,17 @@ This file configures Claude Code behavior for SmartPockets.
 
 > **For architecture, patterns, and technical details, see `AGENTS.md`**
 
+## Mandatory Workflow
+
+Follow the repository instructions in `AGENTS.md`. The most important rules:
+
+1. Before meaningful implementation work, find or create a Linear issue.
+2. Put the Linear issue ID in the branch name, PR title, and PR description.
+3. Use `Fixes <ISSUE-ID>` only when the PR fully completes the issue. Use `Refs <ISSUE-ID>` when partial, exploratory, documentation-only, or related.
+4. Post a Linear comment when starting work, when blocked, and when opening a PR.
+5. Never manually mark Linear issues as Done. PR automation handles that.
+6. Do not merge PRs unless explicitly instructed.
+
 ## Session Startup
 
 At the start of each session:
@@ -38,9 +49,9 @@ When finishing a session or completing significant work, review TODO.md to ensur
 - Read any file in the codebase
 - Run `bun dev`, `bun build`, `bun typecheck`, `bun lint`
 - Run `git status`, `git log`, `git diff`, `git branch`
-- Create/switch branches
+- Create/switch branches through Graphite when submitting work
 - Stage and commit changes (with proper format)
-- Push to remote (`git push`)
+- Submit branches through Graphite (`gt submit`)
 - Run Convex dev commands
 
 ### Use Judgment
@@ -76,10 +87,12 @@ Each commit must be:
 
 [optional body]
 
-Refs: #issue
+Refs <ISSUE-ID>
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
+
+Use `Fixes <ISSUE-ID>` instead of `Refs <ISSUE-ID>` only when the PR fully completes the Linear issue.
 
 ### Commit Types
 
@@ -102,7 +115,9 @@ Commit immediately after:
 
 ### Stacked PRs with Graphite
 
-Use Graphite (`gt`) for ALL branch and PR management on multi-change tasks. Never use raw `git branch`/`git push` for feature work.
+Use Graphite (`gt`) for ALL branch and PR management on implementation tasks. Never use raw `git branch`/`git push` for feature work.
+
+Before creating a branch, confirm the relevant Linear issue ID. Use the Linear-generated branch name when available, or use `<issue-id>-short-description`.
 
 When given a task with multiple logical changes:
 1. Break the work into independent, atomic changes that each pass CI on their own
@@ -110,7 +125,7 @@ When given a task with multiple logical changes:
 3. Each PR in the stack should be a single logical unit (one schema change, one component, one API route, etc.)
 4. Every PR in the stack must compile and pass tests independently
 5. Use `gt create <branch-name> -m "description"` for each new layer
-6. Use `gt submit --stack` to push the entire stack
+6. Use `gt submit --stack` to submit the entire stack
 
 | Rule | Why |
 |------|-----|
@@ -130,6 +145,8 @@ https://app.graphite.com/github/pr/EricJamesCrow/smartpockets/<PR_NUMBER>
 ```
 
 After `gt submit`, use the Graphite URL printed by Graphite in the final response. If a command only returns a GitHub PR number or URL, convert it to the Graphite URL format above before showing it to the user. GitHub links may be included only as a secondary fallback.
+
+After opening or updating a PR, comment on the linked Linear issue with the Graphite PR link, summary, verification, known risks, and follow-up work.
 
 ### Preview Deployments
 
@@ -209,7 +226,7 @@ Skip plan mode for:
 For tasks over 10 minutes:
 1. Break into smaller commits
 2. Commit working checkpoints
-3. Push periodically (if approved)
+3. Submit through Graphite when ready for review
 
 ### Code Style
 
