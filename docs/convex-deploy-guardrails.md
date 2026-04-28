@@ -9,12 +9,14 @@
 The build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
 
 1. `VERCEL_ENV=production`
+
 - Runs `bunx convex deploy --cmd "cd ../../apps/app && bun run build"`.
 - Requires `CONVEX_DEPLOY_KEY`.
 - If `CONVEX_DEPLOYMENT` is set, it must be `prod:*`.
 - Requires production Clerk keys: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_*` and `CLERK_SECRET_KEY=sk_live_*`.
 
 2. `VERCEL_ENV=preview` or `VERCEL_ENV=development`
+
 - Skips `convex deploy`.
 - Requires `NEXT_PUBLIC_CONVEX_URL`.
 - Rejects `CONVEX_DEPLOYMENT=prod:*`.
@@ -24,6 +26,7 @@ The build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
 ## Required Vercel envs
 
 1. Production environment
+
 - `CONVEX_DEPLOY_KEY` (production key)
 - `CONVEX_DEPLOYMENT=prod:<deployment_name>` (recommended and enforced if set)
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...`
@@ -31,12 +34,14 @@ The build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
 - `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://clerk.smartpockets.com` or the approved production Clerk issuer
 
 2. Preview environment
+
 - `NEXT_PUBLIC_CONVEX_URL` (preview/dev convex URL)
 - `CONVEX_DEPLOYMENT=dev:<deployment_name>` (recommended)
 - No production deploy key in preview scope
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...`
 - `CLERK_SECRET_KEY=sk_test_...`
 - `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`
+- Vercel system env vars must be available: `VERCEL_BRANCH_URL` or `VERCEL_URL`
 
 If a preview shows `Clerk: Production Keys are only allowed for domain "smartpockets.com"`, Vercel Preview is using production Clerk env vars. Update the Preview-scoped Clerk variables, redeploy the branch, and verify the build logs show the preview guard passing.
 
@@ -45,16 +50,19 @@ If a preview shows `Clerk: Production Keys are only allowed for domain "smartpoc
 If cards appear missing after a deploy:
 
 1. Confirm app runtime URL
+
 - Verify deployed `NEXT_PUBLIC_CONVEX_URL` points to expected deployment.
 
 2. Confirm Convex deployment target
+
 - Check build logs for whether `convex deploy` ran and in which Vercel environment.
 - Verify `VERCEL_ENV` and `CONVEX_DEPLOYMENT` values in logs.
 
 3. Check delete telemetry
+
 - Search logs for:
-  - `[items.deletePlaidItem] Deleted app-level credit cards`
-  - `[items.deleteAppDataForPlaidItem] Deleted app-level credit cards`
+    - `[items.deletePlaidItem] Deleted app-level credit cards`
+    - `[items.deleteAppDataForPlaidItem] Deleted app-level credit cards`
 - Validate `plaidItemId`, `deletedCreditCards`, and `source`.
 - Ignore/omit `durationMs` for mutation-level timing in `items.deletePlaidItem` and
   `items.deleteAppDataForPlaidItem`; `Date.now()` in Convex mutations does not
@@ -63,10 +71,28 @@ If cards appear missing after a deploy:
 If sign-in fails on a preview:
 
 1. Confirm Vercel Preview Clerk envs
+
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` must start with `pk_test_`.
 - `CLERK_SECRET_KEY` must start with `sk_test_`.
 - `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` must point to the Clerk development issuer, not `smartpockets.com`.
 
 2. Confirm build guard output
+
 - Check the `Vercel - smartpockets-app` logs for `[vercel-build] VERCEL_ENV=preview`.
 - A production Clerk key in Preview should fail the build instead of deploying a broken sign-in page.
+
+3. Confirm preview auth routing
+
+- Signed-out app previews should redirect to
+  `https://preview.smartpockets.com/sign-in?redirect_url=<exact app preview URL>`.
+- The web auth host must use Clerk fallback redirect URLs, not force redirect URLs, so
+  Clerk respects the incoming `redirect_url`.
+- `apps/web` is the primary Clerk auth host; `apps/app` is configured as the
+  satellite app and points its Clerk sign-in/sign-up URLs at the auth host.
+- The app provider derives its satellite domain from Vercel system env vars
+  (`VERCEL_BRANCH_URL` or `VERCEL_URL`) on Preview, not from a manually-set
+  per-branch env var.
+- Do not set per-branch Vercel env vars as the normal fix. Vercel preview URLs are
+  generated per deployment, and env changes only affect new deployments.
+- Trusted redirect targets are limited to `app.smartpockets.com`, local app dev, and
+  SmartPockets `smartpockets-app-*.vercel.app` preview origins.

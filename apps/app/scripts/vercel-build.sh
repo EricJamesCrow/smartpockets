@@ -7,6 +7,8 @@ REPO_ROOT="$(cd "${APP_DIR}/../.." && pwd)"
 BACKEND_DIR="${REPO_ROOT}/packages/backend"
 
 VERCEL_ENV_VALUE="${VERCEL_ENV:-development}"
+VERCEL_BRANCH_URL_VALUE="${VERCEL_BRANCH_URL:-}"
+VERCEL_URL_VALUE="${VERCEL_URL:-}"
 CONVEX_DEPLOYMENT_VALUE="${CONVEX_DEPLOYMENT:-}"
 CLERK_PUBLISHABLE_KEY_VALUE="${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}"
 CLERK_SECRET_KEY_VALUE="${CLERK_SECRET_KEY:-}"
@@ -78,6 +80,12 @@ validate_clerk_env() {
 }
 
 validate_clerk_env
+
+if [[ "${VERCEL_ENV_VALUE}" == "preview" && -z "${VERCEL_BRANCH_URL_VALUE}" && -z "${VERCEL_URL_VALUE}" ]]; then
+  echo "[vercel-build] ERROR: preview builds require VERCEL_BRANCH_URL or VERCEL_URL." >&2
+  echo "[vercel-build] The app uses Vercel's generated URL as its Clerk satellite domain so preview auth can return to the exact app preview origin." >&2
+  exit 1
+fi
 
 # Production deploys are the only builds allowed to trigger `convex deploy`.
 if [[ "${VERCEL_ENV_VALUE}" == "production" ]]; then
