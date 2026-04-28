@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { agentMutation } from "../../functions";
+import { assertAgentSideEffectsAllowed } from "../../writeTool";
 
 // W2.12 stub; real body in W2.12 mirrors the agent/proposals.ts cancel logic.
 export const cancelProposal = agentMutation({
@@ -10,6 +11,7 @@ export const cancelProposal = agentMutation({
   },
   returns: v.any(),
   handler: async (ctx, { proposalId }) => {
+    assertAgentSideEffectsAllowed();
     const viewer = ctx.viewerX();
     const proposal = await ctx.table("agentProposals").getX(proposalId);
     if (proposal.userId !== viewer._id) throw new Error("Not authorized");

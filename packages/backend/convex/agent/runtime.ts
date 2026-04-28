@@ -5,19 +5,99 @@ import { internalAction } from "../_generated/server";
 import type { ActionCtx } from "../_generated/server";
 import { AGENT_DEFAULT_MODEL, getAnthropicModel } from "./config";
 import { agentLimiter } from "./rateLimits";
-import { AGENT_TOOLS } from "./registry";
+import { AGENT_TOOLS, isRegisteredToolName, isSideEffectfulTool, toolRequiresExplicitConfirmation } from "./registry";
 import { PROMPT_VERSION, renderSystemPrompt } from "./system";
+import { isAgentReadOnlyMode } from "./writeTool";
 
 const agent = internal.agent;
 const DEFAULT_RETRY_AFTER_MS = 60_000;
+const DEFAULT_TOOL_OUTPUT_TOKEN_CAP = 15_000;
+const TOOL_HINT_ARGS_MAX_CHARS = 4_000;
 
-type ToolEnvelope = { ok: true; data?: unknown; meta?: unknown } | { ok: false; error?: { code?: unknown; message?: unknown; retryable?: unknown } };
+type ToolEnvelope =
+    | { ok: true; data?: unknown; meta?: unknown }
+    | { ok: false; error?: { code?: unknown; message?: unknown; retryable?: unknown } };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null;
 }
 
-function normalizeToolResult(raw: unknown): {
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+    const proto = Object.getPrototypeOf(value);
+    return proto === Object.prototype || proto === null;
+}
+
+function safeJsonStringify(value: unknown): string {
+    try {
+        const serialized = JSON.stringify(value);
+        return typeof serialized === "string" ? serialized : "null";
+    } catch {
+        return JSON.stringify({ unserializable: true });
+    }
+}
+
+function publicErrorCode(err: unknown, fallback = "downstream_failed"): string {
+    const message = err instanceof Error ? err.message : typeof err === "string" ? err : "";
+    if (message.startsWith("not_authorized") || message.startsWith("Not authorized")) return "not_authorized";
+    if (message.startsWith("invalid_args") || message.includes("validation")) return "validation_failed";
+    if (message.startsWith("first_turn_guard")) return "first_turn_guard";
+    if (message.startsWith("proposal_timed_out")) return "proposal_timed_out";
+    if (message.startsWith("proposal_invalid_state")) return "proposal_invalid_state";
+    if (message.startsWith("destructive_unconfirmed")) return "confirmation_required";
+    if (message.startsWith("read_only_mode")) return "read_only_mode";
+    if (message.startsWith("rate_limited")) return "rate_limited";
+    return fallback;
+}
+
+function publicErrorMessage(code: string): string {
+    switch (code) {
+        case "not_authorized":
+            return "Not authorized.";
+        case "validation_failed":
+            return "The tool arguments were invalid.";
+        case "first_turn_guard":
+            return "Make a read call before proposing a write.";
+        case "proposal_timed_out":
+            return "The proposal timed out.";
+        case "proposal_invalid_state":
+            return "The proposal is not in a valid state for this action.";
+        case "confirmation_required":
+            return "Explicit user confirmation is required before this action can run.";
+        case "read_only_mode":
+            return "This action is disabled in demo/read-only mode.";
+        case "rate_limited":
+            return "Rate limit reached; retry shortly.";
+        case "rate_limit_unavailable":
+            return "Rate limit check unavailable; retry shortly.";
+        default:
+            return "The tool failed. Try again shortly.";
+    }
+}
+
+export function sanitizedToolError(
+    err: unknown,
+    opts: { fallbackCode?: string; retryable?: boolean } = {},
+): { code: string; message: string; retryable: boolean } {
+    const code = publicErrorCode(err, opts.fallbackCode);
+    return {
+        code,
+        message: publicErrorMessage(code),
+        retryable: opts.retryable ?? (code === "downstream_failed" || code === "rate_limit_unavailable"),
+    };
+}
+
+function proposalIdFromPayload(payload: unknown): Id<"agentProposals"> | undefined {
+    if (isRecord(payload) && typeof payload.proposalId === "string") {
+        return payload.proposalId as Id<"agentProposals">;
+    }
+    if (isRecord(payload) && isRecord(payload.data) && typeof payload.data.proposalId === "string") {
+        return payload.data.proposalId as Id<"agentProposals">;
+    }
+    return undefined;
+}
+
+export function normalizeToolResult(raw: unknown): {
     payload: unknown;
     proposalId?: Id<"agentProposals">;
 } {
@@ -26,18 +106,23 @@ function normalizeToolResult(raw: unknown): {
     if (isRecord(raw) && "ok" in raw) {
         const envelope = raw as ToolEnvelope;
         if (envelope.ok === true) {
-            payload = envelope.data ?? null;
+            payload = envelope;
         } else {
             const err = envelope.error ?? {};
+            const code = typeof err.code === "string" ? err.code : "downstream_failed";
             payload = {
-                error: typeof err.message === "string" ? err.message : typeof err.code === "string" ? err.code : "tool_failed",
-                code: typeof err.code === "string" ? err.code : "tool_failed",
-                retryable: typeof err.retryable === "boolean" ? err.retryable : false,
+                ok: false as const,
+                error: {
+                    ...sanitizedToolError(code, {
+                        fallbackCode: code,
+                        retryable: typeof err.retryable === "boolean" ? err.retryable : undefined,
+                    }),
+                },
             };
         }
     }
 
-    const proposalId = isRecord(payload) && typeof payload.proposalId === "string" ? (payload.proposalId as Id<"agentProposals">) : undefined;
+    const proposalId = proposalIdFromPayload(payload);
 
     return { payload, proposalId };
 }
@@ -50,6 +135,181 @@ export function shouldFailClosedOnRateLimitError(bucket: string): boolean {
     return bucket === "write_single" || bucket === "write_bulk" || bucket === "write_expensive";
 }
 
+type ReductionLimits = {
+    depth: number;
+    arrayItems: number;
+    stringChars: number;
+    objectKeys: number;
+};
+
+const REDUCTION_TIERS: ReductionLimits[] = [
+    { depth: 5, arrayItems: 25, stringChars: 512, objectKeys: 24 },
+    { depth: 4, arrayItems: 12, stringChars: 256, objectKeys: 16 },
+    { depth: 3, arrayItems: 6, stringChars: 160, objectKeys: 12 },
+    { depth: 2, arrayItems: 3, stringChars: 96, objectKeys: 8 },
+];
+
+function jsonLength(value: unknown): number {
+    return safeJsonStringify(value).length;
+}
+
+function reduceValue(value: unknown, limits: ReductionLimits, depth = 0): unknown {
+    if (value == null || typeof value === "boolean") return value;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value === "string") {
+        if (value.length <= limits.stringChars) return value;
+        return `${value.slice(0, limits.stringChars)}... [truncated ${value.length - limits.stringChars} chars]`;
+    }
+    if (Array.isArray(value)) {
+        if (depth >= limits.depth) {
+            return { __truncatedArray: true, count: value.length };
+        }
+        const items = value.slice(0, limits.arrayItems).map((item) => reduceValue(item, limits, depth + 1));
+        if (value.length > limits.arrayItems) {
+            items.push({ __omittedItems: value.length - limits.arrayItems });
+        }
+        return items;
+    }
+    if (isRecord(value)) {
+        if (depth >= limits.depth) {
+            return { __truncatedObject: true, keyCount: Object.keys(value).length };
+        }
+        const out: Record<string, unknown> = {};
+        const entries = Object.entries(value);
+        for (const [key, child] of entries.slice(0, limits.objectKeys)) {
+            out[key] = reduceValue(child, limits, depth + 1);
+        }
+        if (entries.length > limits.objectKeys) {
+            out.__omittedKeys = entries.length - limits.objectKeys;
+        }
+        return out;
+    }
+    return null;
+}
+
+function wrapReducedToolResult(reduced: unknown, originalChars: number): unknown {
+    const summary = {
+        truncated: true,
+        originalChars,
+        note: "Tool output exceeded the per-call budget and was summarized before returning to the model.",
+    };
+    if (isPlainObject(reduced)) {
+        return { ...reduced, __truncated: true, __summary: summary };
+    }
+    return { value: reduced, __truncated: true, __summary: summary };
+}
+
+export function reduceToolOutputForModel(
+    raw: unknown,
+    tokenCap = DEFAULT_TOOL_OUTPUT_TOKEN_CAP,
+): { data: unknown; truncated: boolean; originalChars: number; reducedChars: number } {
+    const maxChars = Math.max(256, Math.floor(tokenCap * 4));
+    const originalChars = jsonLength(raw);
+    if (originalChars <= maxChars) {
+        return { data: raw, truncated: false, originalChars, reducedChars: originalChars };
+    }
+
+    for (const limits of REDUCTION_TIERS) {
+        const candidate = wrapReducedToolResult(reduceValue(raw, limits), originalChars);
+        const reducedChars = jsonLength(candidate);
+        if (reducedChars <= maxChars && reducedChars < originalChars) {
+            return { data: candidate, truncated: true, originalChars, reducedChars };
+        }
+    }
+
+    const minimal = {
+        __truncated: true,
+        __summary: {
+            truncated: true,
+            originalChars,
+            note: "Tool output exceeded the per-call budget and was summarized before returning to the model.",
+        },
+    };
+    return { data: minimal, truncated: true, originalChars, reducedChars: jsonLength(minimal) };
+}
+
+function promptSafeString(value: string): string {
+    return value
+        .replace(/[`<>]/g, (ch) => {
+            if (ch === "`") return "\\u0060";
+            if (ch === "<") return "\\u003c";
+            return "\\u003e";
+        })
+        .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`);
+}
+
+function sanitizePromptValue(value: unknown, depth = 0): unknown {
+    if (value == null || typeof value === "boolean") return value;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value === "string") return promptSafeString(value).slice(0, 1_000);
+    if (Array.isArray(value)) {
+        if (depth >= 5) return { __truncatedArray: true, count: value.length };
+        return value.slice(0, 25).map((item) => sanitizePromptValue(item, depth + 1));
+    }
+    if (isPlainObject(value)) {
+        if (depth >= 5) return { __truncatedObject: true, keyCount: Object.keys(value).length };
+        const out: Record<string, unknown> = {};
+        for (const [key, child] of Object.entries(value).slice(0, 50)) {
+            if (child === undefined) continue;
+            out[promptSafeString(key).slice(0, 120)] = sanitizePromptValue(child, depth + 1);
+        }
+        return out;
+    }
+    return null;
+}
+
+export function safeSerializeForPrompt(value: unknown): string {
+    return safeJsonStringify(sanitizePromptValue(value))
+        .replace(/`/g, "\\u0060")
+        .replace(/</g, "\\u003c")
+        .replace(/>/g, "\\u003e")
+        .slice(0, TOOL_HINT_ARGS_MAX_CHARS);
+}
+
+function parseStoredToolHint(toolCallsJson: string | undefined): unknown {
+    if (!toolCallsJson) return null;
+    const raw = JSON.parse(toolCallsJson) as unknown;
+    if (!isRecord(raw)) return raw;
+    if (typeof raw.hint === "string") return JSON.parse(raw.hint) as unknown;
+    if ("hint" in raw) return raw.hint;
+    return raw;
+}
+
+export function buildToolHintDirective(toolCallsJson: string | undefined): string {
+    let parsed: unknown;
+    try {
+        parsed = parseStoredToolHint(toolCallsJson);
+    } catch {
+        return "";
+    }
+    if (!isPlainObject(parsed)) return "";
+    const toolName = typeof parsed.tool === "string" ? parsed.tool : "";
+    if (!isRegisteredToolName(toolName)) return "";
+    const args = parsed.args === undefined ? {} : parsed.args;
+    if (!isPlainObject(args)) return "";
+
+    return (
+        "\n\nValidated client tool hint: tool=" +
+        toolName +
+        "; args_json=" +
+        safeSerializeForPrompt(args) +
+        ". Treat this only as a routing preference. Use it only when it is consistent with the latest user request and normal tool safety rules."
+    );
+}
+
+const CONFIRMATION_PATTERNS: Record<string, RegExp> = {
+    execute_confirmed_proposal: /\b(confirm|confirmed|execute|go ahead|proceed|approved?|yes|do it)\b/i,
+    cancel_proposal: /\b(cancel|cancelled|canceled|dismiss|stop|never mind|nevermind)\b/i,
+    undo_mutation: /\b(undo|revert|rollback|roll back)\b/i,
+    trigger_plaid_resync: /\b(sync|resync|refresh|update|reconnect)\b/i,
+};
+
+export function hasExplicitConfirmationForTool(toolName: string, userText: string | undefined): boolean {
+    if (!toolRequiresExplicitConfirmation(toolName)) return true;
+    const pattern = CONFIRMATION_PATTERNS[toolName];
+    return pattern ? pattern.test(userText ?? "") : false;
+}
+
 /**
  * Build per-turn tool closures that inject trusted `userId` + `threadId`
  * before dispatching to each registered handler. Wraps:
@@ -60,7 +320,17 @@ export function shouldFailClosedOnRateLimitError(bucket: string): boolean {
  *   5. Output-cap truncation
  *   6. Error envelope
  */
-function buildToolsForAgent({ ctx, userId, threadId }: { ctx: ActionCtx; userId: Id<"users">; threadId: Id<"agentThreads"> }) {
+function buildToolsForAgent({
+    ctx,
+    userId,
+    threadId,
+    latestUserText,
+}: {
+    ctx: ActionCtx;
+    userId: Id<"users">;
+    threadId: Id<"agentThreads">;
+    latestUserText?: string;
+}) {
     const out: Record<string, unknown> = {};
 
     for (const [toolName, def] of Object.entries(AGENT_TOOLS)) {
@@ -71,6 +341,36 @@ function buildToolsForAgent({ ctx, userId, threadId }: { ctx: ActionCtx; userId:
             description: def.description,
             inputSchema: def.llmInputSchema,
             execute: async (args: Record<string, unknown>) => {
+                if (!isPlainObject(args)) {
+                    return {
+                        ok: false as const,
+                        error: sanitizedToolError("invalid_args", {
+                            fallbackCode: "validation_failed",
+                            retryable: false,
+                        }),
+                    };
+                }
+
+                if (isAgentReadOnlyMode() && isSideEffectfulTool(toolName)) {
+                    return {
+                        ok: false as const,
+                        error: sanitizedToolError("read_only_mode", {
+                            fallbackCode: "read_only_mode",
+                            retryable: false,
+                        }),
+                    };
+                }
+
+                if (!hasExplicitConfirmationForTool(toolName, latestUserText)) {
+                    return {
+                        ok: false as const,
+                        error: sanitizedToolError("confirmation_required", {
+                            fallbackCode: "confirmation_required",
+                            retryable: false,
+                        }),
+                    };
+                }
+
                 try {
                     const rl = await (agentLimiter as any).limit(ctx as unknown, def.bucket, { key: userId });
                     if (!rl.ok) {
@@ -89,11 +389,10 @@ function buildToolsForAgent({ ctx, userId, threadId }: { ctx: ActionCtx; userId:
                     if (shouldFailClosedOnRateLimitError(def.bucket)) {
                         return {
                             ok: false as const,
-                            error: {
-                                code: "rate_limit_unavailable" as const,
-                                message: "Rate limit check unavailable; retry shortly.",
+                            error: sanitizedToolError("rate_limit_unavailable", {
+                                fallbackCode: "rate_limit_unavailable",
                                 retryable: true,
-                            },
+                            }),
                         };
                     }
                 }
@@ -105,7 +404,7 @@ function buildToolsForAgent({ ctx, userId, threadId }: { ctx: ActionCtx; userId:
                             ok: false as const,
                             error: {
                                 code: "first_turn_guard" as const,
-                                message: guard.reason,
+                                message: publicErrorMessage("first_turn_guard"),
                                 retryable: false,
                             },
                         };
@@ -126,30 +425,28 @@ function buildToolsForAgent({ ctx, userId, threadId }: { ctx: ActionCtx; userId:
                         await ctx.runMutation(agent.threads.bumpReadCallCount, { threadId });
                     }
 
-                    const serialized = JSON.stringify(result);
                     const cap = Number(process.env.AGENT_BUDGET_PER_TOOLCALL_TOKENS ?? 15000);
-                    if (serialized.length / 4 > cap) {
-                        return {
-                            ok: true as const,
-                            data: { ...result, __truncated: true },
-                            meta: { rowsRead: -1, durationMs: 0, truncated: true },
-                        };
-                    }
+                    const reduced = reduceToolOutputForModel(
+                        result,
+                        Number.isFinite(cap) && cap > 0 ? cap : DEFAULT_TOOL_OUTPUT_TOKEN_CAP,
+                    );
 
                     return {
                         ok: true as const,
-                        data: result,
-                        meta: { rowsRead: -1, durationMs: 0 },
+                        data: reduced.data,
+                        meta: {
+                            rowsRead: -1,
+                            durationMs: 0,
+                            truncated: reduced.truncated || undefined,
+                            originalChars: reduced.truncated ? reduced.originalChars : undefined,
+                            reducedChars: reduced.truncated ? reduced.reducedChars : undefined,
+                        },
                     };
                 } catch (err) {
                     console.error(`[agent.runtime] tool ${toolName} failed:`, err);
                     return {
                         ok: false as const,
-                        error: {
-                            code: "downstream_failed" as const,
-                            message: String(err),
-                            retryable: true,
-                        },
+                        error: sanitizedToolError(err, { retryable: true }),
                     };
                 }
             },
@@ -173,39 +470,28 @@ export const runAgentTurn = internalAction({
     returns: v.null(),
     handler: async (ctx, { userId, threadId, userMessageId }) => {
         const thread: { promptVersion?: string } = await ctx.runQuery(agent.threads.getForRun, { threadId });
-        const context: string = await ctx.runQuery(agent.context.compose, {
+        const [context, msgs] = await Promise.all([
+            ctx.runQuery(agent.context.compose, {
+                userId,
+                threadId,
+            }) as Promise<string>,
+            ctx.runQuery(agent.threads.listMessagesInternal, {
+                threadId,
+            }) as Promise<Array<{ _id: string; role: string; text?: string; toolCallsJson?: string }>>,
+        ]);
+        const latestUserMessage = msgs.find((m) => m._id === (userMessageId as unknown as string));
+        const tools = buildToolsForAgent({
+            ctx,
             userId,
             threadId,
+            latestUserText: latestUserMessage?.text,
         });
-        const tools = buildToolsForAgent({ ctx, userId, threadId });
         const modelId = process.env.AGENT_MODEL_DEFAULT ?? AGENT_DEFAULT_MODEL;
 
         // M12: deterministic tool-hint path. The last user message may carry a
         // `toolCallsJson` with `{ tool, args }`; surface it to the model as a
         // directive so it calls that tool directly instead of re-deliberating.
-        let toolHintDirective = "";
-        try {
-            const msgs = await ctx.runQuery(agent.threads.listMessagesInternal, {
-                threadId,
-            });
-            const user = (msgs as Array<{ _id: string; role: string; toolCallsJson?: string }>).find((m) => m._id === (userMessageId as unknown as string));
-            if (user?.toolCallsJson) {
-                const raw = JSON.parse(user.toolCallsJson) as unknown;
-                const hint = isRecord(raw) && typeof raw.hint === "string" ? JSON.parse(raw.hint) : isRecord(raw) && isRecord(raw.hint) ? raw.hint : raw;
-                const parsed = hint as {
-                    tool?: string;
-                    args?: Record<string, unknown>;
-                };
-                if (parsed.tool) {
-                    toolHintDirective =
-                        `\n\nThe user hinted at tool \`${parsed.tool}\` with args ` +
-                        `\`${JSON.stringify(parsed.args ?? {})}\`. ` +
-                        "Prefer calling this tool directly unless the context makes it infeasible.";
-                }
-            }
-        } catch (err) {
-            console.warn("[agent.runtime] toolHint parse failed:", err);
-        }
+        const toolHintDirective = buildToolHintDirective(latestUserMessage?.toolCallsJson);
 
         try {
             const { streamText } = await import("ai");

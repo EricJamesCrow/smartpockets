@@ -434,3 +434,17 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
 };
 
 export type ToolName = keyof typeof AGENT_TOOLS;
+
+export function isRegisteredToolName(toolName: string): toolName is ToolName {
+    return Object.prototype.hasOwnProperty.call(AGENT_TOOLS, toolName);
+}
+
+export function isSideEffectfulTool(toolName: string): boolean {
+    const def = AGENT_TOOLS[toolName];
+    return def?.handlerType === "mutation";
+}
+
+export function toolRequiresExplicitConfirmation(toolName: string): boolean {
+    const def = AGENT_TOOLS[toolName];
+    return def?.category === "execute" || (def?.category === "plaid" && def.handlerType === "mutation");
+}

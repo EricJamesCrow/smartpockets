@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { agentMutation } from "../../functions";
 import { api, internal } from "../../../_generated/api";
+import { assertAgentSideEffectsAllowed } from "../../writeTool";
 
 /**
  * Schedule `syncPlaidItemInternal` for one or more of the viewer's Plaid items.
@@ -27,6 +28,7 @@ export const triggerPlaidResync = agentMutation({
     itemsQueued: v.number(),
   }),
   handler: async (ctx, { plaidItemId }) => {
+    assertAgentSideEffectsAllowed();
     const viewer = ctx.viewerX();
     const items = (await ctx.runQuery(api.items.queries.getItemsByUserId, {
       userId: viewer.externalId,

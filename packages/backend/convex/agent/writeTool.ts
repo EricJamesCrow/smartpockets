@@ -78,6 +78,26 @@ export function markDestructive(toolName: string) {
     DESTRUCTIVE_TOOLS.add(toolName);
 }
 
+const READ_ONLY_ENV_KEYS = [
+    "AGENT_READ_ONLY_MODE",
+    "SMARTPOCKETS_READ_ONLY_MODE",
+    "SMARTPOCKETS_DEMO_MODE",
+] as const;
+
+function isTruthyEnv(value: string | undefined): boolean {
+    return value === "1" || value?.toLowerCase() === "true" || value?.toLowerCase() === "yes" || value?.toLowerCase() === "on";
+}
+
+export function isAgentReadOnlyMode(env: Record<string, string | undefined> = process.env): boolean {
+    return READ_ONLY_ENV_KEYS.some((key) => isTruthyEnv(env[key]));
+}
+
+export function assertAgentSideEffectsAllowed() {
+    if (isAgentReadOnlyMode()) {
+        throw new Error("read_only_mode");
+    }
+}
+
 // ---- Strategy C-prime insert -----------------------------------------------
 
 export interface CreateProposalArgs {
@@ -103,6 +123,7 @@ export async function createProposal(
     ctx: any, // eslint-disable-line @typescript-eslint/no-explicit-any
     args: CreateProposalArgs,
 ): Promise<CreateProposalResult> {
+    assertAgentSideEffectsAllowed();
     const viewer = ctx.viewerX();
 
     // First-turn-read-before-write guard (W5.11): the agent must have made
@@ -205,7 +226,7 @@ function storedFailureMessage(proposal: { errorJson?: string }): string {
     if (!proposal.errorJson) return "execution_failed";
     try {
         const stored = JSON.parse(proposal.errorJson) as { message?: string };
-        return stored.message ?? "execution_failed";
+        return publicExecutionError(stored.message);
     } catch {
         return "execution_failed";
     }
@@ -215,8 +236,14 @@ function failedExecuteResult(proposal: { summaryText?: string }, message: string
     return {
         summary: proposal.summaryText ?? "Proposal execution failed.",
         state: "failed",
-        error: message,
+        error: publicExecutionError(message),
     };
+}
+
+function publicExecutionError(message: unknown): string {
+    if (typeof message !== "string" || message.length === 0) return "execution_failed";
+    if (/^[a-z][a-z0-9_:-]{0,79}$/i.test(message)) return message;
+    return "execution_failed";
 }
 
 export async function executeWriteTool(
@@ -262,6 +289,15 @@ export async function executeWriteTool(
 
     if (proposal.state !== "confirmed") {
         throw new Error(`proposal_invalid_state: expected confirmed, got ${proposal.state}`);
+    }
+
+    if (isAgentReadOnlyMode()) {
+        const message = "read_only_mode";
+        await proposal.patch({
+            state: "failed",
+            errorJson: JSON.stringify({ message }),
+        });
+        return failedExecuteResult(proposal, message);
     }
 
     // Destructive gating (W5.11): the trusted signal lives on the proposal
@@ -411,6 +447,7 @@ export async function undoByToken(
     ctx: any, // eslint-disable-line @typescript-eslint/no-explicit-any
     args: UndoByTokenArgs,
 ): Promise<UndoByTokenResult> {
+    assertAgentSideEffectsAllowed();
     const viewer = ctx.viewerX();
 
     let auditLogId: string;

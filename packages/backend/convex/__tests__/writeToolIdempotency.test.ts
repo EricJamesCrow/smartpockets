@@ -153,6 +153,49 @@ describe("executeWriteTool idempotency", () => {
         });
     });
 
+    it("marks confirmed proposals failed in read-only mode instead of throwing early", async () => {
+        const previous = process.env.AGENT_READ_ONLY_MODE;
+        process.env.AGENT_READ_ONLY_MODE = "1";
+        const proposal: FakeProposal = {
+            _id: proposalId,
+            userId: viewerId,
+            agentThreadId: threadId,
+            state: "confirmed",
+            toolName: "propose_transaction_update",
+            argsJson: "{}",
+            summaryText: "x",
+        };
+        proposal.patch = async (fields) => {
+            Object.assign(proposal, fields);
+        };
+        const ctx = makeCtx({
+            viewerId,
+            proposal,
+            auditsByProposal: new Map(),
+        });
+
+        try {
+            const result = await executeWriteTool(ctx as any, {
+                proposalId: proposalId as any,
+                threadId: threadId as any,
+            });
+
+            expect(result).toEqual({
+                summary: "x",
+                state: "failed",
+                error: "read_only_mode",
+            });
+            expect(proposal.state).toBe("failed");
+            expect(proposal.errorJson).toBe(JSON.stringify({ message: "read_only_mode" }));
+        } finally {
+            if (previous === undefined) {
+                delete process.env.AGENT_READ_ONLY_MODE;
+            } else {
+                process.env.AGENT_READ_ONLY_MODE = previous;
+            }
+        }
+    });
+
     it("does not mark failed inside the executor transaction when an executor throws", async () => {
         const proposal: FakeProposal = {
             _id: proposalId,

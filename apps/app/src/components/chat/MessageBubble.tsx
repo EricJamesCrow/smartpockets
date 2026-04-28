@@ -26,9 +26,40 @@ function tryParseJson(raw: string | undefined): Record<string, unknown> | null {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function unwrapToolEnvelope(parsed: Record<string, unknown> | null): unknown {
+  if (!parsed) return null;
+  if (parsed.ok === true) return "data" in parsed ? parsed.data : null;
+  return parsed;
+}
+
+function deriveToolErrorText(parsed: Record<string, unknown> | null): string | undefined {
+  if (!parsed) return undefined;
+  if (parsed.ok === false) {
+    const error = parsed.error;
+    if (isRecord(error) && typeof error.message === "string") return error.message;
+    return "Tool failed";
+  }
+  const payload = parsed.ok === true && isRecord(parsed.data) ? parsed.data : parsed;
+  if (payload.state === "failed") {
+    return typeof payload.error === "string" ? payload.error : "Tool failed";
+  }
+  if (
+    parsed.ok !== true &&
+    typeof parsed.error === "string" &&
+    (typeof parsed.code === "string" || typeof parsed.retryable === "boolean")
+  ) {
+    return parsed.error;
+  }
+  return undefined;
+}
+
 function deriveToolState(message: AgentMessage): PartState {
   const parsed = tryParseJson(message.toolResultJson);
-  if (parsed && typeof parsed.error === "string") return "output-error";
+  if (deriveToolErrorText(parsed)) return "output-error";
   if (message.toolResultJson) return "output-available";
   if (message.toolCallsJson) return "input-available";
   return "input-streaming";
@@ -50,13 +81,12 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
     if (!message.toolName && !parsedOutput && message.text) {
       return <RawTextMessage text={message.text} />;
     }
-    const errorText =
-      parsedOutput && typeof parsedOutput.error === "string" ? parsedOutput.error : undefined;
+    const errorText = deriveToolErrorText(parsedOutput);
     return (
       <ToolResultRenderer
         toolName={(message.toolName ?? "unknown") as ToolName}
         input={parsedInput ?? {}}
-        output={parsedOutput ?? null}
+        output={unwrapToolEnvelope(parsedOutput)}
         state={deriveToolState(message)}
         errorText={errorText}
         proposalId={message.proposalId}
