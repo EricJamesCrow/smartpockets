@@ -1882,6 +1882,97 @@ async function getLastWebhookAt(
   return log?.receivedAt ?? null;
 }
 
+const webhookStatusValidator = v.union(
+  v.literal("received"),
+  v.literal("processing"),
+  v.literal("processed"),
+  v.literal("duplicate"),
+  v.literal("failed"),
+);
+
+function isWebhookDedupeCandidate(status: string) {
+  return status === "received" || status === "processing";
+}
+
+/**
+ * Record a Plaid webhook receipt and detect in-flight duplicate deliveries.
+ *
+ * @security Components cannot verify webhook signatures. The host app must
+ * call this only after signature verification or in an approved sandbox mode.
+ */
+export const recordWebhookReceived = mutation({
+  args: {
+    itemId: v.string(),
+    webhookType: v.string(),
+    webhookCode: v.string(),
+    bodyHash: v.string(),
+    receivedAt: v.number(),
+    dedupeWindowMs: v.optional(v.number()),
+  },
+  returns: v.object({
+    webhookLogId: v.string(),
+    duplicate: v.boolean(),
+    duplicateOf: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const cutoff = args.receivedAt - (args.dedupeWindowMs ?? 24 * 60 * 60 * 1000);
+    const recent = await ctx.db
+      .query("webhookLogs")
+      .withIndex("by_body_hash_received_at", (q) =>
+        q.eq("bodyHash", args.bodyHash).gte("receivedAt", cutoff)
+      )
+      .order("desc")
+      .take(10);
+    const duplicateOf = recent.find(
+      (log) => isWebhookDedupeCandidate(log.status),
+    );
+    const status = duplicateOf ? "duplicate" : "received";
+    const id = await ctx.db.insert("webhookLogs", {
+      webhookId: `${args.itemId}:${args.webhookType}:${args.webhookCode}:${args.receivedAt}`,
+      itemId: args.itemId,
+      webhookType: args.webhookType,
+      webhookCode: args.webhookCode,
+      bodyHash: args.bodyHash,
+      receivedAt: args.receivedAt,
+      status,
+    });
+
+    return {
+      webhookLogId: String(id),
+      duplicate: Boolean(duplicateOf),
+      duplicateOf: duplicateOf ? String(duplicateOf._id) : undefined,
+    };
+  },
+});
+
+/**
+ * Update a Plaid webhook processing log.
+ */
+export const updateWebhookProcessingStatus = mutation({
+  args: {
+    webhookLogId: v.string(),
+    status: webhookStatusValidator,
+    processedAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    scheduledFunctionId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const id = ctx.db.normalizeId("webhookLogs", args.webhookLogId);
+    if (!id) return null;
+    const log = await ctx.db.get(id);
+    if (!log) return null;
+
+    await ctx.db.patch(log._id, {
+      status: args.status,
+      processedAt: args.processedAt,
+      errorMessage: args.errorMessage,
+      scheduledFunctionId: args.scheduledFunctionId,
+    });
+    return null;
+  },
+});
+
 /**
  * Get health for a single plaidItem.
  *

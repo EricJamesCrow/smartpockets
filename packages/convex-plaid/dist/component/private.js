@@ -2196,10 +2196,12 @@ export const findRecentByHash = internalQuery({
         const cutoff = Date.now() - args.windowMs;
         const matches = await ctx.db
             .query("webhookLogs")
-            .withIndex("by_body_hash", (q) => q.eq("bodyHash", args.bodyHash))
-            .collect();
-        // Find first match within time window that isn't a duplicate
-        const recent = matches.find((log) => log.receivedAt >= cutoff && log.status !== "duplicate");
+            .withIndex("by_body_hash_received_at", (q) => q.eq("bodyHash", args.bodyHash).gte("receivedAt", cutoff))
+            .order("desc")
+            .take(10);
+        // Only in-flight receipts are deduped. Completed matching payloads can be
+        // legitimate repeated Plaid events and should still schedule fresh work.
+        const recent = matches.find((log) => log.status === "received" || log.status === "processing");
         if (!recent)
             return null;
         return {

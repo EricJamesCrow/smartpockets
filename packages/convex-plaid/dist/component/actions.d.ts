@@ -26,16 +26,16 @@ type BackfillTransactionEnrichmentsResult = {
  * The host app should call this before opening Plaid Link modal.
  */
 export declare const createLinkToken: import("convex/server").RegisteredAction<"public", {
-    clientName?: string | undefined;
+    products?: string[] | undefined;
+    accountFilters?: any;
     countryCodes?: string[] | undefined;
     language?: string | undefined;
-    products?: string[] | undefined;
+    clientName?: string | undefined;
     webhookUrl?: string | undefined;
-    accountFilters?: any;
-    plaidClientId: string;
-    plaidEnv: string;
-    plaidSecret: string;
     userId: string;
+    plaidClientId: string;
+    plaidSecret: string;
+    plaidEnv: string;
 }, Promise<{
     linkToken: string;
 }>>;
@@ -53,12 +53,12 @@ export declare const createLinkToken: import("convex/server").RegisteredAction<"
  */
 export declare const exchangePublicToken: import("convex/server").RegisteredAction<"public", {
     products?: string[] | undefined;
-    plaidClientId: string;
-    plaidEnv: string;
-    plaidSecret: string;
     userId: string;
-    encryptionKey: string;
+    plaidClientId: string;
+    plaidSecret: string;
+    plaidEnv: string;
     publicToken: string;
+    encryptionKey: string;
 }, Promise<{
     success: boolean;
     itemId: string;
@@ -76,8 +76,8 @@ export declare const exchangePublicToken: import("convex/server").RegisteredActi
 export declare const fetchAccounts: import("convex/server").RegisteredAction<"public", {
     plaidItemId: string;
     plaidClientId: string;
-    plaidEnv: string;
     plaidSecret: string;
+    plaidEnv: string;
     encryptionKey: string;
 }, Promise<{
     accountCount: number;
@@ -109,8 +109,8 @@ export declare const syncTransactions: import("convex/server").RegisteredAction<
     maxTransactions?: number | undefined;
     plaidItemId: string;
     plaidClientId: string;
-    plaidEnv: string;
     plaidSecret: string;
+    plaidEnv: string;
     encryptionKey: string;
 }, Promise<{
     added: number;
@@ -134,8 +134,8 @@ export declare const backfillTransactionEnrichments: import("convex/server").Reg
     maxTransactions?: number | undefined;
     plaidItemId: string;
     plaidClientId: string;
-    plaidEnv: string;
     plaidSecret: string;
+    plaidEnv: string;
     encryptionKey: string;
 }, Promise<BackfillTransactionEnrichmentsResult>>;
 /**
@@ -151,8 +151,8 @@ export declare const backfillTransactionEnrichments: import("convex/server").Reg
 export declare const fetchLiabilities: import("convex/server").RegisteredAction<"public", {
     plaidItemId: string;
     plaidClientId: string;
-    plaidEnv: string;
     plaidSecret: string;
+    plaidEnv: string;
     encryptionKey: string;
 }, Promise<{
     creditCards: number;
@@ -176,8 +176,8 @@ export declare const fetchLiabilities: import("convex/server").RegisteredAction<
 export declare const fetchRecurringStreams: import("convex/server").RegisteredAction<"public", {
     plaidItemId: string;
     plaidClientId: string;
-    plaidEnv: string;
     plaidSecret: string;
+    plaidEnv: string;
     encryptionKey: string;
 }, Promise<{
     inflows: number;
@@ -198,8 +198,8 @@ export declare const createUpdateLinkToken: import("convex/server").RegisteredAc
     mode?: "reauth" | "account_select" | undefined;
     plaidItemId: string;
     plaidClientId: string;
-    plaidEnv: string;
     plaidSecret: string;
+    plaidEnv: string;
     encryptionKey: string;
 }, Promise<{
     linkToken: string;
@@ -241,8 +241,8 @@ export declare const enrichTransactions: import("convex/server").RegisteredActio
         direction: "INFLOW" | "OUTFLOW";
     }[];
     plaidClientId: string;
-    plaidEnv: string;
     plaidSecret: string;
+    plaidEnv: string;
     encryptionKey: string;
 }, Promise<{
     enriched: number;
@@ -260,8 +260,8 @@ export declare const enrichTransactions: import("convex/server").RegisteredActio
 export declare const triggerTransactionsRefresh: import("convex/server").RegisteredAction<"public", {
     plaidItemId: string;
     plaidClientId: string;
-    plaidEnv: string;
     plaidSecret: string;
+    plaidEnv: string;
     encryptionKey: string;
 }, Promise<{
     success: boolean;
