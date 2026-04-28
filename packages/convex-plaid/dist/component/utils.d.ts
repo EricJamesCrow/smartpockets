@@ -10,6 +10,7 @@
  * not from process.env. This enables component isolation.
  */
 import { PlaidApi, type Transaction, type RemovedTransaction } from "plaid";
+export declare const DEFAULT_PLAID_PRODUCTS: readonly ["transactions", "liabilities"];
 type ConfidenceLevel = "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 type TransactionMerchantEnrichment = {
     merchantId: string;
@@ -31,6 +32,14 @@ type TransactionMerchantEnrichment = {
  * @returns Initialized PlaidApi client
  */
 export declare function initPlaidClient(clientId: string, secret: string, env: string): PlaidApi;
+/**
+ * Normalize the Plaid products this component needs for credit-card tracking.
+ *
+ * Transactions power balances/activity and liabilities power APR/payment data,
+ * so both must be persisted on component items even when the host app omits
+ * products during public-token exchange.
+ */
+export declare function normalizePlaidProducts(products?: string[]): string[];
 /**
  * Convert dollar amount to milliunits (× 1000).
  * Avoids floating point precision errors by storing as integers.

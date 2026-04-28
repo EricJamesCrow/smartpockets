@@ -340,6 +340,12 @@ export const onboardNewConnectionAction = action({
       // Step 3: Initial transaction sync
       console.log("📍 Step 3/4.5: Initial transaction sync");
       const syncResult = await getPlaid().syncTransactions(ctx, { plaidItemId });
+      if (syncResult.hasMore && !syncResult.skipped) {
+        await ctx.scheduler.runAfter(0, internal.plaidComponent.syncTransactionsInternal, {
+          plaidItemId,
+          trigger: "manual",
+        });
+      }
 
       // Step 4: Fetch liabilities
       console.log("📍 Step 4/4.5: Fetch liabilities");
@@ -403,9 +409,18 @@ export const syncTransactionsInternal = internalAction({
   },
   handler: async (ctx, args) => {
     console.log(`[syncTransactionsInternal] Syncing item ${args.plaidItemId} (trigger: ${args.trigger ?? "unknown"})`);
-    return await getPlaid().syncTransactions(ctx, {
+    const result = await getPlaid().syncTransactions(ctx, {
       plaidItemId: args.plaidItemId,
     });
+
+    if (result.hasMore && !result.skipped) {
+      await ctx.scheduler.runAfter(0, internal.plaidComponent.syncTransactionsInternal, {
+        plaidItemId: args.plaidItemId,
+        trigger: args.trigger ?? "manual",
+      });
+    }
+
+    return result;
   },
 });
 

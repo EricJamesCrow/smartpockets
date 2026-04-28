@@ -41,6 +41,17 @@ import type { QueryCtx, MutationCtx } from "./_generated/server.js";
  * @param updateFn - Function to update an existing record
  * @returns { created: boolean; id: string } - Whether record was created or updated
  */
+function compareByCreationTimeThenId<T extends { _id: any; _creationTime: number }>(
+  a: T,
+  b: T
+) {
+  const createdDelta = a._creationTime - b._creationTime;
+  if (createdDelta !== 0) return createdDelta;
+  const aId = String(a._id);
+  const bId = String(b._id);
+  return aId < bId ? -1 : aId > bId ? 1 : 0;
+}
+
 async function safeUpsertWithDedup<T extends { _id: any; _creationTime: number }>(
   ctx: MutationCtx,
   queryFn: () => Promise<T | null>,
@@ -52,9 +63,19 @@ async function safeUpsertWithDedup<T extends { _id: any; _creationTime: number }
   const existing = await queryFn();
 
   if (existing) {
-    // Record exists - just update it
-    await updateFn(existing._id);
-    return { created: false, id: String(existing._id) };
+    const allMatching = await queryAllFn();
+    const sorted = allMatching.length > 0
+      ? allMatching.sort(compareByCreationTimeThenId)
+      : [existing];
+    const survivor = sorted[0];
+    const duplicates = sorted.slice(1);
+
+    for (const dup of duplicates) {
+      await ctx.db.delete(dup._id);
+    }
+
+    await updateFn(survivor._id);
+    return { created: false, id: String(survivor._id) };
   }
 
   // No existing record - insert new one
@@ -67,7 +88,7 @@ async function safeUpsertWithDedup<T extends { _id: any; _creationTime: number }
 
   if (allMatching.length > 1) {
     // Duplicates detected! Keep the one with earliest creation time
-    const sorted = allMatching.sort((a, b) => a._creationTime - b._creationTime);
+    const sorted = allMatching.sort(compareByCreationTimeThenId);
     const survivor = sorted[0];
     const duplicates = sorted.slice(1);
 
@@ -248,6 +269,15 @@ type TransactionInput = {
   merchantEnrichment?: MerchantEnrichmentInput;
 };
 
+type StoredTransactionDoc = TransactionInput & {
+  _id: any;
+  _creationTime: number;
+  userId: string;
+  plaidItemId: string;
+  createdAt: number;
+  updatedAt?: number;
+};
+
 type MerchantEnrichmentDoc = MerchantEnrichmentInput & {
   _id: unknown;
   _creationTime: number;
@@ -320,6 +350,197 @@ function splitTransactionForStorage(transaction: TransactionInput) {
       ...(enrichmentData ? { enrichmentData } : {}),
     },
   };
+}
+
+async function prepareTransactionDocument(
+  ctx: MutationCtx,
+  transaction: TransactionInput
+) {
+  const { merchantEnrichment, transactionDoc } = splitTransactionForStorage(transaction);
+  if (merchantEnrichment) {
+    await upsertMerchantEnrichmentRecord(ctx, merchantEnrichment);
+  }
+  return transactionDoc;
+}
+
+async function removeDuplicateTransactionRows(
+  ctx: MutationCtx,
+  docs: StoredTransactionDoc[]
+): Promise<StoredTransactionDoc | null> {
+  if (docs.length === 0) return null;
+
+  const sorted = [...docs].sort(compareByCreationTimeThenId);
+  const survivor = sorted[0];
+
+  for (const duplicate of sorted.slice(1)) {
+    await ctx.db.delete(duplicate._id);
+  }
+
+  return survivor;
+}
+
+async function reassignPlaidItemReferences(
+  ctx: MutationCtx,
+  fromPlaidItemId: string,
+  toPlaidItemId: string
+) {
+  const mergeDuplicateRowPayload = <
+    T extends {
+      _id: any;
+      _creationTime: number;
+      plaidItemId: string;
+      [key: string]: unknown;
+    },
+  >(
+    rows: T[]
+  ) => {
+    const merged: Record<string, unknown> = {};
+
+    for (const row of [...rows].sort(compareByCreationTimeThenId)) {
+      for (const [key, value] of Object.entries(row)) {
+        if (key === "_id" || key === "_creationTime" || key === "createdAt") {
+          continue;
+        }
+        if (value !== undefined) {
+          merged[key] = value;
+        }
+      }
+    }
+
+    merged.plaidItemId = toPlaidItemId;
+    return merged;
+  };
+
+  const mergeRowsByNaturalKey = async <
+    T extends {
+      _id: any;
+      _creationTime: number;
+      plaidItemId: string;
+      [key: string]: unknown;
+    },
+  >(
+    fromRows: T[],
+    toRows: T[],
+    naturalKey: (row: T) => string
+  ) => {
+    const rowsByKey = new Map<string, { rows: T[]; hasSourceRow: boolean }>();
+    const addRow = (row: T, sourceRow: boolean) => {
+      const key = naturalKey(row);
+      const current = rowsByKey.get(key);
+      if (!current) {
+        rowsByKey.set(key, { rows: [row], hasSourceRow: sourceRow });
+        return;
+      }
+
+      current.rows.push(row);
+      current.hasSourceRow ||= sourceRow;
+    };
+
+    for (const target of toRows) addRow(target, false);
+    for (const source of fromRows) addRow(source, true);
+
+    for (const { rows, hasSourceRow } of rowsByKey.values()) {
+      if (!hasSourceRow) continue;
+
+      const sorted = [...rows].sort(compareByCreationTimeThenId);
+      const survivor = sorted[0];
+
+      await ctx.db.patch(
+        survivor._id,
+        mergeDuplicateRowPayload(sorted) as any
+      );
+
+      for (const duplicate of sorted.slice(1)) {
+        await ctx.db.delete(duplicate._id);
+      }
+    }
+  };
+
+  const accounts = await ctx.db
+    .query("plaidAccounts")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", fromPlaidItemId))
+    .collect();
+  const targetAccounts = await ctx.db
+    .query("plaidAccounts")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", toPlaidItemId))
+    .collect();
+  await mergeRowsByNaturalKey(accounts, targetAccounts, (account) => account.accountId);
+
+  const transactions = await ctx.db
+    .query("plaidTransactions")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", fromPlaidItemId))
+    .collect();
+  const targetTransactions = await ctx.db
+    .query("plaidTransactions")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", toPlaidItemId))
+    .collect();
+  await mergeRowsByNaturalKey(transactions, targetTransactions, (transaction) => transaction.transactionId);
+
+  const creditCardLiabilities = await ctx.db
+    .query("plaidCreditCardLiabilities")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", fromPlaidItemId))
+    .collect();
+  const targetCreditCardLiabilities = await ctx.db
+    .query("plaidCreditCardLiabilities")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", toPlaidItemId))
+    .collect();
+  await mergeRowsByNaturalKey(
+    creditCardLiabilities,
+    targetCreditCardLiabilities,
+    (liability) => liability.accountId
+  );
+
+  const mortgageLiabilities = await ctx.db
+    .query("plaidMortgageLiabilities")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", fromPlaidItemId))
+    .collect();
+  const targetMortgageLiabilities = await ctx.db
+    .query("plaidMortgageLiabilities")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", toPlaidItemId))
+    .collect();
+  await mergeRowsByNaturalKey(
+    mortgageLiabilities,
+    targetMortgageLiabilities,
+    (liability) => liability.accountId
+  );
+
+  const studentLoanLiabilities = await ctx.db
+    .query("plaidStudentLoanLiabilities")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", fromPlaidItemId))
+    .collect();
+  const targetStudentLoanLiabilities = await ctx.db
+    .query("plaidStudentLoanLiabilities")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", toPlaidItemId))
+    .collect();
+  await mergeRowsByNaturalKey(
+    studentLoanLiabilities,
+    targetStudentLoanLiabilities,
+    (liability) => liability.accountId
+  );
+
+  const recurringStreams = await ctx.db
+    .query("plaidRecurringStreams")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", fromPlaidItemId))
+    .collect();
+  const targetRecurringStreams = await ctx.db
+    .query("plaidRecurringStreams")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", toPlaidItemId))
+    .collect();
+  await mergeRowsByNaturalKey(recurringStreams, targetRecurringStreams, (stream) => stream.streamId);
+
+  const syncLogs = await ctx.db
+    .query("syncLogs")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", fromPlaidItemId))
+    .collect();
+  const targetSyncLogs = await ctx.db
+    .query("syncLogs")
+    .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", toPlaidItemId))
+    .collect();
+  await mergeRowsByNaturalKey(
+    syncLogs,
+    targetSyncLogs,
+    (syncLog) => `${syncLog.syncType}:${syncLog.trigger}:${syncLog.startedAt}`
+  );
 }
 
 // =============================================================================
@@ -409,6 +630,57 @@ export const createPlaidItem = internalMutation({
   },
   returns: v.string(),
   handler: async (ctx, args) => {
+    const now = Date.now();
+    const itemUpdate = {
+      userId: args.userId,
+      accessToken: args.accessToken,
+      institutionId: args.institutionId,
+      institutionName: args.institutionName,
+      products: args.products,
+      isActive: args.isActive ?? true,
+      status: args.status as any,
+      syncError: undefined,
+    };
+    const consolidateMatchingItems = async (
+      matchingItems: Array<{
+        _id: any;
+        _creationTime: number;
+        status: string;
+        syncVersion?: number;
+      }>
+    ) => {
+      const sorted = matchingItems
+        .filter((item) => item.status !== "deleting")
+        .sort(compareByCreationTimeThenId);
+      const survivor = sorted[0];
+
+      if (!survivor) return null;
+
+      for (const duplicate of sorted.slice(1)) {
+        await reassignPlaidItemReferences(
+          ctx,
+          String(duplicate._id),
+          String(survivor._id)
+        );
+        await ctx.db.delete(duplicate._id);
+      }
+
+      await ctx.db.patch(survivor._id, {
+        ...itemUpdate,
+        ...(survivor.syncVersion === undefined ? { syncVersion: 0 } : {}),
+      });
+
+      return String(survivor._id);
+    };
+
+    const matchingItems = await ctx.db
+      .query("plaidItems")
+      .withIndex("by_item_id", (q) => q.eq("itemId", args.itemId))
+      .collect();
+
+    const existingSurvivorId = await consolidateMatchingItems(matchingItems);
+    if (existingSurvivorId) return existingSurvivorId;
+
     const id = await ctx.db.insert("plaidItems", {
       userId: args.userId,
       itemId: args.itemId,
@@ -418,10 +690,15 @@ export const createPlaidItem = internalMutation({
       products: args.products,
       isActive: args.isActive ?? true,
       status: args.status as any,
-      createdAt: Date.now(),
+      createdAt: now,
+      syncVersion: 0,
     });
 
-    return String(id);
+    const itemsAfterInsert = await ctx.db
+      .query("plaidItems")
+      .withIndex("by_item_id", (q) => q.eq("itemId", args.itemId))
+      .collect();
+    return (await consolidateMatchingItems(itemsAfterInsert)) ?? String(id);
   },
 });
 
@@ -972,63 +1249,84 @@ export const bulkUpsertTransactions = internalMutation({
 
     const now = Date.now();
 
-    // OPTIMIZATION: Batch query - fetch all existing transactions for this item upfront
-    // This replaces N individual queries (one per modified/removed) with 1 query
+    // Batch query and group by Plaid transactionId. Replayed sync cursors and
+    // older duplicate rows are reconciled to one survivor per transactionId.
     const existingTransactions = await ctx.db
       .query("plaidTransactions")
       .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", args.plaidItemId))
-      .collect();
+      .collect() as StoredTransactionDoc[];
 
-    // Build lookup map: transactionId -> document _id (O(1) lookup)
-    const transactionIdToDoc = new Map(
-      existingTransactions.map((t) => [t.transactionId, t])
-    );
+    const transactionIdToDocs = new Map<string, StoredTransactionDoc[]>();
+    for (const transaction of existingTransactions) {
+      const docs = transactionIdToDocs.get(transaction.transactionId) ?? [];
+      docs.push(transaction);
+      transactionIdToDocs.set(transaction.transactionId, docs);
+    }
 
-    // Insert added transactions
-    for (const txn of args.added) {
-      const { merchantEnrichment, transactionDoc } = splitTransactionForStorage(txn);
-      if (merchantEnrichment) {
-        await upsertMerchantEnrichmentRecord(ctx, merchantEnrichment);
+    let addedCount = 0;
+    let modifiedCount = 0;
+
+    const upsertTransaction = async (txn: TransactionInput) => {
+      const existingDocs = transactionIdToDocs.get(txn.transactionId) ?? [];
+      const transactionDoc = await prepareTransactionDocument(ctx, txn);
+      const survivor = await removeDuplicateTransactionRows(ctx, existingDocs);
+
+      if (survivor) {
+        await ctx.db.patch(survivor._id, {
+          userId: args.userId,
+          plaidItemId: args.plaidItemId,
+          ...transactionDoc,
+          updatedAt: now,
+        });
+        transactionIdToDocs.set(txn.transactionId, [survivor]);
+        return "updated" as const;
       }
 
-      await ctx.db.insert("plaidTransactions", {
+      const id = await ctx.db.insert("plaidTransactions", {
         userId: args.userId,
         plaidItemId: args.plaidItemId,
         ...transactionDoc,
         createdAt: now,
       });
-    }
+      const inserted = await ctx.db.get(id);
+      if (inserted) {
+        transactionIdToDocs.set(txn.transactionId, [inserted as StoredTransactionDoc]);
+      }
+      return "created" as const;
+    };
 
-    // Update modified transactions (no query in loop - use Map lookup)
-    let modifiedCount = 0;
-    for (const txn of args.modified) {
-      const existingTransaction = transactionIdToDoc.get(txn.transactionId);
-      if (existingTransaction) {
-        const { merchantEnrichment, transactionDoc } = splitTransactionForStorage(txn);
-        if (merchantEnrichment) {
-          await upsertMerchantEnrichmentRecord(ctx, merchantEnrichment);
-        }
-
-        await ctx.db.patch(existingTransaction._id, {
-          ...transactionDoc,
-          updatedAt: now,
-        });
+    for (const txn of args.added) {
+      const result = await upsertTransaction(txn);
+      if (result === "created") {
+        addedCount++;
+      } else {
         modifiedCount++;
       }
     }
 
-    // Delete removed transactions (no query in loop - use Map lookup)
-    let removedCount = 0;
-    for (const transactionId of args.removed) {
-      const transaction = transactionIdToDoc.get(transactionId);
-      if (transaction) {
-        await ctx.db.delete(transaction._id);
-        removedCount++;
+    // Modified rows are also upserted so replay or out-of-order Plaid pages do
+    // not drop updates when the original "added" row is absent.
+    for (const txn of args.modified) {
+      const result = await upsertTransaction(txn);
+      if (result === "created") {
+        addedCount++;
+      } else {
+        modifiedCount++;
       }
     }
 
+    let removedCount = 0;
+    for (const transactionId of args.removed) {
+      const transactions = transactionIdToDocs.get(transactionId) ?? [];
+      for (const transaction of transactions) {
+        await ctx.db.delete(transaction._id);
+      }
+      removedCount += transactions.length;
+      transactionIdToDocs.delete(transactionId);
+    }
+
     return {
-      added: args.added.length,
+      added: addedCount,
       modified: modifiedCount,
       removed: removedCount,
     };

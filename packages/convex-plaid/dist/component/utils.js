@@ -10,6 +10,7 @@
  * not from process.env. This enables component isolation.
  */
 import { Configuration, PlaidApi, PlaidEnvironments, } from "plaid";
+export const DEFAULT_PLAID_PRODUCTS = ["transactions", "liabilities"];
 const CONFIDENCE_LEVELS = new Set([
     "VERY_HIGH",
     "HIGH",
@@ -39,6 +40,16 @@ export function initPlaidClient(clientId, secret, env) {
         },
     });
     return new PlaidApi(configuration);
+}
+/**
+ * Normalize the Plaid products this component needs for credit-card tracking.
+ *
+ * Transactions power balances/activity and liabilities power APR/payment data,
+ * so both must be persisted on component items even when the host app omits
+ * products during public-token exchange.
+ */
+export function normalizePlaidProducts(products) {
+    return Array.from(new Set([...(products ?? []), ...DEFAULT_PLAID_PRODUCTS]));
 }
 // =============================================================================
 // AMOUNT & CURRENCY UTILITIES
