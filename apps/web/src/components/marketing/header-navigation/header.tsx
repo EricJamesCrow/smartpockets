@@ -16,8 +16,8 @@ type HeaderNavItem = {
 };
 
 const headerNavItems: HeaderNavItem[] = [
-    { label: "Products", href: "/products", menu: <ProductsDropdown /> },
-    { label: "About", href: "/about" },
+    { label: "Product", href: "/products", menu: <ProductsDropdown /> },
+    { label: "Manifesto", href: "/about" },
 ];
 
 const footerNavItems = [
@@ -100,9 +100,10 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
         <header
             ref={headerRef}
             className={cx(
-                "relative flex h-18 w-full items-center justify-center md:h-20",
+                "relative flex h-18 w-full items-center justify-center border-b border-white/[0.06] backdrop-blur-md md:h-20",
                 isFloating && "h-16 md:h-19 md:pt-3",
                 isFullWidth && !isFloating ? "has-aria-expanded:bg-primary" : "max-md:has-aria-expanded:bg-primary",
+                "font-[family-name:var(--font-geist)]",
                 className,
             )}
         >

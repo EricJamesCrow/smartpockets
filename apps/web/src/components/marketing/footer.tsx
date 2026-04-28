@@ -1,76 +1,95 @@
-import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { SmartPocketsLogo } from "@repo/ui/untitledui/foundations/logo/smartpockets-logo";
 import { GitHub, LinkedIn, X } from "@repo/ui/untitledui/foundations/social-icons/index";
-import { TextType } from "@/components/ui/text-type";
 
-const footerSocials = [
+const socials = [
+    { label: "GitHub", icon: GitHub, href: "https://github.com/EricJamesCrow" },
     { label: "X (formerly Twitter)", icon: X, href: "https://x.com/ericjamescrow" },
     { label: "LinkedIn", icon: LinkedIn, href: "https://www.linkedin.com/in/ericcrow/" },
-    { label: "GitHub", icon: GitHub, href: "https://github.com/EricJamesCrow" },
 ];
 
-const footerLinks = [
-    { title: "Overview", href: "/" },
-    { title: "Features", href: "/features" },
-    { title: "Privacy", href: "/privacy" },
+const productLinks = [
+    { label: "Product", href: "/products" },
+    { label: "Manifesto", href: "/about" },
+    { label: "Sign in", href: "/sign-in" },
+];
+
+const legalLinks = [
+    { label: "Privacy", href: "/privacy" },
+    { label: "Terms", href: "/terms" },
+    { label: "Press kit", href: "/about" },
 ];
 
 export const Footer = () => {
     return (
-        <footer className="dark-mode bg-primary py-12 md:pt-16">
+        <footer className="relative border-t border-white/[0.06] bg-[#0b0c0e] pt-20 md:pt-28">
             <div className="max-w-container mx-auto px-4 md:px-8">
-                <div className="flex flex-col justify-between gap-x-8 gap-y-12 lg:flex-row">
-                    <div className="flex flex-col gap-8 md:items-start">
-                        <div className="flex w-full flex-col gap-6 md:max-w-xs md:gap-8">
-                            <SmartPocketsLogo size="lg" />
-                            <p className="text-md text-tertiary">Smart credit card management for everyone.</p>
-                        </div>
-                        <nav>
-                            <ul className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-[repeat(3,max-content)]">
-                                {footerLinks.map((item) => (
-                                    <li key={item.title}>
-                                        <Button color="link-gray" size="lg" href={item.href}>
-                                            {item.title}
-                                        </Button>
+                <div className="grid grid-cols-1 gap-y-14 lg:grid-cols-12 lg:gap-x-12">
+                    <div className="flex flex-col gap-8 lg:col-span-6">
+                        <SmartPocketsLogo size="md" />
+                        <p className="max-w-md font-[family-name:var(--font-source-serif)] text-2xl font-light leading-tight text-white/85 md:text-3xl">
+                            <span className="italic text-white/60">An open ledger </span>
+                            <span className="text-white">for the cards in your wallet, the goals in your year, and the bills you would rather forget.</span>
+                        </p>
+                        <p className="text-sm leading-relaxed text-white/45 md:max-w-md">
+                            SmartPockets is built and maintained by an independent operator. The hosted plan covers Plaid and infrastructure costs. The code is yours.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-12 lg:col-span-6 lg:grid-cols-3">
+                        <FooterColumn label="Read" links={productLinks} />
+                        <FooterColumn label="Trust" links={legalLinks} />
+                        <div>
+                            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/35">Off-platform</p>
+                            <ul className="mt-5 space-y-3">
+                                {socials.map(({ label, icon: Icon, href }) => (
+                                    <li key={label}>
+                                        <a
+                                            href={href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group inline-flex items-center gap-2.5 text-sm text-white/65 outline-focus-ring transition duration-200 ease-out hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+                                        >
+                                            <Icon size={14} aria-hidden="true" className="opacity-60 transition-opacity duration-200 group-hover:opacity-100" />
+                                            {label}
+                                        </a>
                                     </li>
                                 ))}
                             </ul>
-                        </nav>
-                    </div>
-
-                    <div className="flex flex-col items-start md:items-end justify-end">
-                        <p className="text-xs text-quaternary font-medium uppercase tracking-wider mb-0.5">Currently in development by</p>
-                        <TextType
-                            text="CrowDevelopment"
-                            className="text-lg font-semibold tracking-tight text-white font-[family-name:var(--font-space-grotesk)]"
-                            delay={2}
-                            speed={0.08}
-                            keepCursor
-                        />
+                        </div>
                     </div>
                 </div>
-                
-                <div className="border-secondary mt-12 flex flex-col-reverse justify-between gap-6 border-t pt-8 md:mt-12 md:flex-row md:items-end">
-                    <div className="flex flex-col gap-2">
-                        <p className="text-sm text-quaternary">&copy; 2026 SmartPockets. All rights reserved.</p>
-                    </div>
 
-                    <ul className="flex gap-6 mt-2">
-                        {footerSocials.map(({ label, icon: Icon, href }) => (
-                            <li key={label}>
-                                <a
-                                    href={href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-fg-quaternary outline-focus-ring hover:text-fg-quaternary_hover transition duration-100 ease-linear focus-visible:outline-2 focus-visible:outline-offset-2"
-                                >
-                                    <Icon size={24} aria-label={label} />
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
+                <div className="mt-20 border-t border-white/[0.06] pt-8 pb-12">
+                    <div className="flex flex-col gap-y-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="font-[family-name:var(--font-geist-mono)] text-xs uppercase tracking-[0.16em] text-white/40">
+                            © 2026 SmartPockets · A CrowDevelopment study
+                        </p>
+                        <p className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.04em] text-white/35">
+                            v0.4.2 · alpha · last sync 04/27/26
+                        </p>
+                    </div>
                 </div>
             </div>
         </footer>
     );
 };
+
+function FooterColumn({ label, links }: { label: string; links: { label: string; href: string }[] }) {
+    return (
+        <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/35">{label}</p>
+            <ul className="mt-5 space-y-3">
+                {links.map((link) => (
+                    <li key={link.label}>
+                        <a
+                            href={link.href}
+                            className="text-sm text-white/65 outline-focus-ring transition duration-200 ease-out hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+                        >
+                            {link.label}
+                        </a>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
