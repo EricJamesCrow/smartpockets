@@ -1,0 +1,70 @@
+{
+  "description": "Deterministic money-unit smoke fixture. Synthetic IDs only; never seed this into production Clerk, production Convex, billing, or a real Plaid item.",
+  "environment": {
+    "convexDeployment": "dev or convex-test only",
+    "clerk": "synthetic local user only",
+    "plaid": "constructed sandbox-shaped rows only",
+    "billing": "disabled"
+  },
+  "user": {
+    "externalId": "demo_clerk_user_money_units",
+    "email": "money-units@example.test"
+  },
+  "plaidItem": {
+    "plaidItemId": "plaid_item_money_units",
+    "itemId": "sandbox_item_money_units",
+    "institutionName": "Seed Bank"
+  },
+  "plaidAccount": {
+    "accountId": "plaid_account_credit_800564",
+    "name": "Seed Bank Credit Card",
+    "officialName": "Seed Bank Preferred",
+    "mask": "0564",
+    "type": "credit",
+    "subtype": "credit card",
+    "balances": {
+      "current": 8005640,
+      "available": 1994360,
+      "limit": 10000000,
+      "isoCurrencyCode": "USD"
+    }
+  },
+  "plaidTransaction": {
+    "transactionId": "plaid_tx_7253",
+    "accountId": "plaid_account_credit_800564",
+    "amount": 7253,
+    "date": "2026-04-15",
+    "merchantName": "Seed Merchant"
+  },
+  "plaidCreditCardLiability": {
+    "accountId": "plaid_account_credit_800564",
+    "lastPaymentAmount": 200000,
+    "lastStatementBalance": 8005640,
+    "minimumPaymentAmount": 35000,
+    "nextPaymentDueDate": "2026-05-18",
+    "aprs": [
+      {
+        "aprPercentage": 27.49,
+        "aprType": "purchase_apr",
+        "balanceSubjectToApr": 8005640,
+        "interestChargeAmount": 95120
+      }
+    ]
+  },
+  "statementEmailPayload": {
+    "firstName": "Seed",
+    "cadence": 3,
+    "cadenceLabel": "in 3 days",
+    "statements": [
+      {
+        "cardId": "credit_card_seed_800564",
+        "cardName": "Seed Bank Preferred",
+        "closingDate": "2026-04-23",
+        "projectedBalanceCents": 800564,
+        "minimumDueCents": 3500,
+        "dueDate": "2026-05-18",
+        "cardDetailUrl": "https://app.smartpockets.test/credit-cards/credit_card_seed_800564"
+      }
+    ]
+  }
+}
