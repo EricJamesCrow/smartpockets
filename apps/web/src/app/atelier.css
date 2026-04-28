@@ -1,0 +1,199 @@
+/*
+ * Obsidian Atelier — bespoke CSS for the marketing landing redesign.
+ * Layered after the shared globals so it can override.
+ *
+ * Within `.atelier-scope`, override the bg-brand-solid token used by
+ * UntitledUI primary buttons to amber so CTAs feel like wax seals,
+ * not green chips.
+ */
+.atelier-scope {
+    --color-bg-brand-solid: rgb(245 184 47);
+    --color-bg-brand-solid_hover: rgb(252 211 77);
+    --color-button-primary-icon: rgba(34, 22, 4, 0.9);
+    --color-button-primary-icon_hover: rgba(34, 22, 4, 1);
+    --color-fg-brand-primary: rgb(252 211 77);
+    --color-fg-brand-secondary: rgb(245 184 47);
+    --color-text-brand-secondary: rgb(252 211 77);
+}
+
+/* Force text on amber CTA to be near-black for legibility */
+.atelier-scope button[class*="bg-brand-solid"],
+.atelier-scope a[class*="bg-brand-solid"],
+.atelier-scope [data-rac][class*="bg-brand-solid"] {
+    color: rgb(34 22 4) !important;
+    text-shadow: 0 1px 0 rgba(255, 236, 179, 0.25);
+}
+
+/* Engraved serif text — subtle inset lighting */
+.atelier-engrave {
+    color: rgba(255, 236, 179, 0.95);
+    background: linear-gradient(180deg, rgba(255, 236, 179, 1) 0%, rgba(252, 211, 77, 0.65) 50%, rgba(180, 130, 40, 0.55) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 1px 0 rgba(255, 236, 179, 0.06);
+    filter: drop-shadow(0 0 12px rgba(252, 211, 77, 0.15));
+}
+
+/* Header pill — amber wax glow */
+.atelier-pill::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    pointer-events: none;
+    background: radial-gradient(circle at 30% 0%, rgba(252, 211, 77, 0.25), transparent 60%);
+    opacity: 0.7;
+    transition: opacity 200ms ease;
+}
+.atelier-pill:hover::before {
+    opacity: 1;
+}
+
+/* Glass surface — same as our other backdrops, but subtle highlight on top */
+.atelier-glass {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 1px 0 rgba(0, 0, 0, 0.5),
+        0 24px 48px -24px rgba(0, 0, 0, 0.7);
+}
+
+/* Glass case — highlight rim */
+.atelier-case {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+        0 40px 80px -32px rgba(0, 0, 0, 0.7),
+        0 0 80px -40px rgba(252, 211, 77, 0.18);
+}
+
+/* Concierge plate */
+.atelier-concierge {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 236, 179, 0.05),
+        inset 0 0 80px -40px rgba(252, 211, 77, 0.18),
+        0 60px 120px -40px rgba(0, 0, 0, 0.7);
+}
+
+/* Wax seal flicker */
+@keyframes atelier-seal-pulse {
+    0%, 100% {
+        box-shadow:
+            inset 0 0 24px rgba(252, 211, 77, 0.18),
+            0 0 40px -8px rgba(252, 211, 77, 0.5);
+    }
+    50% {
+        box-shadow:
+            inset 0 0 32px rgba(252, 211, 77, 0.28),
+            0 0 56px -8px rgba(252, 211, 77, 0.65);
+    }
+}
+.atelier-seal {
+    animation: atelier-seal-pulse 5.5s ease-in-out infinite;
+}
+
+/* Ticker dot flicker */
+@keyframes atelier-ticker-flicker {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    35% { opacity: 0.55; transform: scale(0.92); }
+    50% { opacity: 1; transform: scale(1.05); }
+    70% { opacity: 0.7; transform: scale(0.95); }
+}
+.atelier-ticker-flicker {
+    animation: atelier-ticker-flicker 3.4s ease-in-out infinite;
+}
+
+/* Cog quiet spin */
+@keyframes atelier-cog-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.atelier-cog {
+    transition: transform 600ms ease;
+}
+.group:hover .atelier-cog {
+    animation: atelier-cog-spin 6s linear infinite;
+    color: rgba(252, 211, 77, 0.9);
+    border-color: rgba(252, 211, 77, 0.3);
+}
+
+/* Monogram subtle hover */
+.atelier-monogram {
+    transition: color 200ms ease, border-color 200ms ease;
+}
+.group:hover .atelier-monogram {
+    color: rgba(252, 211, 77, 1);
+    border-color: rgba(252, 211, 77, 0.45);
+}
+
+/* Hero card fan transforms — fanned at every breakpoint, with tighter spread on mobile.
+ * Each card breathes via a keyframe so it feels alive without GSAP fighting the base.
+ */
+.atelier-card-left {
+    transform: translate(-78%, -45%) rotate(-8deg);
+}
+.atelier-card-right {
+    transform: translate(-22%, -45%) rotate(8deg);
+}
+.atelier-card-center {
+    transform: translate(-50%, -10%);
+}
+.atelier-card-left {
+    animation: atelier-card-left-breathe 5.1s ease-in-out infinite;
+}
+.atelier-card-right {
+    animation: atelier-card-right-breathe 4.7s ease-in-out infinite;
+}
+.atelier-card-center {
+    animation: atelier-card-center-breathe 4.2s ease-in-out infinite;
+}
+
+/* Fan opens wider at sm+ */
+@media (min-width: 640px) {
+    .atelier-card-left {
+        transform: translate(-92%, -28%) rotate(-9deg);
+        animation-name: atelier-card-left-breathe-wide;
+    }
+    .atelier-card-right {
+        transform: translate(-8%, -28%) rotate(9deg);
+        animation-name: atelier-card-right-breathe-wide;
+    }
+    .atelier-card-center {
+        transform: translate(-50%, 6%);
+        animation-name: atelier-card-center-breathe-wide;
+    }
+}
+
+@keyframes atelier-card-left-breathe {
+    0%, 100% { transform: translate(-78%, -45%) rotate(-8deg); }
+    50% { transform: translate(-79%, -43%) rotate(-6deg); }
+}
+@keyframes atelier-card-right-breathe {
+    0%, 100% { transform: translate(-22%, -45%) rotate(8deg); }
+    50% { transform: translate(-21%, -47%) rotate(6.5deg); }
+}
+@keyframes atelier-card-center-breathe {
+    0%, 100% { transform: translate(-50%, -10%) rotate(0deg); }
+    50% { transform: translate(-50%, -13%) rotate(-1.5deg); }
+}
+@keyframes atelier-card-left-breathe-wide {
+    0%, 100% { transform: translate(-92%, -28%) rotate(-9deg); }
+    50% { transform: translate(-93%, -26%) rotate(-7deg); }
+}
+@keyframes atelier-card-right-breathe-wide {
+    0%, 100% { transform: translate(-8%, -28%) rotate(9deg); }
+    50% { transform: translate(-7%, -30%) rotate(7.5deg); }
+}
+@keyframes atelier-card-center-breathe-wide {
+    0%, 100% { transform: translate(-50%, 6%) rotate(0deg); }
+    50% { transform: translate(-50%, 3%) rotate(-1.5deg); }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .atelier-seal,
+    .atelier-ticker-flicker,
+    .atelier-cog {
+        animation: none !important;
+    }
+}
