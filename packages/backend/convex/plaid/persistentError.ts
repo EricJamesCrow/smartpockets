@@ -14,7 +14,6 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { components, internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
 
 const STALE_SYNC_MS = 24 * 3600 * 1000;
 const DISPATCH_COOLDOWN_MS = 72 * 3600 * 1000;
@@ -53,12 +52,19 @@ export const runPersistentErrorCheckInternal = internalAction({
       // firstErrorAt; errorCode defaults to "SYNC_ERROR".
       const lastSeenErrorAt = item.errorAt ?? item.firstErrorAt;
       const errorCode = item.errorCode ?? "SYNC_ERROR";
+      const nativeUser = await ctx.runQuery(internal.users.getByExternalId, {
+        externalId: item.userId,
+      });
+      if (!nativeUser) {
+        console.warn("[plaid/persistentError] dispatch skipped: missing native user");
+        continue;
+      }
 
       await ctx.scheduler.runAfter(
         0,
         internal.email.dispatch.dispatchItemErrorPersistent,
         {
-          userId: item.userId as Id<"users">,
+          userId: nativeUser._id,
           plaidItemId: item.plaidItemId,
           institutionName: item.institutionName ?? "your bank",
           firstErrorAt: item.firstErrorAt,
