@@ -270,6 +270,18 @@ export const onboardNewConnectionAction = action({
     publicToken: v.string(),
     userId: v.string(),
   },
+  returns: v.object({
+    success: v.boolean(),
+    itemId: v.string(),
+    plaidItemId: v.string(),
+    accounts: v.number(),
+    transactions: v.number(),
+    liabilities: v.object({
+      creditCards: v.number(),
+      mortgages: v.number(),
+      studentLoans: v.number(),
+    }),
+  }),
   handler: async (ctx, args): Promise<{
     success: boolean;
     itemId: string;
@@ -413,6 +425,16 @@ export const syncTransactionsInternal = internalAction({
     plaidItemId: v.string(),
     trigger: v.optional(v.union(v.literal("webhook"), v.literal("scheduled"), v.literal("manual"))),
   },
+  returns: v.object({
+    added: v.number(),
+    modified: v.number(),
+    removed: v.number(),
+    cursor: v.string(),
+    hasMore: v.boolean(),
+    pagesProcessed: v.number(),
+    skipped: v.optional(v.boolean()),
+    skipReason: v.optional(v.string()),
+  }),
   handler: async (ctx, args) => {
     console.log(`[syncTransactionsInternal] Syncing item ${args.plaidItemId} (trigger: ${args.trigger ?? "unknown"})`);
     const result = await getPlaid().syncTransactions(ctx, {

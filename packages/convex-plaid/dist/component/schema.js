@@ -132,6 +132,7 @@ export default defineSchema({
         updatedAt: v.optional(v.number()), // Track modifications from sync
     })
         .index("by_account", ["accountId"])
+        .index("by_account_date", ["accountId", "date"])
         .index("by_transaction_id", ["transactionId"])
         .index("by_date", ["userId", "date"])
         .index("by_plaid_item", ["plaidItemId"])
@@ -395,6 +396,7 @@ export default defineSchema({
         retryCount: v.optional(v.number()), // Number of retries attempted
     })
         .index("by_plaid_item", ["plaidItemId"])
+        .index("by_plaid_item_startedAt", ["plaidItemId", "startedAt"])
         .index("by_user", ["userId"])
         .index("by_status", ["status"])
         .index("by_started_at", ["startedAt"])

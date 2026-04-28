@@ -438,6 +438,7 @@ const schema = defineEntSchema(
             .edges("agentProposalRows", { ref: true })
             .index("by_thread_state", ["agentThreadId", "state"])
             .index("by_user_awaiting", ["userId", "state", "awaitingExpiresAt"])
+            .index("by_state_awaitingExpiresAt", ["state", "awaitingExpiresAt"])
             .index("by_undo_window", ["userId", "state", "undoExpiresAt"]),
 
         // === AGENT PROPOSAL ROWS (W2) ===
@@ -583,7 +584,8 @@ const schema = defineEntSchema(
             lineItemsJson: v.string(),
             generatedAt: v.number(),
         })
-            .edge("user"),
+            .edge("user")
+            .index("by_user_generatedAt", ["userId", "generatedAt"]),
 
         // === REMINDERS (W2 ships table; W5 owns CRUD) ===
         reminders: defineEnt({
