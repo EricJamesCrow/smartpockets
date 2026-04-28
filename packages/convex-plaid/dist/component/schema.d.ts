@@ -16,16 +16,15 @@ declare const _default: import("convex/server").SchemaDefinition<{
      * Access tokens are encrypted using JWE (A256GCM) before storage.
      */
     plaidItems: import("convex/server").TableDefinition<import("convex/values").VObject<{
-        institutionId?: string | undefined;
-        isActive?: boolean | undefined;
-        circuitState?: "closed" | "open" | "half_open" | undefined;
-        errorCode?: string | undefined;
-        errorMessage?: string | undefined;
         cursor?: string | undefined;
+        institutionId?: string | undefined;
         institutionName?: string | undefined;
+        isActive?: boolean | undefined;
         syncError?: string | undefined;
         lastSyncedAt?: number | undefined;
         activatedAt?: number | undefined;
+        errorCode?: string | undefined;
+        errorMessage?: string | undefined;
         errorAt?: number | undefined;
         reauthReason?: string | undefined;
         reauthAt?: number | undefined;
@@ -33,6 +32,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         disconnectedAt?: number | undefined;
         syncVersion?: number | undefined;
         syncStartedAt?: number | undefined;
+        circuitState?: "closed" | "open" | "half_open" | undefined;
         consecutiveFailures?: number | undefined;
         consecutiveSuccesses?: number | undefined;
         lastFailureAt?: number | undefined;
@@ -40,11 +40,11 @@ declare const _default: import("convex/server").SchemaDefinition<{
         newAccountsAvailableAt?: number | undefined;
         firstErrorAt?: number | undefined;
         lastDispatchedAt?: number | undefined;
-        products: string[];
         userId: string;
         itemId: string;
-        status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
         accessToken: string;
+        products: string[];
+        status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
         createdAt: number;
     }, {
         userId: import("convex/values").VString<string, "required">;
@@ -55,7 +55,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         institutionName: import("convex/values").VString<string | undefined, "optional">;
         products: import("convex/values").VArray<string[], import("convex/values").VString<string, "required">, "required">;
         isActive: import("convex/values").VBoolean<boolean | undefined, "optional">;
-        status: import("convex/values").VUnion<"error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting", [import("convex/values").VLiteral<"pending", "required">, import("convex/values").VLiteral<"syncing", "required">, import("convex/values").VLiteral<"active", "required">, import("convex/values").VLiteral<"error", "required">, import("convex/values").VLiteral<"needs_reauth", "required">, import("convex/values").VLiteral<"deleting", "required">], "required", never>;
+        status: import("convex/values").VUnion<"pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting", [import("convex/values").VLiteral<"pending", "required">, import("convex/values").VLiteral<"syncing", "required">, import("convex/values").VLiteral<"active", "required">, import("convex/values").VLiteral<"error", "required">, import("convex/values").VLiteral<"needs_reauth", "required">, import("convex/values").VLiteral<"deleting", "required">], "required", never>;
         syncError: import("convex/values").VString<string | undefined, "optional">;
         createdAt: import("convex/values").VFloat64<number, "required">;
         lastSyncedAt: import("convex/values").VFloat64<number | undefined, "optional">;
@@ -77,7 +77,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         newAccountsAvailableAt: import("convex/values").VFloat64<number | undefined, "optional">;
         firstErrorAt: import("convex/values").VFloat64<number | undefined, "optional">;
         lastDispatchedAt: import("convex/values").VFloat64<number | undefined, "optional">;
-    }, "required", "products" | "userId" | "institutionId" | "isActive" | "itemId" | "circuitState" | "status" | "errorCode" | "errorMessage" | "accessToken" | "cursor" | "institutionName" | "syncError" | "createdAt" | "lastSyncedAt" | "activatedAt" | "errorAt" | "reauthReason" | "reauthAt" | "disconnectedReason" | "disconnectedAt" | "syncVersion" | "syncStartedAt" | "consecutiveFailures" | "consecutiveSuccesses" | "lastFailureAt" | "nextRetryAt" | "newAccountsAvailableAt" | "firstErrorAt" | "lastDispatchedAt">, {
+    }, "required", "userId" | "itemId" | "accessToken" | "cursor" | "institutionId" | "institutionName" | "products" | "isActive" | "status" | "syncError" | "createdAt" | "lastSyncedAt" | "activatedAt" | "errorCode" | "errorMessage" | "errorAt" | "reauthReason" | "reauthAt" | "disconnectedReason" | "disconnectedAt" | "syncVersion" | "syncStartedAt" | "circuitState" | "consecutiveFailures" | "consecutiveSuccesses" | "lastFailureAt" | "nextRetryAt" | "newAccountsAvailableAt" | "firstErrorAt" | "lastDispatchedAt">, {
         by_user: ["userId", "_creationTime"];
         by_item_id: ["itemId", "_creationTime"];
         by_status: ["status", "_creationTime"];
@@ -92,16 +92,16 @@ declare const _default: import("convex/server").SchemaDefinition<{
         officialName?: string | undefined;
         mask?: string | undefined;
         subtype?: string | undefined;
-        name: string;
-        plaidItemId: string;
         userId: string;
-        accountId: string;
         type: string;
         createdAt: number;
+        plaidItemId: string;
+        accountId: string;
+        name: string;
         balances: {
-            limit?: number | undefined;
             available?: number | undefined;
             current?: number | undefined;
+            limit?: number | undefined;
             isoCurrencyCode: string;
         };
     }, {
@@ -114,18 +114,18 @@ declare const _default: import("convex/server").SchemaDefinition<{
         type: import("convex/values").VString<string, "required">;
         subtype: import("convex/values").VString<string | undefined, "optional">;
         balances: import("convex/values").VObject<{
-            limit?: number | undefined;
             available?: number | undefined;
             current?: number | undefined;
+            limit?: number | undefined;
             isoCurrencyCode: string;
         }, {
             available: import("convex/values").VFloat64<number | undefined, "optional">;
             current: import("convex/values").VFloat64<number | undefined, "optional">;
             limit: import("convex/values").VFloat64<number | undefined, "optional">;
             isoCurrencyCode: import("convex/values").VString<string, "required">;
-        }, "required", "limit" | "available" | "current" | "isoCurrencyCode">;
+        }, "required", "available" | "current" | "limit" | "isoCurrencyCode">;
         createdAt: import("convex/values").VFloat64<number, "required">;
-    }, "required", "name" | "plaidItemId" | "userId" | "accountId" | "type" | "createdAt" | "officialName" | "mask" | "subtype" | "balances" | "balances.limit" | "balances.available" | "balances.current" | "balances.isoCurrencyCode">, {
+    }, "required", "userId" | "type" | "createdAt" | "plaidItemId" | "accountId" | "name" | "officialName" | "mask" | "subtype" | "balances" | "balances.available" | "balances.current" | "balances.limit" | "balances.isoCurrencyCode">, {
         by_plaid_item: ["plaidItemId", "_creationTime"];
         by_account_id: ["accountId", "_creationTime"];
         by_user: ["userId", "_creationTime"];
@@ -137,13 +137,13 @@ declare const _default: import("convex/server").SchemaDefinition<{
      * Amounts stored in MILLIUNITS (amount × 1000).
      */
     plaidTransactions: import("convex/server").TableDefinition<import("convex/values").VObject<{
-        merchantId?: string | undefined;
         datetime?: string | undefined;
         merchantName?: string | undefined;
         pendingTransactionId?: string | undefined;
         categoryPrimary?: string | undefined;
         categoryDetailed?: string | undefined;
         paymentChannel?: string | undefined;
+        merchantId?: string | undefined;
         enrichmentData?: {
             counterpartyName?: string | undefined;
             counterpartyType?: string | undefined;
@@ -155,12 +155,12 @@ declare const _default: import("convex/server").SchemaDefinition<{
             enrichedAt?: number | undefined;
         } | undefined;
         updatedAt?: number | undefined;
-        pending: boolean;
-        name: string;
-        plaidItemId: string;
         userId: string;
-        accountId: string;
+        pending: boolean;
         createdAt: number;
+        plaidItemId: string;
+        accountId: string;
+        name: string;
         isoCurrencyCode: string;
         transactionId: string;
         amount: number;
@@ -203,7 +203,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         }, "optional", "counterpartyName" | "counterpartyType" | "counterpartyEntityId" | "counterpartyConfidence" | "counterpartyLogoUrl" | "counterpartyWebsite" | "counterpartyPhoneNumber" | "enrichedAt">;
         createdAt: import("convex/values").VFloat64<number, "required">;
         updatedAt: import("convex/values").VFloat64<number | undefined, "optional">;
-    }, "required", "pending" | "name" | "plaidItemId" | "userId" | "merchantId" | "accountId" | "createdAt" | "isoCurrencyCode" | "transactionId" | "amount" | "date" | "datetime" | "merchantName" | "pendingTransactionId" | "categoryPrimary" | "categoryDetailed" | "paymentChannel" | "enrichmentData" | "updatedAt" | "enrichmentData.counterpartyName" | "enrichmentData.counterpartyType" | "enrichmentData.counterpartyEntityId" | "enrichmentData.counterpartyConfidence" | "enrichmentData.counterpartyLogoUrl" | "enrichmentData.counterpartyWebsite" | "enrichmentData.counterpartyPhoneNumber" | "enrichmentData.enrichedAt">, {
+    }, "required", "userId" | "pending" | "createdAt" | "plaidItemId" | "accountId" | "name" | "isoCurrencyCode" | "transactionId" | "amount" | "date" | "datetime" | "merchantName" | "pendingTransactionId" | "categoryPrimary" | "categoryDetailed" | "paymentChannel" | "merchantId" | "enrichmentData" | "updatedAt" | "enrichmentData.counterpartyName" | "enrichmentData.counterpartyType" | "enrichmentData.counterpartyEntityId" | "enrichmentData.counterpartyConfidence" | "enrichmentData.counterpartyLogoUrl" | "enrichmentData.counterpartyWebsite" | "enrichmentData.counterpartyPhoneNumber" | "enrichmentData.enrichedAt">, {
         by_account: ["accountId", "_creationTime"];
         by_transaction_id: ["transactionId", "_creationTime"];
         by_date: ["userId", "date", "_creationTime"];
@@ -224,10 +224,10 @@ declare const _default: import("convex/server").SchemaDefinition<{
         lastStatementIssueDate?: string | undefined;
         minimumPaymentAmount?: number | undefined;
         nextPaymentDueDate?: string | undefined;
-        plaidItemId: string;
         userId: string;
-        accountId: string;
         createdAt: number;
+        plaidItemId: string;
+        accountId: string;
         updatedAt: number;
         aprs: {
             balanceSubjectToApr?: number | undefined;
@@ -265,7 +265,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         nextPaymentDueDate: import("convex/values").VString<string | undefined, "optional">;
         createdAt: import("convex/values").VFloat64<number, "required">;
         updatedAt: import("convex/values").VFloat64<number, "required">;
-    }, "required", "plaidItemId" | "userId" | "accountId" | "createdAt" | "updatedAt" | "aprs" | "isOverdue" | "lastPaymentAmount" | "lastPaymentDate" | "lastStatementBalance" | "lastStatementIssueDate" | "minimumPaymentAmount" | "nextPaymentDueDate">, {
+    }, "required", "userId" | "createdAt" | "plaidItemId" | "accountId" | "updatedAt" | "aprs" | "isOverdue" | "lastPaymentAmount" | "lastPaymentDate" | "lastStatementBalance" | "lastStatementIssueDate" | "minimumPaymentAmount" | "nextPaymentDueDate">, {
         by_account: ["accountId", "_creationTime"];
         by_plaid_item: ["plaidItemId", "_creationTime"];
         by_user: ["userId", "_creationTime"];
@@ -283,13 +283,13 @@ declare const _default: import("convex/server").SchemaDefinition<{
         firstDate?: string | undefined;
         lastDate?: string | undefined;
         predictedNextDate?: string | undefined;
-        plaidItemId: string;
         userId: string;
-        accountId: string;
+        type: "inflow" | "outflow";
         isActive: boolean;
         status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
-        type: "inflow" | "outflow";
         createdAt: number;
+        plaidItemId: string;
+        accountId: string;
         isoCurrencyCode: string;
         updatedAt: number;
         streamId: string;
@@ -317,7 +317,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         predictedNextDate: import("convex/values").VString<string | undefined, "optional">;
         createdAt: import("convex/values").VFloat64<number, "required">;
         updatedAt: import("convex/values").VFloat64<number, "required">;
-    }, "required", "plaidItemId" | "userId" | "accountId" | "isActive" | "status" | "type" | "createdAt" | "isoCurrencyCode" | "merchantName" | "updatedAt" | "streamId" | "description" | "averageAmount" | "lastAmount" | "frequency" | "category" | "firstDate" | "lastDate" | "predictedNextDate">, {
+    }, "required", "userId" | "type" | "isActive" | "status" | "createdAt" | "plaidItemId" | "accountId" | "isoCurrencyCode" | "merchantName" | "updatedAt" | "streamId" | "description" | "averageAmount" | "lastAmount" | "frequency" | "category" | "firstDate" | "lastDate" | "predictedNextDate">, {
         by_user: ["userId", "_creationTime"];
         by_stream_id: ["streamId", "_creationTime"];
         by_plaid_item: ["plaidItemId", "_creationTime"];
@@ -355,10 +355,10 @@ declare const _default: import("convex/server").SchemaDefinition<{
             postalCode?: string | undefined;
             country?: string | undefined;
         } | undefined;
-        plaidItemId: string;
         userId: string;
-        accountId: string;
         createdAt: number;
+        plaidItemId: string;
+        accountId: string;
         updatedAt: number;
         interestRatePercentage: number;
     }, {
@@ -399,7 +399,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         }, "optional", "street" | "city" | "region" | "postalCode" | "country">;
         createdAt: import("convex/values").VFloat64<number, "required">;
         updatedAt: import("convex/values").VFloat64<number, "required">;
-    }, "required", "plaidItemId" | "userId" | "accountId" | "createdAt" | "updatedAt" | "lastPaymentAmount" | "lastPaymentDate" | "nextPaymentDueDate" | "accountNumber" | "loanTerm" | "loanTypeDescription" | "originationDate" | "maturityDate" | "interestRatePercentage" | "interestRateType" | "nextMonthlyPayment" | "originationPrincipalAmount" | "currentLateFee" | "escrowBalance" | "pastDueAmount" | "ytdInterestPaid" | "ytdPrincipalPaid" | "hasPmi" | "hasPrepaymentPenalty" | "propertyAddress" | "propertyAddress.street" | "propertyAddress.city" | "propertyAddress.region" | "propertyAddress.postalCode" | "propertyAddress.country">, {
+    }, "required", "userId" | "createdAt" | "plaidItemId" | "accountId" | "updatedAt" | "lastPaymentAmount" | "lastPaymentDate" | "nextPaymentDueDate" | "accountNumber" | "loanTerm" | "loanTypeDescription" | "originationDate" | "maturityDate" | "interestRatePercentage" | "interestRateType" | "nextMonthlyPayment" | "originationPrincipalAmount" | "currentLateFee" | "escrowBalance" | "pastDueAmount" | "ytdInterestPaid" | "ytdPrincipalPaid" | "hasPmi" | "hasPrepaymentPenalty" | "propertyAddress" | "propertyAddress.street" | "propertyAddress.city" | "propertyAddress.region" | "propertyAddress.postalCode" | "propertyAddress.country">, {
         by_user: ["userId", "_creationTime"];
         by_account: ["accountId", "_creationTime"];
         by_plaid_item: ["plaidItemId", "_creationTime"];
@@ -431,8 +431,8 @@ declare const _default: import("convex/server").SchemaDefinition<{
         paymentReferenceNumber?: string | undefined;
         outstandingInterestAmount?: number | undefined;
         loanStatus?: {
-            endDate?: string | undefined;
             type?: string | undefined;
+            endDate?: string | undefined;
         } | undefined;
         repaymentPlan?: {
             type?: string | undefined;
@@ -445,10 +445,10 @@ declare const _default: import("convex/server").SchemaDefinition<{
             postalCode?: string | undefined;
             country?: string | undefined;
         } | undefined;
-        plaidItemId: string;
         userId: string;
-        accountId: string;
         createdAt: number;
+        plaidItemId: string;
+        accountId: string;
         updatedAt: number;
         interestRatePercentage: number;
     }, {
@@ -476,12 +476,12 @@ declare const _default: import("convex/server").SchemaDefinition<{
         ytdPrincipalPaid: import("convex/values").VFloat64<number | undefined, "optional">;
         isOverdue: import("convex/values").VBoolean<boolean | undefined, "optional">;
         loanStatus: import("convex/values").VObject<{
-            endDate?: string | undefined;
             type?: string | undefined;
+            endDate?: string | undefined;
         } | undefined, {
             type: import("convex/values").VString<string | undefined, "optional">;
             endDate: import("convex/values").VString<string | undefined, "optional">;
-        }, "optional", "endDate" | "type">;
+        }, "optional", "type" | "endDate">;
         repaymentPlan: import("convex/values").VObject<{
             type?: string | undefined;
             description?: string | undefined;
@@ -504,7 +504,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         }, "optional", "street" | "city" | "region" | "postalCode" | "country">;
         createdAt: import("convex/values").VFloat64<number, "required">;
         updatedAt: import("convex/values").VFloat64<number, "required">;
-    }, "required", "plaidItemId" | "userId" | "accountId" | "createdAt" | "updatedAt" | "isOverdue" | "lastPaymentAmount" | "lastPaymentDate" | "lastStatementBalance" | "lastStatementIssueDate" | "minimumPaymentAmount" | "nextPaymentDueDate" | "accountNumber" | "originationDate" | "interestRatePercentage" | "originationPrincipalAmount" | "ytdInterestPaid" | "ytdPrincipalPaid" | "loanName" | "guarantor" | "sequenceNumber" | "disbursementDates" | "expectedPayoffDate" | "paymentReferenceNumber" | "outstandingInterestAmount" | "loanStatus" | "repaymentPlan" | "servicerAddress" | "loanStatus.endDate" | "loanStatus.type" | "repaymentPlan.type" | "repaymentPlan.description" | "servicerAddress.street" | "servicerAddress.city" | "servicerAddress.region" | "servicerAddress.postalCode" | "servicerAddress.country">, {
+    }, "required", "userId" | "createdAt" | "plaidItemId" | "accountId" | "updatedAt" | "isOverdue" | "lastPaymentAmount" | "lastPaymentDate" | "lastStatementBalance" | "lastStatementIssueDate" | "minimumPaymentAmount" | "nextPaymentDueDate" | "accountNumber" | "originationDate" | "interestRatePercentage" | "originationPrincipalAmount" | "ytdInterestPaid" | "ytdPrincipalPaid" | "loanName" | "guarantor" | "sequenceNumber" | "disbursementDates" | "expectedPayoffDate" | "paymentReferenceNumber" | "outstandingInterestAmount" | "loanStatus" | "repaymentPlan" | "servicerAddress" | "loanStatus.type" | "loanStatus.endDate" | "repaymentPlan.type" | "repaymentPlan.description" | "servicerAddress.street" | "servicerAddress.city" | "servicerAddress.region" | "servicerAddress.postalCode" | "servicerAddress.country">, {
         by_user: ["userId", "_creationTime"];
         by_account: ["accountId", "_creationTime"];
         by_plaid_item: ["plaidItemId", "_creationTime"];
@@ -522,9 +522,9 @@ declare const _default: import("convex/server").SchemaDefinition<{
         categoryIconUrl?: string | undefined;
         website?: string | undefined;
         phoneNumber?: string | undefined;
-        merchantId: string;
         merchantName: string;
-        confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
+        merchantId: string;
+        confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
         lastEnriched: number;
     }, {
         merchantId: import("convex/values").VString<string, "required">;
@@ -535,9 +535,9 @@ declare const _default: import("convex/server").SchemaDefinition<{
         categoryIconUrl: import("convex/values").VString<string | undefined, "optional">;
         website: import("convex/values").VString<string | undefined, "optional">;
         phoneNumber: import("convex/values").VString<string | undefined, "optional">;
-        confidenceLevel: import("convex/values").VUnion<"UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW", [import("convex/values").VLiteral<"VERY_HIGH", "required">, import("convex/values").VLiteral<"HIGH", "required">, import("convex/values").VLiteral<"MEDIUM", "required">, import("convex/values").VLiteral<"LOW", "required">, import("convex/values").VLiteral<"UNKNOWN", "required">], "required", never>;
+        confidenceLevel: import("convex/values").VUnion<"VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN", [import("convex/values").VLiteral<"VERY_HIGH", "required">, import("convex/values").VLiteral<"HIGH", "required">, import("convex/values").VLiteral<"MEDIUM", "required">, import("convex/values").VLiteral<"LOW", "required">, import("convex/values").VLiteral<"UNKNOWN", "required">], "required", never>;
         lastEnriched: import("convex/values").VFloat64<number, "required">;
-    }, "required", "merchantId" | "merchantName" | "categoryPrimary" | "categoryDetailed" | "logoUrl" | "categoryIconUrl" | "website" | "phoneNumber" | "confidenceLevel" | "lastEnriched">, {
+    }, "required", "merchantName" | "categoryPrimary" | "categoryDetailed" | "merchantId" | "logoUrl" | "categoryIconUrl" | "website" | "phoneNumber" | "confidenceLevel" | "lastEnriched">, {
         by_merchant: ["merchantId", "_creationTime"];
     }, {}, {}>;
     /**
@@ -570,6 +570,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         scheduledFunctionId: import("convex/values").VString<string | undefined, "optional">;
     }, "required", "itemId" | "status" | "errorMessage" | "webhookId" | "webhookType" | "webhookCode" | "bodyHash" | "receivedAt" | "processedAt" | "scheduledFunctionId">, {
         by_body_hash: ["bodyHash", "_creationTime"];
+        by_body_hash_received_at: ["bodyHash", "receivedAt", "_creationTime"];
         by_received_at: ["receivedAt", "_creationTime"];
         by_item: ["itemId", "_creationTime"];
         by_status: ["status", "_creationTime"];
@@ -597,9 +598,9 @@ declare const _default: import("convex/server").SchemaDefinition<{
             studentLoansUpdated?: number | undefined;
         } | undefined;
         retryCount?: number | undefined;
-        plaidItemId: string;
         userId: string;
-        status: "started" | "success" | "error" | "rate_limited" | "circuit_open";
+        status: "error" | "started" | "success" | "rate_limited" | "circuit_open";
+        plaidItemId: string;
         syncType: "transactions" | "liabilities" | "recurring" | "accounts" | "onboard";
         trigger: "onboard" | "webhook" | "scheduled" | "manual";
         startedAt: number;
@@ -611,7 +612,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         startedAt: import("convex/values").VFloat64<number, "required">;
         completedAt: import("convex/values").VFloat64<number | undefined, "optional">;
         durationMs: import("convex/values").VFloat64<number | undefined, "optional">;
-        status: import("convex/values").VUnion<"started" | "success" | "error" | "rate_limited" | "circuit_open", [import("convex/values").VLiteral<"started", "required">, import("convex/values").VLiteral<"success", "required">, import("convex/values").VLiteral<"error", "required">, import("convex/values").VLiteral<"rate_limited", "required">, import("convex/values").VLiteral<"circuit_open", "required">], "required", never>;
+        status: import("convex/values").VUnion<"error" | "started" | "success" | "rate_limited" | "circuit_open", [import("convex/values").VLiteral<"started", "required">, import("convex/values").VLiteral<"success", "required">, import("convex/values").VLiteral<"error", "required">, import("convex/values").VLiteral<"rate_limited", "required">, import("convex/values").VLiteral<"circuit_open", "required">], "required", never>;
         result: import("convex/values").VObject<{
             transactionsAdded?: number | undefined;
             transactionsModified?: number | undefined;
@@ -634,7 +635,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         errorCode: import("convex/values").VString<string | undefined, "optional">;
         errorMessage: import("convex/values").VString<string | undefined, "optional">;
         retryCount: import("convex/values").VFloat64<number | undefined, "optional">;
-    }, "required", "plaidItemId" | "userId" | "status" | "errorCode" | "errorMessage" | "syncType" | "trigger" | "startedAt" | "completedAt" | "durationMs" | "result" | "retryCount" | "result.transactionsAdded" | "result.transactionsModified" | "result.transactionsRemoved" | "result.accountsUpdated" | "result.streamsUpdated" | "result.creditCardsUpdated" | "result.mortgagesUpdated" | "result.studentLoansUpdated">, {
+    }, "required", "userId" | "status" | "errorCode" | "errorMessage" | "plaidItemId" | "syncType" | "trigger" | "startedAt" | "completedAt" | "durationMs" | "result" | "retryCount" | "result.transactionsAdded" | "result.transactionsModified" | "result.transactionsRemoved" | "result.accountsUpdated" | "result.streamsUpdated" | "result.creditCardsUpdated" | "result.mortgagesUpdated" | "result.studentLoansUpdated">, {
         by_plaid_item: ["plaidItemId", "_creationTime"];
         by_user: ["userId", "_creationTime"];
         by_status: ["status", "_creationTime"];
@@ -652,8 +653,8 @@ declare const _default: import("convex/server").SchemaDefinition<{
         logo?: string | undefined;
         primaryColor?: string | undefined;
         url?: string | undefined;
-        name: string;
         institutionId: string;
+        name: string;
         lastFetched: number;
     }, {
         institutionId: import("convex/values").VString<string, "required">;
@@ -663,7 +664,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         url: import("convex/values").VString<string | undefined, "optional">;
         products: import("convex/values").VArray<string[] | undefined, import("convex/values").VString<string, "required">, "optional">;
         lastFetched: import("convex/values").VFloat64<number, "required">;
-    }, "required", "name" | "products" | "institutionId" | "logo" | "primaryColor" | "url" | "lastFetched">, {
+    }, "required", "institutionId" | "products" | "name" | "logo" | "primaryColor" | "url" | "lastFetched">, {
         by_institution_id: ["institutionId", "_creationTime"];
     }, {}, {}>;
 }, true>;

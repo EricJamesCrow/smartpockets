@@ -5,12 +5,63 @@ import type { WebhookEvent } from "@clerk/backend";
 import { Webhook } from "svix";
 import { z } from "zod";
 import { transformWebhookData } from "./paymentAttemptTypes";
-import { verifyPlaidWebhook, shouldSkipVerification } from "./lib/plaidWebhookVerification";
+import { verifyPlaidWebhook, shouldSkipVerification, computeSha256 } from "./lib/plaidWebhookVerification";
 import { verifyUnsubscribeToken } from "./email/unsubscribeToken";
 import { resend } from "./email/resend";
 import type { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
+const PLAID_WEBHOOK_DEDUPE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function webhookField(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : fallback;
+}
+
+function shortRef(value: unknown): string {
+  const text = typeof value === "string" ? value : "";
+  if (text.length <= 8) return text ? "[redacted]" : "unknown";
+  return `...${text.slice(-6)}`;
+}
+
+function webhookErrorCode(error: unknown): string {
+  if (error && typeof error === "object" && "error_code" in error) {
+    const code = (error as { error_code?: unknown }).error_code;
+    return typeof code === "string" && code ? code : "UNKNOWN";
+  }
+  return "UNKNOWN";
+}
+
+function webhookErrorMessage(error: unknown): string {
+  if (error && typeof error === "object" && "error_message" in error) {
+    const message = (error as { error_message?: unknown }).error_message;
+    return typeof message === "string" && message ? message : "Unknown error occurred";
+  }
+  return "Unknown error occurred";
+}
+
+async function updatePlaidWebhookLog(
+  ctx: any,
+  args: {
+    webhookLogId?: string;
+    status: "processed" | "failed" | "processing";
+    errorMessage?: string;
+    scheduledFunctionIds?: string[];
+  },
+) {
+  if (!args.webhookLogId) return;
+  await ctx.runMutation((components.plaid.public as any).updateWebhookProcessingStatus, {
+    webhookLogId: args.webhookLogId,
+    status: args.status,
+    processedAt: Date.now(),
+    errorMessage: args.errorMessage,
+    scheduledFunctionId:
+      args.scheduledFunctionIds && args.scheduledFunctionIds.length > 0
+        ? args.scheduledFunctionIds.join(",")
+        : undefined,
+  });
+}
 
 http.route({
   path: "/clerk-users-webhook",
@@ -119,6 +170,8 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     // Get raw body BEFORE parsing (needed for signature verification)
     const rawBody = await request.text();
+    let webhookLogId: string | undefined;
+    const scheduledFunctionIds: string[] = [];
 
     try {
       // =================================================================
@@ -155,13 +208,45 @@ http.route({
       // =================================================================
       const body = JSON.parse(rawBody);
       const { webhook_type, webhook_code, item_id, error } = body;
+      const webhookType = webhookField(webhook_type, "UNKNOWN");
+      const webhookCode = webhookField(webhook_code, "UNKNOWN");
+      const itemId = webhookField(item_id, "UNKNOWN");
+      const bodyHash = await computeSha256(rawBody);
+
+      const webhookLog = await ctx.runMutation(
+        (components.plaid.public as any).recordWebhookReceived,
+        {
+          itemId,
+          webhookType,
+          webhookCode,
+          bodyHash,
+          receivedAt: Date.now(),
+          dedupeWindowMs: PLAID_WEBHOOK_DEDUPE_WINDOW_MS,
+        },
+      );
+      webhookLogId = webhookLog.webhookLogId;
+
+      if (webhookLog.duplicate) {
+        console.log(
+          `[Webhook] Duplicate Plaid delivery ignored (${webhookType}/${webhookCode}, item ${shortRef(itemId)})`,
+        );
+        return new Response(
+          JSON.stringify({ received: true, duplicate: true }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      await updatePlaidWebhookLog(ctx, {
+        webhookLogId,
+        status: "processing",
+      });
 
       console.log(`\n=== PLAID WEBHOOK RECEIVED ===`);
-      console.log("Type:", webhook_type);
-      console.log("Code:", webhook_code);
-      console.log("Item ID:", item_id);
+      console.log("Type:", webhookType);
+      console.log("Code:", webhookCode);
+      console.log("Item:", shortRef(itemId));
       if (error) {
-        console.log("Error:", JSON.stringify(error));
+        console.log("Error code:", webhookErrorCode(error));
       }
       console.log("==============================\n");
 
@@ -169,18 +254,23 @@ http.route({
       // STEP 3: Find Plaid item using INTERNAL query (includes accessToken)
       // =================================================================
       const plaidItem = await ctx.runQuery(internal.items.queries.getByPlaidItemId, {
-        itemId: item_id,
+        itemId,
       });
 
       if (!plaidItem) {
-        console.warn(`[Webhook] Unknown item_id: ${item_id}`);
+        console.warn(`[Webhook] Unknown Plaid item ${shortRef(itemId)}`);
+        await updatePlaidWebhookLog(ctx, {
+          webhookLogId,
+          status: "processed",
+          errorMessage: "unknown_item",
+        });
         return new Response(
           JSON.stringify({ ok: true, ignored: "unknown_item" }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
       }
 
-      console.log(`[Webhook] Found plaidItem: ${plaidItem._id}`);
+      console.log(`[Webhook] Found plaidItem ${shortRef(plaidItem._id)}`);
 
       // =================================================================
       // STEP 4: Handle webhook using async dispatch (scheduler)
@@ -188,66 +278,73 @@ http.route({
       // =================================================================
 
       // ----- TRANSACTIONS WEBHOOKS -----
-      if (webhook_type === "TRANSACTIONS") {
-        if (webhook_code === "SYNC_UPDATES_AVAILABLE") {
+      if (webhookType === "TRANSACTIONS") {
+        if (webhookCode === "SYNC_UPDATES_AVAILABLE") {
           console.log("[Webhook] Scheduling transaction sync...");
 
           // Async dispatch - sync transactions (with webhook trigger for monitoring)
-          await ctx.scheduler.runAfter(0, internal.plaidComponent.syncTransactionsInternal, {
+          const syncId = await ctx.scheduler.runAfter(0, internal.plaidComponent.syncTransactionsInternal, {
             plaidItemId: plaidItem._id,
             trigger: "webhook",
           });
+          scheduledFunctionIds.push(String(syncId));
 
           // Async dispatch - refresh accounts then sync credit cards (chained sequentially)
-          await ctx.scheduler.runAfter(500, internal.plaidComponent.refreshAccountsAndSyncCreditCardsInternal, {
+          const refreshId = await ctx.scheduler.runAfter(500, internal.plaidComponent.refreshAccountsAndSyncCreditCardsInternal, {
             plaidItemId: plaidItem._id,
             userId: plaidItem.userId,
             trigger: "webhook",
           });
-        } else if (webhook_code === "INITIAL_UPDATE" || webhook_code === "HISTORICAL_UPDATE") {
+          scheduledFunctionIds.push(String(refreshId));
+        } else if (webhookCode === "INITIAL_UPDATE" || webhookCode === "HISTORICAL_UPDATE") {
           // These are informational - initial sync already handles them
-          console.log(`[Webhook] ${webhook_code} - informational only`);
-        } else if (webhook_code === "RECURRING_TRANSACTIONS_UPDATE") {
+          console.log(`[Webhook] ${webhookCode} - informational only`);
+        } else if (webhookCode === "RECURRING_TRANSACTIONS_UPDATE") {
           console.log("[Webhook] Scheduling recurring streams sync...");
-          await ctx.scheduler.runAfter(0, internal.plaidComponent.fetchRecurringStreamsInternal, {
+          const recurringId = await ctx.scheduler.runAfter(0, internal.plaidComponent.fetchRecurringStreamsInternal, {
             plaidItemId: plaidItem._id,
             trigger: "webhook",
           });
-        } else if (webhook_code === "DEFAULT_UPDATE") {
+          scheduledFunctionIds.push(String(recurringId));
+        } else if (webhookCode === "DEFAULT_UPDATE") {
           // W4: legacy TRANSACTIONS webhook (older items not migrated to sync-based).
           // Mirror SYNC_UPDATES_AVAILABLE: schedule sync + 500ms offset refresh.
           console.log("[Webhook] TRANSACTIONS DEFAULT_UPDATE: scheduling sync (legacy path)...");
-          await ctx.scheduler.runAfter(0, internal.plaidComponent.syncTransactionsInternal, {
+          const syncId = await ctx.scheduler.runAfter(0, internal.plaidComponent.syncTransactionsInternal, {
             plaidItemId: plaidItem._id,
             trigger: "webhook",
           });
-          await ctx.scheduler.runAfter(500, internal.plaidComponent.refreshAccountsAndSyncCreditCardsInternal, {
+          scheduledFunctionIds.push(String(syncId));
+          const refreshId = await ctx.scheduler.runAfter(500, internal.plaidComponent.refreshAccountsAndSyncCreditCardsInternal, {
             plaidItemId: plaidItem._id,
             userId: plaidItem.userId,
             trigger: "webhook",
           });
+          scheduledFunctionIds.push(String(refreshId));
         }
       }
 
       // ----- LIABILITIES WEBHOOKS -----
-      else if (webhook_type === "LIABILITIES" && webhook_code === "DEFAULT_UPDATE") {
+      else if (webhookType === "LIABILITIES" && webhookCode === "DEFAULT_UPDATE") {
         console.log("[Webhook] Scheduling liabilities sync...");
-        await ctx.scheduler.runAfter(0, internal.plaidComponent.fetchLiabilitiesInternal, {
+        const liabilitiesId = await ctx.scheduler.runAfter(0, internal.plaidComponent.fetchLiabilitiesInternal, {
           plaidItemId: plaidItem._id,
           trigger: "webhook",
         });
+        scheduledFunctionIds.push(String(liabilitiesId));
 
         // Async dispatch - refresh accounts then sync credit cards (chained sequentially)
-        await ctx.scheduler.runAfter(500, internal.plaidComponent.refreshAccountsAndSyncCreditCardsInternal, {
+        const refreshId = await ctx.scheduler.runAfter(500, internal.plaidComponent.refreshAccountsAndSyncCreditCardsInternal, {
           plaidItemId: plaidItem._id,
           userId: plaidItem.userId,
           trigger: "webhook",
         });
+        scheduledFunctionIds.push(String(refreshId));
       }
 
       // ----- ITEM WEBHOOKS (P1 Security) -----
-      else if (webhook_type === "ITEM") {
-        if (webhook_code === "ERROR") {
+      else if (webhookType === "ITEM") {
+        if (webhookCode === "ERROR") {
           // Handle item errors (e.g., ITEM_LOGIN_REQUIRED)
           const errorCode = error?.error_code || "UNKNOWN";
           const errorMessage = error?.error_message || "Unknown error occurred";
@@ -266,7 +363,7 @@ http.route({
               reason: errorMessage,
             });
             // W4: dispatch reconsent-required email per contracts §15.
-            await ctx.scheduler.runAfter(
+            const emailId = await ctx.scheduler.runAfter(
               0,
               internal.email.dispatch.dispatchReconsentRequired,
               {
@@ -276,6 +373,7 @@ http.route({
                 reason: "ITEM_LOGIN_REQUIRED",
               },
             );
+            scheduledFunctionIds.push(String(emailId));
           } else {
             await ctx.runMutation(internal.plaidComponent.setItemErrorInternal, {
               itemId: plaidItem._id,
@@ -283,7 +381,7 @@ http.route({
               errorMessage,
             });
           }
-        } else if (webhook_code === "PENDING_EXPIRATION") {
+        } else if (webhookCode === "PENDING_EXPIRATION") {
           // Credentials will expire soon - user should re-authenticate
           const expirationDate = body.consent_expiration_time || "soon";
           console.log(`[Webhook] Item pending expiration: ${expirationDate}`);
@@ -299,7 +397,7 @@ http.route({
           });
 
           // W4: dispatch reconsent-required email per contracts §15.
-          await ctx.scheduler.runAfter(
+          const emailId = await ctx.scheduler.runAfter(
             0,
             internal.email.dispatch.dispatchReconsentRequired,
             {
@@ -309,7 +407,8 @@ http.route({
               reason: "PENDING_EXPIRATION",
             },
           );
-        } else if (webhook_code === "USER_PERMISSION_REVOKED") {
+          scheduledFunctionIds.push(String(emailId));
+        } else if (webhookCode === "USER_PERMISSION_REVOKED") {
           // User revoked access in their bank's settings
           console.log("[Webhook] User permission revoked");
 
@@ -317,7 +416,7 @@ http.route({
             itemId: plaidItem._id,
             reason: "User revoked access from bank settings",
           });
-        } else if (webhook_code === "PENDING_DISCONNECT") {
+        } else if (webhookCode === "PENDING_DISCONNECT") {
           // Account will be disconnected (user action or bank policy)
           console.log("[Webhook] Pending disconnect");
 
@@ -325,16 +424,16 @@ http.route({
             itemId: plaidItem._id,
             reason: "Account pending disconnect",
           });
-        } else if (webhook_code === "WEBHOOK_UPDATE_ACKNOWLEDGED") {
+        } else if (webhookCode === "WEBHOOK_UPDATE_ACKNOWLEDGED") {
           // Webhook URL was successfully updated
           console.log("[Webhook] Webhook URL update acknowledged");
-        } else if (webhook_code === "LOGIN_REPAIRED") {
+        } else if (webhookCode === "LOGIN_REPAIRED") {
           // W4: log-only (see spec §3.4). The dominant repair path is
           // update-mode Link via completeReauthAction which already resets
           // status. Log preserves empirical data in webhookLogs for future
           // decisions about whether to act on this code.
           console.log("[Webhook] ITEM LOGIN_REPAIRED: log-only");
-        } else if (webhook_code === "NEW_ACCOUNTS_AVAILABLE") {
+        } else if (webhookCode === "NEW_ACCOUNTS_AVAILABLE") {
           // W4: stamp newAccountsAvailableAt so the UI surfaces the
           // "Update accounts" CTA via the account_select update-mode flow.
           console.log("[Webhook] ITEM NEW_ACCOUNTS_AVAILABLE: stamping flag");
@@ -343,50 +442,61 @@ http.route({
             { plaidItemId: plaidItem._id },
           );
         } else {
-          console.log(`[Webhook] Unhandled ITEM code: ${webhook_code}`);
+          console.log(`[Webhook] Unhandled ITEM code: ${webhookCode}`);
         }
       }
 
       // ----- HOLDINGS WEBHOOKS (W4 stub; investments deferred per spec §3.1) -----
-      else if (webhook_type === "HOLDINGS") {
+      else if (webhookType === "HOLDINGS") {
         console.log(
-          `[Webhook] HOLDINGS ${webhook_code}: log-only (investments deferred)`,
+          `[Webhook] HOLDINGS ${webhookCode}: log-only (investments deferred)`,
         );
       }
 
       // ----- INVESTMENTS_TRANSACTIONS WEBHOOKS (W4 stub) -----
-      else if (webhook_type === "INVESTMENTS_TRANSACTIONS") {
+      else if (webhookType === "INVESTMENTS_TRANSACTIONS") {
         console.log(
-          `[Webhook] INVESTMENTS_TRANSACTIONS ${webhook_code}: log-only (investments deferred)`,
+          `[Webhook] INVESTMENTS_TRANSACTIONS ${webhookCode}: log-only (investments deferred)`,
         );
       }
 
       // ----- AUTH WEBHOOKS (W4 stub; AUTH product not in MVP) -----
-      else if (webhook_type === "AUTH") {
+      else if (webhookType === "AUTH") {
         console.log(
-          `[Webhook] AUTH ${webhook_code}: log-only (AUTH product not in MVP)`,
+          `[Webhook] AUTH ${webhookCode}: log-only (AUTH product not in MVP)`,
         );
       }
 
       // ----- IDENTITY WEBHOOKS (W4 stub; identity merge deferred to post-MVP) -----
-      else if (webhook_type === "IDENTITY") {
+      else if (webhookType === "IDENTITY") {
         console.log(
-          `[Webhook] IDENTITY ${webhook_code}: log-only (identity merge deferred)`,
+          `[Webhook] IDENTITY ${webhookCode}: log-only (identity merge deferred)`,
         );
       }
 
       // ----- UNKNOWN WEBHOOKS -----
       else {
-        console.log(`[Webhook] Unknown type: ${webhook_type}/${webhook_code}`);
+        console.log(`[Webhook] Unknown type: ${webhookType}/${webhookCode}`);
       }
 
       // Always return 200 to acknowledge receipt
+      await updatePlaidWebhookLog(ctx, {
+        webhookLogId,
+        status: "processed",
+        scheduledFunctionIds,
+      });
       return new Response(
         JSON.stringify({ received: true }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
     } catch (error) {
-      console.error("[Webhook] Processing error:", error);
+      console.error("[Webhook] Processing error:", error instanceof Error ? error.name : "unknown");
+      await updatePlaidWebhookLog(ctx, {
+        webhookLogId,
+        status: "failed",
+        errorMessage: "processing_failed",
+        scheduledFunctionIds,
+      });
 
       // Still return 200 to prevent Plaid from retrying
       return new Response(

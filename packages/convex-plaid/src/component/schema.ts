@@ -445,6 +445,7 @@ export default defineSchema({
     scheduledFunctionId: v.optional(v.string()), // Convex scheduled function ID
   })
     .index("by_body_hash", ["bodyHash"])
+    .index("by_body_hash_received_at", ["bodyHash", "receivedAt"])
     .index("by_received_at", ["receivedAt"])
     .index("by_item", ["itemId"])
     .index("by_status", ["status"]),
