@@ -8,8 +8,76 @@ BACKEND_DIR="${REPO_ROOT}/packages/backend"
 
 VERCEL_ENV_VALUE="${VERCEL_ENV:-development}"
 CONVEX_DEPLOYMENT_VALUE="${CONVEX_DEPLOYMENT:-}"
+CLERK_PUBLISHABLE_KEY_VALUE="${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}"
+CLERK_SECRET_KEY_VALUE="${CLERK_SECRET_KEY:-}"
+CLERK_FRONTEND_API_URL_VALUE="${NEXT_PUBLIC_CLERK_FRONTEND_API_URL:-}"
 
 echo "[vercel-build] VERCEL_ENV=${VERCEL_ENV_VALUE}"
+
+require_clerk_env() {
+  if [[ -z "${CLERK_PUBLISHABLE_KEY_VALUE}" ]]; then
+    echo "[vercel-build] ERROR: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required." >&2
+    exit 1
+  fi
+
+  if [[ -z "${CLERK_SECRET_KEY_VALUE}" ]]; then
+    echo "[vercel-build] ERROR: CLERK_SECRET_KEY is required." >&2
+    exit 1
+  fi
+
+  if [[ -z "${CLERK_FRONTEND_API_URL_VALUE}" ]]; then
+    echo "[vercel-build] ERROR: NEXT_PUBLIC_CLERK_FRONTEND_API_URL is required." >&2
+    exit 1
+  fi
+}
+
+validate_clerk_env() {
+  require_clerk_env
+
+  if [[ "${VERCEL_ENV_VALUE}" == "production" ]]; then
+    if [[ "${CLERK_PUBLISHABLE_KEY_VALUE}" != pk_live_* ]]; then
+      echo "[vercel-build] ERROR: production builds require NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_*." >&2
+      exit 1
+    fi
+
+    if [[ "${CLERK_SECRET_KEY_VALUE}" != sk_live_* ]]; then
+      echo "[vercel-build] ERROR: production builds require CLERK_SECRET_KEY=sk_live_*." >&2
+      exit 1
+    fi
+
+    return
+  fi
+
+  if [[ "${CLERK_PUBLISHABLE_KEY_VALUE}" == pk_live_* ]]; then
+    echo "[vercel-build] ERROR: ${VERCEL_ENV_VALUE} builds cannot use production Clerk publishable keys." >&2
+    echo "[vercel-build] Set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to a Clerk development key scoped to Vercel Preview." >&2
+    exit 1
+  fi
+
+  if [[ "${CLERK_SECRET_KEY_VALUE}" == sk_live_* ]]; then
+    echo "[vercel-build] ERROR: ${VERCEL_ENV_VALUE} builds cannot use production Clerk secret keys." >&2
+    echo "[vercel-build] Set CLERK_SECRET_KEY to a Clerk development key scoped to Vercel Preview." >&2
+    exit 1
+  fi
+
+  if [[ "${CLERK_PUBLISHABLE_KEY_VALUE}" != pk_test_* ]]; then
+    echo "[vercel-build] ERROR: ${VERCEL_ENV_VALUE} builds require NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_*." >&2
+    exit 1
+  fi
+
+  if [[ "${CLERK_SECRET_KEY_VALUE}" != sk_test_* ]]; then
+    echo "[vercel-build] ERROR: ${VERCEL_ENV_VALUE} builds require CLERK_SECRET_KEY=sk_test_*." >&2
+    exit 1
+  fi
+
+  if [[ "${CLERK_FRONTEND_API_URL_VALUE}" == *"smartpockets.com"* ]]; then
+    echo "[vercel-build] ERROR: ${VERCEL_ENV_VALUE} builds cannot use the production Clerk frontend domain." >&2
+    echo "[vercel-build] Set NEXT_PUBLIC_CLERK_FRONTEND_API_URL to the Clerk development issuer, for example https://<dev-clerk-domain>.clerk.accounts.dev." >&2
+    exit 1
+  fi
+}
+
+validate_clerk_env
 
 # Production deploys are the only builds allowed to trigger `convex deploy`.
 if [[ "${VERCEL_ENV_VALUE}" == "production" ]]; then
