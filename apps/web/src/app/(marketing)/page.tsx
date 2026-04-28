@@ -286,7 +286,7 @@ const BentoCard = ({ title, description, icon: Icon, visual, kicker }: (typeof b
             </div>
             <span className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-stone-500">{kicker}</span>
         </div>
-        <h3 className="mt-7 max-w-xl font-[family-name:var(--font-fraunces)] text-[1.85rem] font-medium leading-[1.05] tracking-[-0.015em] text-white">
+        <h3 className="mt-7 max-w-xl font-[family-name:var(--font-inter)] text-[1.7rem] font-medium leading-[1.1] tracking-[-0.025em] text-white">
             {title}
         </h3>
         <p className="mt-3 max-w-2xl text-pretty text-[0.95rem] leading-7 text-stone-400">{description}</p>
@@ -351,8 +351,10 @@ const AgenticSection = () => (
         <div className="grid gap-14 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
             <div>
                 <Eyebrow>Future direction</Eyebrow>
-                <h2 className="max-w-3xl text-balance font-[family-name:var(--font-fraunces)] text-[clamp(2.6rem,4.8vw,5.2rem)] font-medium leading-[0.94] tracking-[-0.025em] text-white">
-                    Built for the moment finance starts <em className="italic text-stone-300">helping back.</em>
+                <h2 className="max-w-3xl text-balance font-[family-name:var(--font-inter)] text-[clamp(2.6rem,4.8vw,5.2rem)] font-medium leading-[0.94] tracking-[-0.035em] text-white">
+                    Built for the moment finance starts{" "}
+                    <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300">helping</em>{" "}
+                    back.
                 </h2>
                 <p className="mt-8 max-w-xl text-pretty text-lg leading-8 text-stone-400">
                     The product direction is careful by design: assistance for spotting patterns, organizing wallets, and recalling what needs attention, while you keep your hand on every financial decision.
@@ -559,9 +561,10 @@ export default function HomePage() {
                             <span className="text-stone-600">/</span>
                             <span className="text-[#a3d7bf]">private alpha</span>
                         </div>
-                        <h1 className="sp-hero-in mt-7 max-w-5xl text-balance font-[family-name:var(--font-fraunces)] text-[clamp(3.1rem,5.6vw,5.8rem)] font-medium leading-[0.92] tracking-[-0.03em] text-white">
-                            Open-source finance{" "}
-                            <em className="italic text-stone-300 [font-feature-settings:'ss01']">that hands you</em> the keys.
+                        <h1 className="sp-hero-in mt-7 max-w-5xl text-balance font-[family-name:var(--font-inter)] text-[clamp(3.1rem,5.6vw,5.8rem)] font-medium leading-[0.92] tracking-[-0.04em] text-white">
+                            Open-source finance that hands{" "}
+                            <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 [font-feature-settings:'ss01']">you</em>{" "}
+                            the keys.
                         </h1>
                         <p className="sp-hero-in mt-7 max-w-2xl text-pretty text-[1.15rem] leading-8 text-stone-400">
                             SmartPockets is a careful workshop for the people who manage more than one card. Real balances, clean wallets, transaction visibility, and future agent-assist that never pretends to control your money.
@@ -618,8 +621,10 @@ export default function HomePage() {
                         </p>
                     </div>
                     <div className="max-w-3xl">
-                        <h2 className="text-balance font-[family-name:var(--font-fraunces)] text-[clamp(2.4rem,4.4vw,4.8rem)] font-medium leading-[0.96] tracking-[-0.025em] text-white">
-                            Built for people whose finances <em className="italic text-stone-300">do not fit</em> a starter template.
+                        <h2 className="text-balance font-[family-name:var(--font-inter)] text-[clamp(2.4rem,4.4vw,4.8rem)] font-medium leading-[0.96] tracking-[-0.035em] text-white">
+                            Built for people whose finances do not{" "}
+                            <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300">fit</em>{" "}
+                            a starter template.
                         </h2>
                         <p className="mt-6 max-w-2xl text-pretty text-lg leading-8 text-stone-400">
                             The first job is not budgeting theatrics. It is giving card-heavy users a reliable place to see what is connected, what changed, and what needs attention.
@@ -655,9 +660,9 @@ export default function HomePage() {
                         <div className="relative z-10 grid gap-10 lg:grid-cols-[1fr_0.86fr] lg:items-end">
                             <div>
                                 <Eyebrow>Early access</Eyebrow>
-                                <h2 className="max-w-4xl text-balance font-[family-name:var(--font-fraunces)] text-[clamp(2.5rem,4.8vw,5.2rem)] font-medium leading-[0.94] tracking-[-0.025em] text-white">
-                                    Help shape the finance app{" "}
-                                    <em className="sp-shimmer-text italic [font-feature-settings:'ss01']">power users can trust.</em>
+                                <h2 className="max-w-4xl text-balance font-[family-name:var(--font-inter)] text-[clamp(2.5rem,4.8vw,5.2rem)] font-medium leading-[0.94] tracking-[-0.035em] text-white">
+                                    Help shape the finance app power users can{" "}
+                                    <em className="font-[family-name:var(--font-fraunces)] sp-shimmer-text font-medium italic [font-feature-settings:'ss01']">trust.</em>
                                 </h2>
                                 <p className="mt-6 max-w-2xl text-pretty text-lg leading-8 text-stone-400">
                                     The alpha is focused on credit-card visibility first. The broader vision is open-source personal finance with careful assistance layered on top &mdash; on your terms.
