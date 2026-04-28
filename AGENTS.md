@@ -13,6 +13,53 @@ SmartPockets is a fintech application for credit card power users who manage mul
 | Data Source | Plaid API (real bank connections) |
 | Auth | Clerk (user management synced to Convex) |
 
+## Linear + Graphite Work Tracking
+
+Linear is the source of truth for implementation work. Before meaningful code or documentation changes, search Linear for an existing issue that matches the task. If one exists, use it. If none exists, create a lightweight issue in the SmartPockets project. Do not create duplicates, and confirm the Linear issue ID before opening a branch or making changes.
+
+A Linear issue is required for features, bug fixes, refactors, tests, infrastructure, UI changes, data/model changes, documentation changes, and any multi-step investigation that may produce a branch or PR. A Linear issue is not required for read-only exploration, conceptual questions, or tiny checks with no code changes.
+
+When creating a new issue, keep it short and use:
+
+```md
+## Goal
+What should be true when this is done?
+
+## Done when
+- [ ]
+- [ ]
+
+## Verify
+-
+
+## Notes
+Created from AI coding session.
+```
+
+The Linear issue ID must appear in:
+- Branch name: `<issue-id>-short-description` (for example, `crowdev-123-add-empty-state`)
+- PR title: `<ISSUE-ID> Short description`
+- PR body: use `Fixes <ISSUE-ID>` only when the PR fully completes the issue; use `Refs <ISSUE-ID>` when the PR is partial, exploratory, documentation-only, or has follow-up work.
+
+Post a Linear comment when:
+- Starting work: intended approach, key assumptions, and files likely to change.
+- Blocked: what is blocked, why, and what input or decision is needed.
+- Opening a PR: Graphite PR link, summary of changes, verification performed, known risks, and follow-up work.
+
+Never manually mark a Linear issue as Done. PR automation handles status transitions on PR open and merge. Do not merge PRs unless explicitly instructed. Prefer small, reviewable PRs and run verification before opening a PR when possible. If verification cannot be run, say why.
+
+For reliable linking across Linear, GitHub, and Graphite:
+- Use the Linear issue's generated branch name when available.
+- Include the issue ID in the branch name, PR title, and PR body.
+- Use `Refs <ISSUE-ID>` for non-closing links and `Fixes <ISSUE-ID>` only for complete fixes.
+- Configure Linear's GitHub integration and commit-linking webhook for magic-word commit links.
+- Configure GitHub autolinks for the `CROWDEV-` prefix so issue IDs render as links in GitHub and Graphite.
+- Use Graphite's Linear integration as a secondary check so related Linear issues appear in the Graphite PR sidebar.
+
+Do not create new Linear projects, labels, statuses, automations, or views without approval. Do not introduce new dependencies without approval.
+
+When finishing, summarize the Linear issue used or created, branch name, Graphite PR link, what changed, verification performed, and remaining risks or follow-ups.
+
 ## Tech Stack
 
 | Category | Technology | Version |
@@ -422,7 +469,8 @@ Things AI agents frequently get wrong in this codebase.
 | Large commits with multiple changes | One logical change per commit |
 | Amend after pre-commit hook failure | Create NEW commit (hook failure = no commit happened) |
 | `git add -A` or `git add .` | Stage specific files by name |
-| Push to main without PR | Create feature branch, open PR via Graphite |
+| Branch without Linear issue ID | Search/create Linear issue first, then use the issue ID in the branch name |
+| Push to main without PR | Create a Linear-linked feature branch, open PR via Graphite |
 | Showing GitHub PR links as the primary link | Show the Graphite PR link first |
 
 ### Graphite PR Links
