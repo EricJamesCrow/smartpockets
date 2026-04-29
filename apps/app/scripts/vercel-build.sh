@@ -13,8 +13,6 @@ CLERK_SECRET_KEY_VALUE="${CLERK_SECRET_KEY:-}"
 CLERK_FRONTEND_API_URL_VALUE="${NEXT_PUBLIC_CLERK_FRONTEND_API_URL:-}"
 PRODUCTION_CLERK_FRONTEND_API_HOST="clerk.smartpockets.com"
 
-echo "[vercel-build] VERCEL_ENV=${VERCEL_ENV_VALUE}"
-
 require_clerk_env() {
   if [[ -z "${CLERK_PUBLISHABLE_KEY_VALUE}" ]]; then
     echo "[vercel-build] ERROR: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required." >&2
@@ -110,41 +108,49 @@ validate_clerk_env() {
   fi
 }
 
-validate_clerk_env
+main() {
+  echo "[vercel-build] VERCEL_ENV=${VERCEL_ENV_VALUE}"
 
-# Production deploys are the only builds allowed to trigger `convex deploy`.
-if [[ "${VERCEL_ENV_VALUE}" == "production" ]]; then
-  if [[ -z "${CONVEX_DEPLOY_KEY:-}" ]]; then
-    echo "[vercel-build] ERROR: CONVEX_DEPLOY_KEY is required for production builds." >&2
+  validate_clerk_env
+
+  # Production deploys are the only builds allowed to trigger `convex deploy`.
+  if [[ "${VERCEL_ENV_VALUE}" == "production" ]]; then
+    if [[ -z "${CONVEX_DEPLOY_KEY:-}" ]]; then
+      echo "[vercel-build] ERROR: CONVEX_DEPLOY_KEY is required for production builds." >&2
+      exit 1
+    fi
+
+    # Guardrail: if CONVEX_DEPLOYMENT is set, it must target production.
+    if [[ -n "${CONVEX_DEPLOYMENT_VALUE}" && "${CONVEX_DEPLOYMENT_VALUE}" != prod:* ]]; then
+      echo "[vercel-build] ERROR: production builds require CONVEX_DEPLOYMENT=prod:*." >&2
+      exit 1
+    fi
+
+    echo "[vercel-build] Deploying backend to Convex and building app..."
+    cd "${BACKEND_DIR}"
+    bunx convex deploy \
+      --cmd "cd ../../apps/app && bun run build" \
+      --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL
+    exit 0
+  fi
+
+  # Guardrail: non-production builds should never point at a production Convex deployment.
+  if [[ -n "${CONVEX_DEPLOYMENT_VALUE}" && "${CONVEX_DEPLOYMENT_VALUE}" == prod:* ]]; then
+    echo "[vercel-build] ERROR: ${VERCEL_ENV_VALUE} builds cannot use CONVEX_DEPLOYMENT=prod:*." >&2
     exit 1
   fi
 
-  # Guardrail: if CONVEX_DEPLOYMENT is set, it must target production.
-  if [[ -n "${CONVEX_DEPLOYMENT_VALUE}" && "${CONVEX_DEPLOYMENT_VALUE}" != prod:* ]]; then
-    echo "[vercel-build] ERROR: production builds require CONVEX_DEPLOYMENT=prod:*." >&2
+  # Non-production builds skip backend deploy and use environment-provided Convex URL.
+  if [[ -z "${NEXT_PUBLIC_CONVEX_URL:-}" ]]; then
+    echo "[vercel-build] ERROR: NEXT_PUBLIC_CONVEX_URL is required for non-production builds." >&2
     exit 1
   fi
 
-  echo "[vercel-build] Deploying backend to Convex and building app..."
-  cd "${BACKEND_DIR}"
-  bunx convex deploy \
-    --cmd "cd ../../apps/app && bun run build" \
-    --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL
-  exit 0
-fi
+  echo "[vercel-build] Skipping Convex deploy for ${VERCEL_ENV_VALUE}; building app only."
+  cd "${APP_DIR}"
+  bun run build
+}
 
-# Guardrail: non-production builds should never point at a production Convex deployment.
-if [[ -n "${CONVEX_DEPLOYMENT_VALUE}" && "${CONVEX_DEPLOYMENT_VALUE}" == prod:* ]]; then
-  echo "[vercel-build] ERROR: ${VERCEL_ENV_VALUE} builds cannot use CONVEX_DEPLOYMENT=prod:*." >&2
-  exit 1
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
 fi
-
-# Non-production builds skip backend deploy and use environment-provided Convex URL.
-if [[ -z "${NEXT_PUBLIC_CONVEX_URL:-}" ]]; then
-  echo "[vercel-build] ERROR: NEXT_PUBLIC_CONVEX_URL is required for non-production builds." >&2
-  exit 1
-fi
-
-echo "[vercel-build] Skipping Convex deploy for ${VERCEL_ENV_VALUE}; building app only."
-cd "${APP_DIR}"
-bun run build

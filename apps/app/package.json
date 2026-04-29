@@ -8,8 +8,9 @@
     "start": "next start",
     "clean": "rm -rf .next .turbo node_modules",
     "typecheck": "tsc --noEmit",
-    "lint": "bun scripts/check-tool-results.ts && node scripts/verify-reserved-slugs.mjs",
+    "lint": "bun scripts/check-tool-results.ts && node scripts/verify-reserved-slugs.mjs && bun run test:vercel-build",
     "check:tool-results": "bun scripts/check-tool-results.ts",
+    "test:vercel-build": "bash scripts/vercel-build.test.sh",
     "verify:slugs": "node scripts/verify-reserved-slugs.mjs"
   },
   "dependencies": {
