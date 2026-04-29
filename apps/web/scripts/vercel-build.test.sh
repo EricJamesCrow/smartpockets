@@ -44,6 +44,24 @@ run_validate_case() {
 }
 
 run_validate_case \
+  "web production live keys and production Clerk host pass" \
+  pass \
+  "" \
+  VERCEL_ENV=production \
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_test \
+  CLERK_SECRET_KEY=sk_live_test \
+  NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://clerk.smartpockets.com
+
+run_validate_case \
+  "web preview non-dev Clerk host fails" \
+  fail \
+  "preview builds require NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev." \
+  VERCEL_ENV=preview \
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_test \
+  CLERK_SECRET_KEY=sk_test_test \
+  NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.com
+
+run_validate_case \
   "web preview live publishable key fails" \
   fail \
   "preview builds cannot use production Clerk publishable keys" \

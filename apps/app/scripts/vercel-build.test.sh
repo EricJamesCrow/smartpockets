@@ -43,6 +43,35 @@ run_validate_case() {
   echo "[vercel-build.test] PASS: ${name}"
 }
 
+run_main_case() {
+  local name="${1}"
+  local expected_output="${2}"
+  shift 2
+
+  local output
+  local status
+
+  set +e
+  output="$(env -i PATH="${PATH}" "$@" bash -c 'source "$1"; main' bash "${BUILD_SCRIPT}" 2>&1)"
+  status=$?
+  set -e
+
+  if [[ "${status}" -eq 0 ]]; then
+    echo "[vercel-build.test] FAIL: ${name} expected failure, got success" >&2
+    failures=$((failures + 1))
+    return
+  fi
+
+  if [[ -n "${expected_output}" && "${output}" != *"${expected_output}"* ]]; then
+    echo "[vercel-build.test] FAIL: ${name} expected output containing: ${expected_output}" >&2
+    echo "${output}" >&2
+    failures=$((failures + 1))
+    return
+  fi
+
+  echo "[vercel-build.test] PASS: ${name}"
+}
+
 run_normalize_case() {
   local name="${1}"
   local expected_output="${2}"
@@ -96,6 +125,23 @@ run_validate_case \
   VERCEL_ENV=preview \
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_test \
   CLERK_SECRET_KEY=sk_test_test \
+  NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.clerk.accounts.dev
+
+run_validate_case \
+  "preview non-dev Clerk host fails" \
+  fail \
+  "preview builds require NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev." \
+  VERCEL_ENV=preview \
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_test \
+  CLERK_SECRET_KEY=sk_test_test \
+  NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.com
+
+run_main_case \
+  "production dev Clerk host fails before Convex checks" \
+  "production builds require NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://clerk.smartpockets.com." \
+  VERCEL_ENV=production \
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_test \
+  CLERK_SECRET_KEY=sk_live_test \
   NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.clerk.accounts.dev
 
 run_validate_case \

@@ -30,7 +30,7 @@ The web build command is `bash ./scripts/vercel-build.sh` in `apps/web/vercel.js
 
 ## Required Vercel envs
 
-1. Production environment
+1. Production environment (`apps/app`)
 
 - `CONVEX_DEPLOY_KEY` (production key)
 - `CONVEX_DEPLOYMENT=prod:<deployment_name>` (recommended and enforced if set)
@@ -38,14 +38,28 @@ The web build command is `bash ./scripts/vercel-build.sh` in `apps/web/vercel.js
 - `CLERK_SECRET_KEY=sk_live_...`
 - `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://clerk.smartpockets.com`
 
-2. Preview environment
+2. Production environment (`apps/web`)
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...`
+- `CLERK_SECRET_KEY=sk_live_...`
+- `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://clerk.smartpockets.com`
+- `CONVEX_DEPLOY_KEY`, `NEXT_PUBLIC_CONVEX_URL`, and `CONVEX_DEPLOYMENT` are not required for `smartpockets-web` builds.
+
+3. Preview environment (`apps/app`)
 
 - `NEXT_PUBLIC_CONVEX_URL` (preview/dev convex URL)
 - `CONVEX_DEPLOYMENT=dev:<deployment_name>` (recommended)
-- No production deploy key in preview scope
+- No production deploy key in preview scope.
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...`
 - `CLERK_SECRET_KEY=sk_test_...`
 - `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`
+
+4. Preview environment (`apps/web`)
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...`
+- `CLERK_SECRET_KEY=sk_test_...`
+- `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`
+- `NEXT_PUBLIC_CONVEX_URL` and `CONVEX_DEPLOYMENT` are not required for `smartpockets-web` preview builds.
 
 If a preview shows `Clerk: Production Keys are only allowed for domain "smartpockets.com"`, Vercel Preview is using production Clerk env vars. Update the Preview-scoped Clerk variables, redeploy the branch, and verify the build logs show the preview guard passing.
 
