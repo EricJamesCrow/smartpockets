@@ -554,7 +554,7 @@ The browser error `Clerk: Production Keys are only allowed for domain "smartpock
 
 Only share production Clerk settings/data with a preview if the preview is intentionally hosted on an approved `smartpockets.com` subdomain. The default Graphite/Vercel preview workflow should use Clerk development keys and non-production Convex data.
 
-Preview auth should redirect through `https://preview.smartpockets.com/sign-in` and use a Clerk `redirect_url` on the stable app domain, `https://app.preview.smartpockets.com`. Do not use generated `smartpockets-app-*.vercel.app` URLs as post-login destinations.
+Preview auth should redirect through plain `https://preview.smartpockets.com/sign-in`. Do not build custom app-side `redirect_url` values from generated or shared preview URLs, and do not use generated `smartpockets-app-*.vercel.app` URLs as post-login destinations. The web auth host owns fallback routing to `https://app.preview.smartpockets.com`.
 
 ## Schema Overview
 

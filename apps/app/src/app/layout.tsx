@@ -5,7 +5,6 @@ import { cx } from "@repo/ui/utils";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { headers } from "next/headers";
-import { buildAuthPageUrl, getAuthHostUrl } from "@/lib/auth-routing";
 import { AppearanceProvider } from "@/providers/appearance-provider";
 import { ConvexClientProvider } from "@/providers/convex-provider";
 import { RouteProvider } from "@/providers/router-provider";
@@ -16,10 +15,29 @@ const inter = Inter({
     display: "swap",
     variable: "--font-inter",
 });
-const AUTH_HOST_URL = getAuthHostUrl();
-const CLERK_SIGN_IN_URL = buildAuthPageUrl(AUTH_HOST_URL, "/sign-in");
-const CLERK_SIGN_UP_URL = buildAuthPageUrl(AUTH_HOST_URL, "/sign-up");
+const DEFAULT_LOCAL_MARKETING_URL = "http://localhost:3001";
+const DEFAULT_PREVIEW_MARKETING_URL = "https://preview.smartpockets.com";
+const DEFAULT_PRODUCTION_MARKETING_URL = "https://smartpockets.com";
 const DEFAULT_PRODUCTION_APP_HOST = "app.smartpockets.com";
+
+function getAuthHostUrl() {
+    if (process.env.NODE_ENV === "development") {
+        return process.env.NEXT_PUBLIC_LOCAL_MARKETING_URL || DEFAULT_LOCAL_MARKETING_URL;
+    }
+
+    if (process.env.VERCEL_ENV === "preview") {
+        return DEFAULT_PREVIEW_MARKETING_URL;
+    }
+
+    return process.env.NEXT_PUBLIC_MARKETING_URL || DEFAULT_PRODUCTION_MARKETING_URL;
+}
+
+function buildAuthPageUrl(pathname: "/sign-in" | "/sign-up") {
+    return new URL(pathname, getAuthHostUrl()).toString();
+}
+
+const CLERK_SIGN_IN_URL = buildAuthPageUrl("/sign-in");
+const CLERK_SIGN_UP_URL = buildAuthPageUrl("/sign-up");
 
 async function getClerkSatelliteDomain() {
     const headersList = await headers();

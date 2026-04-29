@@ -1,12 +1,30 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { buildAuthPageUrl, buildSignInRedirectUrl, getAuthHostUrl } from "@/lib/auth-routing";
 
 // API routes should not redirect (they return 401 instead)
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
-const AUTH_HOST_URL = getAuthHostUrl();
-const CLERK_SIGN_IN_URL = buildAuthPageUrl(AUTH_HOST_URL, "/sign-in");
-const CLERK_SIGN_UP_URL = buildAuthPageUrl(AUTH_HOST_URL, "/sign-up");
+const DEFAULT_LOCAL_MARKETING_URL = "http://localhost:3001";
+const DEFAULT_PREVIEW_MARKETING_URL = "https://preview.smartpockets.com";
+const DEFAULT_PRODUCTION_MARKETING_URL = "https://smartpockets.com";
+
+function getAuthHostUrl() {
+    if (process.env.NODE_ENV === "development") {
+        return process.env.NEXT_PUBLIC_LOCAL_MARKETING_URL || DEFAULT_LOCAL_MARKETING_URL;
+    }
+
+    if (process.env.VERCEL_ENV === "preview") {
+        return DEFAULT_PREVIEW_MARKETING_URL;
+    }
+
+    return process.env.NEXT_PUBLIC_MARKETING_URL || DEFAULT_PRODUCTION_MARKETING_URL;
+}
+
+function buildAuthPageUrl(pathname: "/sign-in" | "/sign-up") {
+    return new URL(pathname, getAuthHostUrl()).toString();
+}
+
+const CLERK_SIGN_IN_URL = buildAuthPageUrl("/sign-in");
+const CLERK_SIGN_UP_URL = buildAuthPageUrl("/sign-up");
 
 export default clerkMiddleware(
     async (auth, req) => {
@@ -18,14 +36,10 @@ export default clerkMiddleware(
         // Check if user is authenticated
         const { userId } = await auth();
 
-        // Redirect unauthenticated users to the auth host, then back to this app URL.
+        // Redirect unauthenticated users to the stable auth host. The auth host owns
+        // post-login fallback routing, which avoids custom redirect state loops.
         if (!userId) {
-            return NextResponse.redirect(
-                buildSignInRedirectUrl({
-                    authHostUrl: AUTH_HOST_URL,
-                    requestUrl: req.nextUrl,
-                }),
-            );
+            return NextResponse.redirect(CLERK_SIGN_IN_URL);
         }
 
         return NextResponse.next();
