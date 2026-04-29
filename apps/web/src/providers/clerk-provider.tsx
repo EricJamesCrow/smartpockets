@@ -1,32 +1,37 @@
 "use client";
 
 import { ClerkProvider } from "@clerk/nextjs";
-import { SMARTPOCKETS_APP_PREVIEW_ORIGIN_PATTERN } from "@repo/ui/utils/smartpockets-preview";
 
-function getOrigin(url: string) {
+const DEFAULT_LOCAL_APP_ORIGIN = "http://localhost:3000";
+const DEFAULT_PREVIEW_APP_ORIGIN = "https://app.preview.smartpockets.com";
+const DEFAULT_PRODUCTION_APP_ORIGIN = "https://app.smartpockets.com";
+
+function getOrigin(url: string, fallback: string) {
     try {
         return new URL(url).origin;
     } catch {
-        return url;
+        return fallback;
     }
 }
 
-export function SmartPocketsClerkProvider({ appUrl, children }: { appUrl: string; children: React.ReactNode }) {
-    const appOrigin = getOrigin(appUrl);
-    const allowedRedirectOrigins: Array<string | RegExp> = [
-        appOrigin,
-        "https://app.smartpockets.com",
-        "http://localhost:3000",
-        SMARTPOCKETS_APP_PREVIEW_ORIGIN_PATTERN,
-    ];
+export function SmartPocketsClerkProvider({ appOrigin, children }: { appOrigin: string; children: React.ReactNode }) {
+    const safeAppOrigin = getOrigin(appOrigin, DEFAULT_PRODUCTION_APP_ORIGIN);
+    const allowedRedirectOrigins = Array.from(
+        new Set([
+            safeAppOrigin,
+            DEFAULT_PRODUCTION_APP_ORIGIN,
+            DEFAULT_PREVIEW_APP_ORIGIN,
+            DEFAULT_LOCAL_APP_ORIGIN,
+        ]),
+    );
 
     return (
         <ClerkProvider
             allowedRedirectOrigins={allowedRedirectOrigins}
             signInUrl="/sign-in"
             signUpUrl="/sign-up"
-            signInFallbackRedirectUrl={appUrl}
-            signUpFallbackRedirectUrl={appUrl}
+            signInFallbackRedirectUrl={safeAppOrigin}
+            signUpFallbackRedirectUrl={safeAppOrigin}
         >
             {children}
         </ClerkProvider>

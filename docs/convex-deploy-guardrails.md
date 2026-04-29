@@ -102,14 +102,18 @@ If sign-in fails on a preview:
 3. Confirm preview auth routing
 
 - Signed-out app previews should redirect to
-  `https://preview.smartpockets.com/sign-in?redirect_url=<exact app preview URL>`.
+  `https://preview.smartpockets.com/sign-in?redirect_url=https://app.preview.smartpockets.com/<same-path>`.
+- Generated Vercel preview URLs are build/check URLs, not Clerk post-login
+  destinations. Do not use `smartpockets-app-*.vercel.app` as an auth return target.
 - The web auth host must use Clerk fallback redirect URLs, not force redirect URLs, so
-  Clerk respects the incoming `redirect_url`.
+  Clerk respects the stable incoming `redirect_url`.
 - `apps/web` is the primary Clerk auth host; `apps/app` is configured as the
   satellite app and points its Clerk sign-in/sign-up URLs at the auth host.
 - The app provider derives its satellite domain from the current request/location
   host, not from a manually-set per-branch env var.
-- Do not set per-branch Vercel env vars as the normal fix. Vercel preview URLs are
-  generated per deployment, and env changes only affect new deployments.
-- Trusted redirect targets are limited to `app.smartpockets.com`, local app dev, and
-  SmartPockets `smartpockets-app-*.vercel.app` preview origins.
+- The stable preview auth domains are shared manual-test aliases:
+  `preview.smartpockets.com` for `apps/web` and `app.preview.smartpockets.com` for
+  `apps/app`. Repoint them to the current branch/deployment only after reporting the
+  existing mapping because this can interrupt someone else's test session.
+- Trusted redirect targets are limited to `app.smartpockets.com`,
+  `app.preview.smartpockets.com`, and local app dev.
