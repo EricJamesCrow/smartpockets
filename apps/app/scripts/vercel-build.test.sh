@@ -119,6 +119,15 @@ run_validate_case \
   NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.clerk.accounts.dev
 
 run_validate_case \
+  "preview live secret key fails" \
+  fail \
+  "preview builds cannot use production Clerk secret keys" \
+  VERCEL_ENV=preview \
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_test \
+  CLERK_SECRET_KEY=sk_live_test \
+  NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.clerk.accounts.dev
+
+run_validate_case \
   "preview test keys and dev Clerk host pass" \
   pass \
   "" \
@@ -126,6 +135,34 @@ run_validate_case \
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_test \
   CLERK_SECRET_KEY=sk_test_test \
   NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.clerk.accounts.dev
+
+run_validate_case \
+  "development live secret key fails" \
+  fail \
+  "development builds cannot use production Clerk secret keys" \
+  VERCEL_ENV=development \
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_test \
+  CLERK_SECRET_KEY=sk_live_test \
+  NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.clerk.accounts.dev
+
+run_validate_case \
+  "development test keys and dev Clerk host pass" \
+  pass \
+  "" \
+  VERCEL_ENV=development \
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_test \
+  CLERK_SECRET_KEY=sk_test_test \
+  NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.clerk.accounts.dev
+
+run_main_case \
+  "development prod Convex deployment fails" \
+  "development builds cannot use CONVEX_DEPLOYMENT=prod:*." \
+  VERCEL_ENV=development \
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_test \
+  CLERK_SECRET_KEY=sk_test_test \
+  NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://example.clerk.accounts.dev \
+  NEXT_PUBLIC_CONVEX_URL=https://example.convex.cloud \
+  CONVEX_DEPLOYMENT=prod:example
 
 run_validate_case \
   "preview non-dev Clerk host fails" \

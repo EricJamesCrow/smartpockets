@@ -45,6 +45,7 @@ assert.equal(getAppOrigin({ NODE_ENV: "development" }), "http://localhost:3000")
 assert.equal(isTrustedAppRedirectOrigin("https://app.preview.smartpockets.com"), true);
 assert.equal(isTrustedAppRedirectOrigin("https://app.smartpockets.com"), true);
 assert.equal(isTrustedAppRedirectOrigin("http://localhost:3000"), true);
+assert.equal(isTrustedAppRedirectOrigin("http://127.0.0.1:4173"), true);
 assert.equal(
     isTrustedAppRedirectOrigin("https://smartpockets-app-git-eric-crowdev-225-prev-b554f3-crow-commerce.vercel.app"),
     false,

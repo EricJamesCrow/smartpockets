@@ -61,11 +61,17 @@ export function isTrustedAppRedirectOrigin(origin: string) {
     try {
         const url = new URL(origin);
 
-        return (
-            url.origin === DEFAULT_PRODUCTION_APP_URL ||
-            url.origin === DEFAULT_PREVIEW_APP_URL ||
-            url.origin === DEFAULT_LOCAL_APP_URL
-        );
+        if (
+            url.protocol === "http:" &&
+            (url.hostname === "localhost" ||
+                url.hostname === "127.0.0.1" ||
+                url.hostname === "[::1]" ||
+                url.hostname === "::1")
+        ) {
+            return true;
+        }
+
+        return url.origin === DEFAULT_PRODUCTION_APP_URL || url.origin === DEFAULT_PREVIEW_APP_URL;
     } catch {
         return false;
     }
