@@ -84,7 +84,7 @@ When finishing, summarize the Linear issue used or created, branch name, Graphit
 | Bank Data | Plaid | Latest |
 | Components | UntitledUI | Paid library |
 | Styling | Tailwind CSS | 4 |
-| Package Manager | bun | 1.1.42 |
+| Package Manager | bun | 1.3.13 |
 | Monorepo | Turborepo | Latest |
 
 ## Monorepo Structure

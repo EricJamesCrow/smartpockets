@@ -100,6 +100,7 @@
 - [ ] Self-hosting guide (Docker setup)
 - [ ] Set up GitHub Discussions
 - [ ] Hosted version — managed deployment with Plaid costs included
+- [x] Document safe Codex Cloud install/check/propose environment
 
 ---
 
