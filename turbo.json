@@ -9,8 +9,13 @@
     "build": {
       "env": [
         "CONVEX_DEPLOYMENT",
+        "VERCEL_ENV",
         "NEXT_PUBLIC_CONVEX_URL",
         "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+        "NEXT_PUBLIC_CLERK_FRONTEND_API_URL",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_MARKETING_URL",
+        "NEXT_PUBLIC_LOCAL_MARKETING_URL",
         "CLERK_SECRET_KEY",
         "RESEND_API_KEY",
         "OPENAI_API_KEY"

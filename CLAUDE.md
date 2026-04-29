@@ -14,6 +14,8 @@ Follow the repository instructions in `AGENTS.md`. The most important rules:
 4. Post a Linear comment when starting work, when blocked, and when opening a PR.
 5. Never manually mark Linear issues as Done. PR automation handles that.
 6. Do not merge PRs unless explicitly instructed.
+7. If an issue blocks verification, merge, or deployment of another issue, add the Linear blocker relationship and comment on both issues with the evidence and PR links.
+8. When working a sub-issue, move its parent to In Progress if the parent is still To-do or Backlog, then comment with the active child issue.
 
 ## Session Startup
 

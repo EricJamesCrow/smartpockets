@@ -1,8 +1,7 @@
 "use client";
 
 import { ClerkProvider } from "@clerk/nextjs";
-
-const APP_PREVIEW_ORIGIN_PATTERN = /^https:\/\/smartpockets-app(?:-git)?-[a-z0-9-]+-crow-commerce\.vercel\.app$/;
+import { SMARTPOCKETS_APP_PREVIEW_ORIGIN_PATTERN } from "@repo/ui/utils/smartpockets-preview";
 
 function getOrigin(url: string) {
     try {
@@ -14,7 +13,12 @@ function getOrigin(url: string) {
 
 export function SmartPocketsClerkProvider({ appUrl, children }: { appUrl: string; children: React.ReactNode }) {
     const appOrigin = getOrigin(appUrl);
-    const allowedRedirectOrigins: Array<string | RegExp> = [appOrigin, "https://app.smartpockets.com", "http://localhost:3000", APP_PREVIEW_ORIGIN_PATTERN];
+    const allowedRedirectOrigins: Array<string | RegExp> = [
+        appOrigin,
+        "https://app.smartpockets.com",
+        "http://localhost:3000",
+        SMARTPOCKETS_APP_PREVIEW_ORIGIN_PATTERN,
+    ];
 
     return (
         <ClerkProvider

@@ -46,6 +46,10 @@ Post a Linear comment when:
 - Blocked: what is blocked, why, and what input or decision is needed.
 - Opening a PR: Graphite PR link, summary of changes, verification performed, known risks, and follow-up work.
 
+If an issue or PR reasonably blocks verification, merge, or deployment of another issue, update Linear before continuing: add the blocker relationship (`blocks` / `blocked by`) and comment on both issues with the evidence and the affected PR links. Do not leave blockers only in chat, PR comments, or local notes.
+
+When starting or resuming work on a sub-issue, check its parent issue. If the parent is still To-do or Backlog while child work is active, move the parent to In Progress and leave a short comment naming the active child issue. Never move a parent issue to Done manually.
+
 Never manually mark a Linear issue as Done. PR automation handles status transitions on PR open and merge. Do not merge PRs unless explicitly instructed. Prefer small, reviewable PRs and run verification before opening a PR when possible. If verification cannot be run, say why.
 
 For reliable linking across Linear, GitHub, and Graphite:

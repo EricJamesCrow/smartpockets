@@ -14,6 +14,7 @@ The build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
 - Requires `CONVEX_DEPLOY_KEY`.
 - If `CONVEX_DEPLOYMENT` is set, it must be `prod:*`.
 - Requires production Clerk keys: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_*` and `CLERK_SECRET_KEY=sk_live_*`.
+- Requires production Clerk frontend domain: `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://clerk.smartpockets.com`.
 
 2. `VERCEL_ENV=preview` or `VERCEL_ENV=development`
 
@@ -21,6 +22,7 @@ The build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
 - Requires `NEXT_PUBLIC_CONVEX_URL`.
 - Rejects `CONVEX_DEPLOYMENT=prod:*`.
 - Requires development Clerk keys: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_*` and `CLERK_SECRET_KEY=sk_test_*`.
+- Requires development Clerk frontend domain: `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`.
 - Rejects production Clerk keys and any `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` that points at `smartpockets.com`.
 
 ## Required Vercel envs
@@ -31,7 +33,7 @@ The build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
 - `CONVEX_DEPLOYMENT=prod:<deployment_name>` (recommended and enforced if set)
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...`
 - `CLERK_SECRET_KEY=sk_live_...`
-- `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://clerk.smartpockets.com` or the approved production Clerk issuer
+- `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://clerk.smartpockets.com`
 
 2. Preview environment
 
@@ -41,7 +43,6 @@ The build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...`
 - `CLERK_SECRET_KEY=sk_test_...`
 - `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`
-- Vercel system env vars must be available: `VERCEL_BRANCH_URL` or `VERCEL_URL`
 
 If a preview shows `Clerk: Production Keys are only allowed for domain "smartpockets.com"`, Vercel Preview is using production Clerk env vars. Update the Preview-scoped Clerk variables, redeploy the branch, and verify the build logs show the preview guard passing.
 
@@ -89,9 +90,8 @@ If sign-in fails on a preview:
   Clerk respects the incoming `redirect_url`.
 - `apps/web` is the primary Clerk auth host; `apps/app` is configured as the
   satellite app and points its Clerk sign-in/sign-up URLs at the auth host.
-- The app provider derives its satellite domain from Vercel system env vars
-  (`VERCEL_BRANCH_URL` or `VERCEL_URL`) on Preview, not from a manually-set
-  per-branch env var.
+- The app provider derives its satellite domain from the current request/location
+  host, not from a manually-set per-branch env var.
 - Do not set per-branch Vercel env vars as the normal fix. Vercel preview URLs are
   generated per deployment, and env changes only affect new deployments.
 - Trusted redirect targets are limited to `app.smartpockets.com`, local app dev, and
