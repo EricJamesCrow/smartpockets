@@ -101,18 +101,17 @@ If sign-in fails on a preview:
 
 3. Confirm preview auth routing
 
-- Signed-out app previews should redirect to plain
-  `https://preview.smartpockets.com/sign-in`.
+- Signed-out app previews should redirect to the configured marketing/auth host.
+  In Preview, set `NEXT_PUBLIC_MARKETING_URL=https://preview.smartpockets.com`.
 - Generated Vercel preview URLs are build/check URLs, not Clerk post-login
   destinations. Do not use `smartpockets-app-*.vercel.app` as an auth return target.
-- The web auth host must use Clerk fallback redirect URLs, not force redirect URLs, so
-  Clerk can return to the stable app preview origin after sign-in.
+- The web auth host should force post-sign-in/sign-up redirects to the configured
+  stable app origin.
 - Do not build custom app-side `redirect_url` values from generated or shared preview
   URLs; Clerk redirect state is owned by the auth host.
-- `apps/web` is the primary Clerk auth host; `apps/app` is configured as the
-  satellite app and points its Clerk sign-in/sign-up URLs at the auth host.
-- The app provider derives its satellite domain from the current request/location
-  host, not from a manually-set per-branch env var.
+- Do not add app-side Clerk satellite props (`isSatellite`, `domain`,
+  `signInUrl`, or `signUpUrl`) unless the Clerk instance is explicitly configured
+  for those satellite domains and the flow is smoke-tested end to end.
 - The stable preview auth domains are shared manual-test aliases:
   `preview.smartpockets.com` for `apps/web` and `app.preview.smartpockets.com` for
   `apps/app`. Repoint them to the current branch/deployment only after reporting the

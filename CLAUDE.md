@@ -191,7 +191,8 @@ For Vercel Preview environment variables, use a non-production auth/data stack:
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...`
 - `CLERK_SECRET_KEY=sk_test_...`
 - `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`
-- `NEXT_PUBLIC_APP_ORIGIN=https://app.preview.smartpockets.com`
+- `NEXT_PUBLIC_APP_ORIGIN=https://app.preview.smartpockets.com` or `NEXT_PUBLIC_APP_URL=https://app.preview.smartpockets.com`
+- `NEXT_PUBLIC_MARKETING_URL=https://preview.smartpockets.com`
 - `NEXT_PUBLIC_CONVEX_URL=https://<dev-or-staging-convex>.convex.cloud`
 - `CONVEX_DEPLOYMENT=dev:<deployment>` or leave unset; never `prod:*`
 
@@ -199,7 +200,7 @@ The error `Clerk: Production Keys are only allowed for domain "smartpockets.com"
 
 Only use production Clerk keys on previews if the preview is hosted on an approved `smartpockets.com` subdomain and intentionally shares production auth settings/data. That is not the default workflow.
 
-Preview auth should redirect through plain `https://preview.smartpockets.com/sign-in`. Do not build custom app-side `redirect_url` values from generated or shared preview URLs, and do not use generated `smartpockets-app-*.vercel.app` URLs as post-login destinations. The web auth host owns fallback routing to `https://app.preview.smartpockets.com`.
+Preview auth should use the shared `https://preview.smartpockets.com` auth host and force post-login redirects to the configured stable app origin. Do not build custom app-side `redirect_url` values from generated or shared preview URLs, do not add Clerk satellite props unless the Clerk instance is explicitly configured and smoke-tested for those domains, and do not use generated `smartpockets-app-*.vercel.app` URLs as post-login destinations.
 
 ### Never Do
 
