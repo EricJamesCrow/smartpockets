@@ -16,10 +16,37 @@ const overlayFields = {
   isHidden: v.optional(v.boolean()),
   notes: v.optional(v.string()),
   userCategory: v.optional(v.string()),
+  userCategoryDetailed: v.optional(v.string()),
   userDate: v.optional(v.string()),
   userMerchantName: v.optional(v.string()),
   userTime: v.optional(v.string()),
 };
+
+function serializeOverlay(doc: {
+  plaidTransactionId: string;
+  isReviewed?: boolean;
+  reviewedAt?: number;
+  isHidden?: boolean;
+  notes?: string;
+  userCategory?: string;
+  userCategoryDetailed?: string;
+  userDate?: string;
+  userMerchantName?: string;
+  userTime?: string;
+}) {
+  return {
+    plaidTransactionId: doc.plaidTransactionId,
+    isReviewed: doc.isReviewed,
+    reviewedAt: doc.reviewedAt,
+    isHidden: doc.isHidden,
+    notes: doc.notes,
+    userCategory: doc.userCategory,
+    userCategoryDetailed: doc.userCategoryDetailed,
+    userDate: doc.userDate,
+    userMerchantName: doc.userMerchantName,
+    userTime: doc.userTime,
+  };
+}
 
 /**
  * Get a single overlay by Plaid transaction ID.
@@ -47,7 +74,7 @@ export const getByTransactionId = query({
       )
       .first();
 
-    return overlay?.doc() ?? null;
+    return overlay ? serializeOverlay(overlay.doc()) : null;
   },
 });
 
@@ -78,6 +105,7 @@ export const getByTransactionIds = query({
         isHidden?: boolean;
         notes?: string;
         userCategory?: string;
+        userCategoryDetailed?: string;
         userDate?: string;
         userMerchantName?: string;
         userTime?: string;
@@ -92,13 +120,14 @@ export const getByTransactionIds = query({
         .first();
 
       if (overlay) {
-        const doc = overlay.doc();
+        const doc = serializeOverlay(overlay.doc());
         result[id] = {
           isReviewed: doc.isReviewed,
           reviewedAt: doc.reviewedAt,
           isHidden: doc.isHidden,
           notes: doc.notes,
           userCategory: doc.userCategory,
+          userCategoryDetailed: doc.userCategoryDetailed,
           userDate: doc.userDate,
           userMerchantName: doc.userMerchantName,
           userTime: doc.userTime,

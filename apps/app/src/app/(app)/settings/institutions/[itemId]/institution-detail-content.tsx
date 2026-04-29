@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useUser } from "@clerk/nextjs";
 import { api } from "@convex/_generated/api";
 import { SectionHeader } from "@repo/ui/untitledui/application/section-headers/section-headers";
 import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { FeaturedIcon } from "@repo/ui/untitledui/foundations/featured-icon/featured-icon";
 import { ArrowLeft, Building07, Calendar, Check, CreditCard02, LinkBroken01, RefreshCw01 } from "@untitledui/icons";
-import { useAction, useQuery } from "convex/react";
+import { useAction, useConvexAuth, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DisconnectBankModal } from "@/features/institutions";
@@ -39,18 +38,18 @@ function formatBalance(rawValue: number | null | undefined): string {
  */
 export function InstitutionDetailContent({ itemId }: InstitutionDetailContentProps) {
     const router = useRouter();
-    const { user } = useUser();
+    const { isAuthenticated } = useConvexAuth();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
     // Fetch item data (using internal query via component)
-    const plaidItems = useQuery(api.items.queries.getItemsByUserId, user?.id ? { userId: user.id } : "skip");
+    const plaidItems = useQuery(api.items.queries.getItemsForViewer, isAuthenticated ? {} : "skip");
 
     // Find the specific item
     const item = plaidItems?.find((i) => i._id === itemId);
 
     // Fetch accounts for this item
-    const accounts = useQuery(api.plaidComponent.getAccountsByPlaidItemId, item ? { plaidItemId: item._id } : "skip");
+    const accounts = useQuery(api.plaidComponent.getAccountsForViewerItem, item ? { plaidItemId: item._id } : "skip");
 
     // Sync action
     const syncTransactions = useAction(api.plaidComponent.syncTransactionsAction);
@@ -58,7 +57,7 @@ export function InstitutionDetailContent({ itemId }: InstitutionDetailContentPro
     const syncCreditCards = useAction(api.creditCards.actions.syncCreditCardsAction);
 
     const handleRefresh = async () => {
-        if (!item || !user?.id) return;
+        if (!item) return;
 
         setIsRefreshing(true);
         const toastId = toast.loading("Refreshing data...");
