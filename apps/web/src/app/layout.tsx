@@ -8,7 +8,7 @@ const spaceGrotesk = Space_Grotesk({
     variable: "--font-space-grotesk",
 });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.smartpockets.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_ORIGIN ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://app.smartpockets.com";
 
 export const metadata = {
     title: "SmartPockets - Smart Credit Card Management",

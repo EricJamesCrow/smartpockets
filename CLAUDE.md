@@ -14,6 +14,8 @@ Follow the repository instructions in `AGENTS.md`. The most important rules:
 4. Post a Linear comment when starting work, when blocked, and when opening a PR.
 5. Never manually mark Linear issues as Done. PR automation handles that.
 6. Do not merge PRs unless explicitly instructed.
+7. If an issue blocks verification, merge, or deployment of another issue, add the Linear blocker relationship and comment on both issues with the evidence and PR links.
+8. When working a sub-issue, move its parent to In Progress if the parent is still To-do or Backlog, then comment with the active child issue.
 
 ## Session Startup
 
@@ -171,6 +173,16 @@ When summarizing submitted work, include:
 
 Vercel branch preview URLs are tied to the Git branch and should track the latest commit on that Graphite branch. Do not hand-compose the final user-facing preview URL unless Vercel printed or commented it; prefer the URL from Vercel checks/comments.
 
+Generated Vercel preview URLs are for build/check verification. They are not Clerk auth return targets.
+
+For auth smoke tests, use the shared stable preview domains:
+- `preview.smartpockets.com` for `smartpockets-web`
+- `app.preview.smartpockets.com` for `smartpockets-app`
+
+At the end of an implementation, ask: "Do you want me to point the shared preview domains at this branch so you can manually test the changes?"
+
+If the user says yes, inspect and report the current domain mappings first, then point only the shared preview domains at the selected branch/deployments. Prefer Vercel project domain `gitBranch` assignment; fall back to `vercel alias set <deployment-url> <domain> --scope crow-commerce`. Never change production domains or DNS records. After updating, verify project, branch/deployment, commit SHA, and the `preview.smartpockets.com` sign-in flow returning to `app.preview.smartpockets.com`.
+
 ### Clerk In Previews
 
 Never point Vercel Preview deployments at production Clerk keys or production Convex.
@@ -179,12 +191,16 @@ For Vercel Preview environment variables, use a non-production auth/data stack:
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...`
 - `CLERK_SECRET_KEY=sk_test_...`
 - `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`
+- `NEXT_PUBLIC_APP_ORIGIN=https://app.preview.smartpockets.com` or `NEXT_PUBLIC_APP_URL=https://app.preview.smartpockets.com`
+- `NEXT_PUBLIC_MARKETING_URL=https://preview.smartpockets.com`
 - `NEXT_PUBLIC_CONVEX_URL=https://<dev-or-staging-convex>.convex.cloud`
 - `CONVEX_DEPLOYMENT=dev:<deployment>` or leave unset; never `prod:*`
 
 The error `Clerk: Production Keys are only allowed for domain "smartpockets.com"` means a non-production origin, usually a Vercel preview URL, is using production Clerk keys. Fix the Vercel Preview environment variables and redeploy. `apps/app/scripts/vercel-build.sh` already blocks Preview builds from using `CONVEX_DEPLOYMENT=prod:*`; keep that guardrail intact.
 
 Only use production Clerk keys on previews if the preview is hosted on an approved `smartpockets.com` subdomain and intentionally shares production auth settings/data. That is not the default workflow.
+
+Preview auth should use the shared `https://preview.smartpockets.com` auth host and force post-login redirects to the configured stable app origin. Do not build custom app-side `redirect_url` values from generated or shared preview URLs, do not add Clerk satellite props unless the Clerk instance is explicitly configured and smoke-tested for those domains, and do not use generated `smartpockets-app-*.vercel.app` URLs as post-login destinations.
 
 ### Never Do
 
