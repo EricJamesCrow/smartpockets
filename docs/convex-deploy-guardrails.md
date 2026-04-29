@@ -3,10 +3,12 @@
 ## Why this exists
 
 `apps/app` uses a guarded Vercel build script so preview builds cannot accidentally deploy backend changes to production Convex or boot with production Clerk credentials.
+`apps/web` also uses a guarded Vercel build script so preview auth pages cannot deploy with production Clerk credentials.
 
 ## Build behavior
 
-The build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
+The app build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
+The web build command is `bash ./scripts/vercel-build.sh` in `apps/web/vercel.json`.
 
 1. `VERCEL_ENV=production`
 
@@ -24,6 +26,7 @@ The build command is `bash ./scripts/vercel-build.sh` in `apps/app/vercel.json`.
 - Requires development Clerk keys: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_*` and `CLERK_SECRET_KEY=sk_test_*`.
 - Requires development Clerk frontend domain: `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`.
 - Rejects production Clerk keys and any `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` that points at `smartpockets.com`.
+- The Clerk key/domain checks apply to both `smartpockets-app` and `smartpockets-web` preview deployments.
 
 ## Required Vercel envs
 
@@ -79,7 +82,7 @@ If sign-in fails on a preview:
 
 2. Confirm build guard output
 
-- Check the `Vercel - smartpockets-app` logs for `[vercel-build] VERCEL_ENV=preview`.
+- Check the `Vercel - smartpockets-app` and `Vercel - smartpockets-web` logs for `[vercel-build] VERCEL_ENV=preview`.
 - A production Clerk key in Preview should fail the build instead of deploying a broken sign-in page.
 
 3. Confirm preview auth routing
