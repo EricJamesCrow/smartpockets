@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { SearchLg, Building07, RefreshCw01 } from "@untitledui/icons";
+import { SearchLg, Building07 } from "@untitledui/icons";
 import { SectionHeader } from "@repo/ui/untitledui/application/section-headers/section-headers";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Toggle } from "@repo/ui/untitledui/base/toggle/toggle";
@@ -28,20 +27,20 @@ import { PlaidLinkButton, useTogglePlaidItem } from "@/features/institutions";
  */
 export default function InstitutionsPage() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
+  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "active" | "inactive">("all");
 
   // Fetch user's plaid items
   const plaidItems = useQuery(
-    api.items.queries.getItemsByUserId,
-    user?.id ? { userId: user.id } : "skip"
+    api.items.queries.getItemsForViewer,
+    isAuthenticated ? {} : "skip"
   );
 
   // Toggle hook
   const { toggle: toggleItem, isLoading: isToggling } = useTogglePlaidItem();
 
-  if (!isLoaded) {
+  if (isAuthLoading) {
     return null;
   }
 

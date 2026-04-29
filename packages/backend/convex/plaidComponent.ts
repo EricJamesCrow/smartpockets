@@ -829,29 +829,52 @@ export const deactivateItemInternal = internalMutation({
 /**
  * Get accounts for a specific plaidItem.
  */
+const plaidAccountReturnValidator = v.object({
+  _id: v.string(),
+  userId: v.string(),
+  plaidItemId: v.string(),
+  accountId: v.string(),
+  name: v.string(),
+  officialName: v.optional(v.string()),
+  mask: v.optional(v.string()),
+  type: v.string(),
+  subtype: v.optional(v.string()),
+  balances: v.object({
+    available: v.optional(v.number()),
+    current: v.optional(v.number()),
+    limit: v.optional(v.number()),
+    isoCurrencyCode: v.string(),
+  }),
+  createdAt: v.number(),
+});
+
 export const getAccountsByPlaidItemId = query({
   args: { plaidItemId: v.string() },
-  returns: v.array(
-    v.object({
-      _id: v.string(),
-      userId: v.string(),
-      plaidItemId: v.string(),
-      accountId: v.string(),
-      name: v.string(),
-      officialName: v.optional(v.string()),
-      mask: v.optional(v.string()),
-      type: v.string(),
-      subtype: v.optional(v.string()),
-      balances: v.object({
-        available: v.optional(v.number()),
-        current: v.optional(v.number()),
-        limit: v.optional(v.number()),
-        isoCurrencyCode: v.string(),
-      }),
-      createdAt: v.number(),
-    })
-  ),
+  returns: v.array(plaidAccountReturnValidator),
   handler: async (ctx, args) => {
+    return await ctx.runQuery(
+      components.plaid.public.getAccountsByItem,
+      { plaidItemId: args.plaidItemId }
+    );
+  },
+});
+
+/**
+ * Get accounts for a specific plaidItem owned by the authenticated viewer.
+ */
+export const getAccountsForViewerItem = viewerQuery({
+  args: { plaidItemId: v.string() },
+  returns: v.array(plaidAccountReturnValidator),
+  handler: async (ctx, args) => {
+    const viewer = ctx.viewerX();
+    const item = await ctx.runQuery(components.plaid.public.getItem, {
+      plaidItemId: args.plaidItemId,
+    });
+
+    if (!item || item.userId !== viewer.externalId) {
+      return [];
+    }
+
     return await ctx.runQuery(
       components.plaid.public.getAccountsByItem,
       { plaidItemId: args.plaidItemId }
@@ -864,26 +887,7 @@ export const getAccountsByPlaidItemId = query({
  */
 export const getAccountsByUserId = query({
   args: { userId: v.string() },
-  returns: v.array(
-    v.object({
-      _id: v.string(),
-      userId: v.string(),
-      plaidItemId: v.string(),
-      accountId: v.string(),
-      name: v.string(),
-      officialName: v.optional(v.string()),
-      mask: v.optional(v.string()),
-      type: v.string(),
-      subtype: v.optional(v.string()),
-      balances: v.object({
-        available: v.optional(v.number()),
-        current: v.optional(v.number()),
-        limit: v.optional(v.number()),
-        isoCurrencyCode: v.string(),
-      }),
-      createdAt: v.number(),
-    })
-  ),
+  returns: v.array(plaidAccountReturnValidator),
   handler: async (ctx, args) => {
     return await ctx.runQuery(
       components.plaid.public.getAccountsByUser,

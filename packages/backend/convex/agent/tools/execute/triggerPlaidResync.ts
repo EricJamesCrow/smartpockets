@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { agentMutation } from "../../functions";
-import { api, internal } from "../../../_generated/api";
+import { internal } from "../../../_generated/api";
 import { assertAgentSideEffectsAllowed } from "../../writeTool";
 
 /**
@@ -30,7 +30,7 @@ export const triggerPlaidResync = agentMutation({
   handler: async (ctx, { plaidItemId }) => {
     assertAgentSideEffectsAllowed();
     const viewer = ctx.viewerX();
-    const items = (await ctx.runQuery(api.items.queries.getItemsByUserId, {
+    const items = (await ctx.runQuery(internal.items.queries.getItemsByTrustedUserId, {
       userId: viewer.externalId,
     })) as Array<{
       _id: string;
