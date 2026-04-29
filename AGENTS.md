@@ -62,6 +62,15 @@ For reliable linking across Linear, GitHub, and Graphite:
 
 Do not create new Linear projects, labels, statuses, automations, or views without approval. Do not introduce new dependencies without approval.
 
+When finishing any code-changing task, unless the user explicitly says not to:
+- Stage only the files changed for the task.
+- Commit with the Linear issue ID in the commit subject.
+- Track the branch in Graphite if needed.
+- Submit a draft Graphite PR.
+- Update the PR title/body with the Linear issue, summary, verification, risks, and preview/check status.
+- Post the PR handoff comment on the Linear issue.
+- If any step is blocked, do not silently stop; report the exact blocker and the command/output.
+
 When finishing, summarize the Linear issue used or created, branch name, Graphite PR link, what changed, verification performed, and remaining risks or follow-ups.
 
 ## Tech Stack
