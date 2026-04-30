@@ -7,7 +7,6 @@ import { ChatView } from "@/components/chat/ChatView";
 // this [threadId] catch-all. Keep in sync with directories under (app)/ via
 // the verify-reserved-slugs lint script (T-6.2).
 const RESERVED_SLUGS = new Set([
-  "overview",
   "credit-cards",
   "transactions",
   "wallets",
