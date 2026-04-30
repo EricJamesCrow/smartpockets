@@ -34,7 +34,7 @@ export function ReconsentModal({ plaidItemId, onDismiss }: ReconsentModalProps) 
                   Action required
                 </p>
                 <AriaHeading slot="title" className="mt-1 text-base font-medium leading-tight tracking-[-0.02em] text-primary">
-                  <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 dark:text-stone-300">Bank</em>{" "}
+                  <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-[var(--sp-fraunces-accent)]">Bank</em>{" "}
                   reconnection required
                 </AriaHeading>
                 <p className="mt-2 text-sm text-tertiary">

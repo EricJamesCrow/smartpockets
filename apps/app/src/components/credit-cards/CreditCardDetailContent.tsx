@@ -208,7 +208,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         <div className="mt-4 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-medium leading-tight tracking-[-0.02em] text-primary lg:text-[1.85rem]">
-              <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 dark:text-stone-300">
+              <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-[var(--sp-fraunces-accent)]">
                 {card.cardName}
               </em>
             </h1>
@@ -246,7 +246,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
           {/* Payment Due Info */}
           <div className="flex flex-col items-end gap-1">
             <span className="sp-kicker text-tertiary dark:text-stone-500">
-              <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">
+              <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-[var(--sp-fraunces-accent)]">
                 Payment
               </em>{" "}
               due
@@ -308,7 +308,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
                 02 / Schema &middot; live
               </p>
               <h2 className="mt-1.5 text-display-xs font-medium leading-tight tracking-[-0.02em] text-primary">
-                <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 dark:text-stone-300">
+                <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-[var(--sp-fraunces-accent)]">
                   Architecture
                 </em>{" "}
                 under the card.
