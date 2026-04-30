@@ -1,0 +1,188 @@
+/*
+ * Apothecary Moss + Champagne palette for the SmartPockets dashboard.
+ * Phase 3 of CROWDEV-270 — port the 3A refined marketing aesthetic.
+ *
+ * Strategy: scoped overrides on .dark-mode (the active dashboard theme) so
+ * that AppearanceProvider light-mode users still get a graceful fallback.
+ * Additive moss/champagne CSS variables expose the palette without
+ * invalidating UntitledUI primitives that lean on the existing tokens.
+ */
+
+:root {
+    /* Apothecary palette — direct, additive variables. */
+    --apothecary-bg: #080a0c;
+    --apothecary-panel: #0a1014;
+    --apothecary-panel-elev: #0c1014;
+    --apothecary-panel-hover: #10171c;
+
+    --apothecary-mint: #a3d7bf;
+    --apothecary-moss: #7fb89a;
+    --apothecary-champagne: #d4c59c;
+
+    --apothecary-hairline: rgba(127, 184, 154, 0.1);
+    --apothecary-hairline-strong: rgba(127, 184, 154, 0.18);
+    --apothecary-hairline-soft: rgba(127, 184, 154, 0.06);
+    --apothecary-champagne-line: rgba(212, 197, 156, 0.18);
+}
+
+/*
+ * Dark-mode override — apply the moss + champagne palette to the existing
+ * UntitledUI tokens so any consuming primitive inherits the apothecary
+ * surface without us having to repaint each component class-by-class.
+ */
+.dark-mode {
+    /* BACKGROUND */
+    --color-bg-primary: var(--apothecary-bg);
+    --color-bg-primary_alt: var(--apothecary-panel);
+    --color-bg-primary-solid: var(--apothecary-panel-elev);
+    --color-bg-primary_hover: var(--apothecary-panel-hover);
+    --color-bg-secondary: var(--apothecary-panel);
+    --color-bg-secondary_alt: var(--apothecary-bg);
+    --color-bg-secondary_hover: var(--apothecary-panel-hover);
+    --color-bg-secondary_subtle: var(--apothecary-panel);
+    --color-bg-secondary-solid: rgba(127, 184, 154, 0.16);
+    --color-bg-tertiary: rgba(127, 184, 154, 0.1);
+    --color-bg-quaternary: rgba(127, 184, 154, 0.18);
+    --color-bg-active: var(--apothecary-panel-hover);
+    --color-bg-disabled: var(--apothecary-panel);
+    --color-bg-disabled_subtle: var(--apothecary-panel);
+    --color-bg-overlay: rgba(8, 10, 12, 0.92);
+
+    /* BORDERS — hairline moss tints */
+    --color-border-primary: var(--apothecary-hairline-strong);
+    --color-border-secondary: var(--apothecary-hairline);
+    --color-border-secondary_alt: var(--apothecary-hairline);
+    --color-border-tertiary: var(--apothecary-hairline-soft);
+    --color-border-disabled_subtle: var(--apothecary-hairline-soft);
+    --color-border-disabled: var(--apothecary-hairline);
+
+    /* TEXT — moss leans, but body text stays readable stone */
+    --color-text-primary: #f5f5f4;            /* stone-100, true white feels harsh */
+    --color-text-secondary: rgba(245, 245, 244, 0.85);
+    --color-text-tertiary: rgba(245, 245, 244, 0.55);
+    --color-text-quaternary: rgba(245, 245, 244, 0.4);
+    --color-text-secondary_hover: rgba(245, 245, 244, 0.92);
+    --color-text-tertiary_hover: rgba(245, 245, 244, 0.7);
+    --color-text-placeholder: rgba(245, 245, 244, 0.32);
+    --color-text-placeholder_subtle: rgba(245, 245, 244, 0.18);
+
+    /* FOREGROUND */
+    --color-fg-primary: #f5f5f4;
+    --color-fg-secondary: rgba(245, 245, 244, 0.78);
+    --color-fg-secondary_hover: rgba(245, 245, 244, 0.92);
+    --color-fg-tertiary: rgba(245, 245, 244, 0.55);
+    --color-fg-tertiary_hover: rgba(245, 245, 244, 0.72);
+    --color-fg-quaternary: rgba(245, 245, 244, 0.45);
+    --color-fg-quaternary_hover: rgba(245, 245, 244, 0.6);
+
+    /* BRAND — collapse to apothecary moss so brand-coloured UntitledUI
+     *          primitives (badges, focus rings, accents) read on-palette. */
+    --color-bg-brand-primary: rgba(127, 184, 154, 0.12);
+    --color-bg-brand-primary_alt: rgba(127, 184, 154, 0.08);
+    --color-bg-brand-secondary: rgba(127, 184, 154, 0.18);
+    --color-bg-brand-solid: var(--apothecary-moss);
+    --color-bg-brand-solid_hover: var(--apothecary-mint);
+    --color-bg-brand-section: var(--apothecary-panel);
+    --color-bg-brand-section_subtle: var(--apothecary-bg);
+
+    --color-fg-brand-primary: var(--apothecary-mint);
+    --color-fg-brand-primary_alt: var(--apothecary-moss);
+    --color-fg-brand-secondary: var(--apothecary-moss);
+    --color-fg-brand-secondary_alt: rgba(127, 184, 154, 0.55);
+    --color-fg-brand-secondary_hover: var(--apothecary-mint);
+
+    --color-text-brand-primary: var(--apothecary-mint);
+    --color-text-brand-secondary: var(--apothecary-moss);
+    --color-text-brand-tertiary: rgba(127, 184, 154, 0.65);
+    --color-text-brand-secondary_hover: var(--apothecary-mint);
+    --color-text-brand-tertiary_alt: rgba(245, 245, 244, 0.85);
+
+    --color-border-brand: var(--apothecary-hairline-strong);
+    --color-border-brand_alt: var(--apothecary-hairline);
+}
+
+/*
+ * Live status pulse — used on the sidebar header status dot and
+ * scattered "live" chips. Subtle enough to avoid an animated dashboard.
+ */
+@keyframes apothecary-pulse {
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 8px 2px rgba(127, 184, 154, 0.5);
+    }
+    50% {
+        opacity: 0.7;
+        box-shadow: 0 0 4px 1px rgba(127, 184, 154, 0.3);
+    }
+}
+
+.apothecary-pulse {
+    animation: apothecary-pulse 2.4s ease-in-out infinite;
+}
+
+/*
+ * Cursor-spotlit hover — used on credit-card grid items.
+ * The mouse-tracking JS sets --mouse-x / --mouse-y as percentages
+ * within the grid item bounds.
+ */
+.apothecary-spotlight {
+    position: relative;
+    isolation: isolate;
+}
+
+.apothecary-spotlight::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: radial-gradient(
+        320px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(212, 197, 156, 0.14),
+        rgba(127, 184, 154, 0.06) 36%,
+        transparent 64%
+    );
+    opacity: 0;
+    transition: opacity 280ms ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.apothecary-spotlight:hover::before,
+.apothecary-spotlight:focus-visible::before {
+    opacity: 1;
+}
+
+.apothecary-spotlight > * {
+    position: relative;
+    z-index: 2;
+}
+
+/*
+ * Hairline divider — used in card detail and sidebar to evoke the
+ * marketing site's tonal panel borders.
+ */
+.apothecary-hairline {
+    border-color: var(--apothecary-hairline);
+}
+
+.apothecary-hairline-strong {
+    border-color: var(--apothecary-hairline-strong);
+}
+
+/*
+ * Tabular mono labels for technical microcopy. Use sparingly to
+ * preserve the marketing site's contrast between body and data text.
+ */
+.apothecary-mono {
+    font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular,
+        Menlo, Consolas, monospace;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.apothecary-serif {
+    font-family: var(--font-source-serif), Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 300;
+}

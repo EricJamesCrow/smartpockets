@@ -21,6 +21,7 @@ import { useAutoPay } from "./AutoPayToggle";
 import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { TransactionsSection } from "./TransactionsSection";
 import { CardDetailsTab } from "./CardDetailsTab";
+import { CardSchemaPanel } from "./CardSchemaPanel";
 import { InlineEditableField } from "./details/InlineEditableField";
 import { useSharedLayoutAnimation } from "@/lib/context/shared-layout-animation-context";
 import {
@@ -206,11 +207,16 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         {/* Card Title and Subtitle */}
         <div className="mt-4 flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-primary lg:text-3xl">
-              {card.cardName}
+            <h1 className="font-[family-name:var(--font-geist)] text-2xl font-medium tracking-[-0.02em] text-primary lg:text-3xl">
+              <span className="font-[family-name:var(--font-source-serif)] italic font-light text-text-brand-primary">
+                {card.cardName.split(" ")[0]}
+              </span>
+              {card.cardName.includes(" ")
+                ? ` ${card.cardName.substring(card.cardName.indexOf(" ") + 1)}`
+                : ""}
             </h1>
-            <p className="mt-1 text-sm text-tertiary">
-              CREDIT • {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} •••• {card.lastFour}
+            <p className="mt-1.5 font-[family-name:var(--font-jetbrains-mono)] text-[11px] tracking-[0.18em] uppercase text-text-brand-tertiary">
+              CREDIT · {card.brand.toUpperCase()} ···· {card.lastFour}
             </p>
             {/* Provider Dashboard Link */}
             <div className="mt-1 flex items-center">
@@ -241,10 +247,10 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
 
           {/* Payment Due Info */}
           <div className="flex flex-col items-end gap-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-tertiary">
+            <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] font-medium uppercase tracking-[0.22em] text-text-brand-tertiary">
               Payment Due
             </span>
-            <span className="text-base font-semibold text-primary">
+            <span className="font-[family-name:var(--font-jetbrains-mono)] text-base font-medium tabular-nums text-primary">
               {card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--"}
             </span>
             <PaymentDueBadge
@@ -264,23 +270,23 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         </div>
 
         {/* Tab Navigation - Below card */}
-        <div className="border-b border-secondary px-4 lg:px-6">
-          <nav className="flex justify-center gap-6" aria-label="Card detail tabs">
+        <div className="border-b border-[var(--apothecary-hairline)] px-4 lg:px-6">
+          <nav className="flex justify-center gap-7" aria-label="Card detail tabs">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setSelectedTab(tab.id)}
                 className={cx(
-                  "relative pb-3 text-sm font-semibold transition-colors",
+                  "relative pb-3 font-[family-name:var(--font-jetbrains-mono)] text-[11px] tracking-[0.18em] uppercase transition-colors",
                   selectedTab === tab.id
-                    ? "text-utility-brand-600"
-                    : "text-tertiary hover:text-secondary"
+                    ? "text-text-brand-primary"
+                    : "text-text-brand-tertiary hover:text-secondary"
                 )}
               >
                 {tab.label}
                 {selectedTab === tab.id && (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-utility-brand-600" />
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-[var(--apothecary-moss)] via-[var(--apothecary-champagne)] to-[var(--apothecary-moss)]" />
                 )}
               </button>
             ))}
@@ -293,6 +299,34 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
           <>
             {/* Key Metrics Row */}
             <KeyMetrics card={card} />
+
+            {/* Convex schema panel — apothecary's lift of the marketing site's
+                code listing. The 3A signature in product context. */}
+            <div className="px-4 py-8 lg:px-6">
+              <div className="mb-5 flex items-center gap-3">
+                <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.22em] uppercase text-text-brand-primary">
+                  02
+                </span>
+                <span className="h-px w-10 bg-gradient-to-r from-[var(--apothecary-hairline-strong)] via-[var(--apothecary-champagne-line)] to-transparent" />
+                <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.22em] uppercase text-text-brand-tertiary">
+                  Schema · live
+                </span>
+              </div>
+              <h2 className="font-[family-name:var(--font-geist)] text-lg font-medium tracking-[-0.015em] text-primary">
+                <span className="font-[family-name:var(--font-source-serif)] italic font-light text-text-brand-primary">
+                  Architecture
+                </span>{" "}
+                under the card.
+              </h2>
+              <p className="mt-2 max-w-[60ch] font-[family-name:var(--font-geist)] text-sm leading-[1.55] text-tertiary">
+                Every field on this page resolves through a single Convex query.
+                No polling, no intermediate API. The shape below is what the
+                runtime actually returns.
+              </p>
+              <div className="mt-6">
+                <CardSchemaPanel card={card} />
+              </div>
+            </div>
 
             {/* Transactions Section */}
             <div className="px-4 py-6 lg:px-6">

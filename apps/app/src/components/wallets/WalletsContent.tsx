@@ -84,10 +84,24 @@ export function WalletsContent() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-secondary px-6 py-4">
+      <div className="flex items-center justify-between border-b border-secondary px-6 py-5">
         <div>
-          <h1 className="text-display-xs font-semibold text-primary">Wallets</h1>
-          <p className="text-sm text-tertiary">
+          <div className="flex items-center gap-3">
+            <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.22em] uppercase text-text-brand-primary">
+              03
+            </span>
+            <span className="h-px w-10 bg-gradient-to-r from-[var(--apothecary-hairline-strong)] via-[var(--apothecary-champagne-line)] to-transparent" />
+            <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.22em] uppercase text-text-brand-tertiary">
+              Pockets
+            </span>
+          </div>
+          <h1 className="mt-2 font-[family-name:var(--font-geist)] text-display-xs font-medium tracking-[-0.02em] text-primary">
+            <span className="font-[family-name:var(--font-source-serif)] italic font-light text-text-brand-primary">
+              Your
+            </span>{" "}
+            wallets
+          </h1>
+          <p className="mt-1.5 font-[family-name:var(--font-geist)] text-sm text-tertiary">
             Organize your credit cards into custom groups
           </p>
         </div>

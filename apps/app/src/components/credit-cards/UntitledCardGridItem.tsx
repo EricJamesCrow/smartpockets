@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useMutation } from "convex/react";
@@ -58,6 +58,19 @@ export function UntitledCardGridItem({
   const [hasAnimatedIn, setHasAnimatedIn] = useState(false);
   useEffect(() => {
     setHasAnimatedIn(true);
+  }, []);
+
+  // Cursor-spotlit hover — set --mouse-x/--mouse-y as percentages on the host.
+  // The radial gradient is rendered by `.apothecary-spotlight::before`.
+  const spotlightRef = useRef<HTMLDivElement>(null);
+  const handleSpotlight = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const node = spotlightRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    node.style.setProperty("--mouse-x", `${x.toFixed(1)}%`);
+    node.style.setProperty("--mouse-y", `${y.toFixed(1)}%`);
   }, []);
 
   // Remove from wallet mutation
@@ -141,6 +154,7 @@ export function UntitledCardGridItem({
     >
       {/* Card Visual - Shared element wrapper (fixed aspect, no size distortion) */}
       <motion.div
+        ref={spotlightRef}
         layoutId={sharedLayoutId}
         layout="position"
         transition={{
@@ -149,7 +163,8 @@ export function UntitledCardGridItem({
           damping: SHARED_LAYOUT_ANIMATIONS.SPRING_DAMPING,
           duration: SHARED_LAYOUT_ANIMATIONS.DURATION,
         }}
-        className="relative w-full"
+        onMouseMove={handleSpotlight}
+        className="apothecary-spotlight relative w-full rounded-2xl p-1.5 transition-shadow duration-300 group-hover:shadow-[0_24px_60px_-30px_rgba(127,184,154,0.45)]"
       >
         <UntitledCreditCard card={card} />
 
@@ -181,15 +196,17 @@ export function UntitledCardGridItem({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="mt-3"
+            className="mt-3 px-1.5"
           >
             {/* Card Name & Payment Status */}
-            <div className="mb-2 flex items-start justify-between gap-2">
+            <div className="mb-3 flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold text-primary">
+                <h3 className="truncate font-[family-name:var(--font-geist)] text-sm font-medium text-primary">
                   {card.cardName}
                 </h3>
-                <p className="text-xs text-tertiary">{card.company}</p>
+                <p className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.18em] uppercase text-text-brand-tertiary">
+                  {card.company}
+                </p>
               </div>
               <PaymentDueBadge
                 nextPaymentDueDate={card.nextPaymentDueDate}
@@ -203,8 +220,10 @@ export function UntitledCardGridItem({
             {/* Utilization Bar */}
             <div className="mb-3">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs text-tertiary">Utilization</span>
-                <span className="text-xs font-medium tabular-nums text-primary">
+                <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.18em] uppercase text-text-brand-tertiary">
+                  Util
+                </span>
+                <span className="font-[family-name:var(--font-jetbrains-mono)] text-[11px] font-medium tabular-nums text-primary">
                   {card.utilization !== null ? `${card.utilization}%` : "--"}
                 </span>
               </div>
@@ -212,33 +231,25 @@ export function UntitledCardGridItem({
             </div>
 
             {/* Statement Balance, Min Payment, Due Date, APR */}
-            <div className="flex justify-between text-xs">
-              <div>
-                <p className="text-tertiary">Statement</p>
-                <p className="font-medium text-primary">
-                  {formatDisplayCurrency(card.lastStatementBalance)}
-                </p>
-              </div>
-              <div>
-                <p className="text-tertiary">Min Payment</p>
-                <p className="font-medium text-primary">
-                  {formatDisplayCurrency(card.minimumPaymentAmount)}
-                </p>
-              </div>
-              <div>
-                <p className="text-tertiary">Due Date</p>
-                <p className="font-medium text-primary">
-                  {card.nextPaymentDueDate
-                    ? formatDueDate(card.nextPaymentDueDate)
-                    : "--"}
-                </p>
-              </div>
-              <div>
-                <p className="text-tertiary">APR</p>
-                <p className="font-medium text-primary">
-                  {formatApr(card.apr)}
-                </p>
-              </div>
+            <div className="grid grid-cols-4 gap-2 border-t border-[var(--apothecary-hairline)] pt-3 text-xs">
+              {[
+                { label: "Statement", value: formatDisplayCurrency(card.lastStatementBalance) },
+                { label: "Min", value: formatDisplayCurrency(card.minimumPaymentAmount) },
+                {
+                  label: "Due",
+                  value: card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--",
+                },
+                { label: "APR", value: formatApr(card.apr) },
+              ].map((cell) => (
+                <div key={cell.label}>
+                  <p className="font-[family-name:var(--font-jetbrains-mono)] text-[9px] tracking-[0.18em] uppercase text-text-brand-tertiary">
+                    {cell.label}
+                  </p>
+                  <p className="mt-0.5 font-[family-name:var(--font-jetbrains-mono)] text-[12px] font-medium tabular-nums text-primary">
+                    {cell.value}
+                  </p>
+                </div>
+              ))}
             </div>
           </motion.div>
         )}

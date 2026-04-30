@@ -130,8 +130,14 @@ export function PinnedWalletsSidebar() {
 
   return (
     <div className="mt-4 border-t border-secondary pt-4">
-      <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-tertiary">
-        Pinned Wallets
+      <div className="mb-3 flex items-center gap-3 px-3">
+        <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.22em] uppercase text-text-brand-primary">
+          Wallets
+        </span>
+        <span className="h-px flex-1 bg-gradient-to-r from-[var(--apothecary-hairline-strong)] via-[var(--apothecary-champagne-line)] to-transparent" />
+        <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tabular-nums uppercase tracking-[0.22em] text-text-brand-tertiary">
+          {String(pinnedWallets.length).padStart(2, "0")}
+        </span>
       </div>
       <DndContext
         sensors={sensors}
@@ -231,7 +237,7 @@ function PinnedWalletItem({ wallet, dragHandleProps, isDragging }: PinnedWalletI
         className={cx(
           "group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
           isActive
-            ? "bg-brand-primary/10 text-brand-primary"
+            ? "bg-[rgba(127,184,154,0.10)] text-text-brand-primary ring-1 ring-inset ring-[var(--apothecary-hairline-strong)]"
             : "text-secondary hover:bg-secondary hover:text-primary",
           isDragging && "bg-secondary shadow-sm"
         )}

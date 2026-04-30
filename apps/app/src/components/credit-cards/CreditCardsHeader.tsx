@@ -26,12 +26,32 @@ export function CreditCardsHeader({
   const showWalletAddCards = Boolean(walletName && onAddCardsToWallet);
 
   return (
-    <div className="flex items-center justify-between border-b border-secondary px-6 py-4">
+    <div className="flex items-center justify-between border-b border-secondary px-6 py-5">
       <div>
-        <h1 className="text-display-xs font-semibold text-primary">
-          {walletName ? walletName : "Credit Cards"}
+        {/* Apothecary section label */}
+        <div className="flex items-center gap-3">
+          <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.22em] uppercase text-text-brand-primary">
+            01
+          </span>
+          <span className="h-px w-10 bg-gradient-to-r from-[var(--apothecary-hairline-strong)] via-[var(--apothecary-champagne-line)] to-transparent" />
+          <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.22em] uppercase text-text-brand-tertiary">
+            {walletName ? "wallet view" : "vault"}
+          </span>
+        </div>
+        {/* Headline with one-word italic accent */}
+        <h1 className="mt-2 font-[family-name:var(--font-geist)] text-display-xs font-medium tracking-[-0.02em] text-primary">
+          {walletName ? (
+            walletName
+          ) : (
+            <>
+              <span className="font-[family-name:var(--font-source-serif)] italic font-light text-text-brand-primary">
+                Your
+              </span>{" "}
+              cards
+            </>
+          )}
         </h1>
-        <p className="text-sm text-tertiary">
+        <p className="mt-1.5 font-[family-name:var(--font-geist)] text-sm text-tertiary">
           {walletName
             ? "Cards in this wallet"
             : "Track your balances, payments, and utilization"}

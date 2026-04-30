@@ -135,8 +135,13 @@ export function DashboardSidebar() {
                     initial={false}
                     animate={{ width: isSlim ? "auto" : 296 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="h-full bg-primary overflow-hidden border-r border-secondary"
+                    className="h-full bg-primary overflow-hidden border-r border-secondary relative"
                 >
+                    {/* Apothecary edge highlight — champagne hairline at the top, moss bloom at the bottom */}
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-[var(--apothecary-champagne-line)] to-transparent"
+                    />
                     <div className={isSlim ? "w-auto h-full min-w-[68px]" : "w-[296px] h-full min-w-[296px]"}>
                         {isSlim ? (
                              <SidebarSlimDesktop
@@ -153,6 +158,18 @@ export function DashboardSidebar() {
                                 onSearchClick={() => setIsCommandMenuOpen(true)}
                                 hideBorder
                              >
+                                {/* Apothecary status chip — sits between the search row and the nav list */}
+                                <div className="mt-2 flex items-center gap-3 px-5">
+                                    <span className="grid size-1.5 place-items-center">
+                                        <span className="apothecary-pulse size-1.5 rounded-full bg-[var(--apothecary-moss)]" />
+                                    </span>
+                                    <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.22em] uppercase text-text-brand-primary">
+                                        sync · live
+                                    </span>
+                                    <span className="ml-auto font-[family-name:var(--font-jetbrains-mono)] text-[10px] tabular-nums uppercase tracking-[0.22em] text-text-brand-tertiary">
+                                        v3.0
+                                    </span>
+                                </div>
                                 <PinnedWalletsSidebar />
                              </SidebarSimpleDesktop>
                         )}
