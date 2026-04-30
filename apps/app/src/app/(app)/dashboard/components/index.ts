@@ -1,4 +1,3 @@
-export { AlertBanner } from "./AlertBanner";
 export { HeroMetrics } from "./HeroMetrics";
 export { UpcomingPayments } from "./UpcomingPayments";
 export { YourCards } from "./YourCards";
