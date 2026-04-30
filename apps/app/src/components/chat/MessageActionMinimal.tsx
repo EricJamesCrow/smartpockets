@@ -46,8 +46,8 @@ export function MessageActionMinimal({
   return (
     <div
       className={cx(
-        "relative flex items-end gap-2 rounded-3xl border border-secondary bg-primary p-2 shadow-xs transition-shadow duration-300 focus-within:shadow-md",
-        "dark:border-white/[0.10] dark:bg-white/[0.04] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:focus-within:border-[#7fb89a]/40",
+        "relative flex items-end gap-2 rounded-3xl border border-secondary bg-primary p-2 shadow-xs transition-[box-shadow,border-color] duration-300 focus-within:shadow-md focus-within:border-[var(--sp-moss-mint)]/40",
+        "dark:border-[var(--sp-moss-line-strong)] dark:bg-[var(--sp-surface-panel-strong)] dark:shadow-[var(--sp-inset-hairline-strong)] dark:focus-within:border-[var(--sp-moss-mint)]/40",
         className,
       )}
     >
@@ -68,7 +68,7 @@ export function MessageActionMinimal({
         onClick={submit}
         disabled={!canSubmit}
         aria-label="Send"
-        className="flex size-9 items-center justify-center rounded-full bg-brand-solid text-white shadow-[0_4px_14px_rgba(127,184,154,0.25)] transition-all duration-300 disabled:opacity-40 hover:scale-[1.04] active:scale-[0.96]"
+        className="flex size-9 items-center justify-center rounded-full bg-brand-solid text-white shadow-[0_4px_14px_rgba(127,184,154,0.25)] transition-all duration-300 disabled:opacity-40 hover:scale-[1.04] hover:brightness-110 active:scale-[0.96] active:brightness-95"
       >
         <ArrowUp className="size-5" />
       </button>

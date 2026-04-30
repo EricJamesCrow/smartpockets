@@ -6,8 +6,8 @@
  * champagne and mossy mint accents. Hairline borders. Geist body, Fraunces
  * for italic accent words.
  *
- * NOTE: This file ONLY retunes the dark-mode gray ramp + neutral surfaces.
- * The brand chain (--color-brand-25..950 → --color-bg-brand-solid) is left
+ * Only the dark-mode + light-mode token blocks reshape the gray ramp; the
+ * brand chain (--color-brand-25..950 → --color-bg-brand-solid) is left
  * intact so AppearanceProvider's runtime applyBrandColor() override still
  * wins. Defaults below shift the brand toward mossy mint when no user
  * override is present.
@@ -24,6 +24,13 @@
     --sp-moss-mint-bright: #a3d7bf;
     --sp-champagne: #d4c59c;
     --sp-champagne-soft: #c8b88a;
+
+    /* Surface tokens — moss panel with subtle inner highlight. */
+    --sp-surface-panel: rgba(255, 255, 255, 0.03);
+    --sp-surface-panel-strong: rgba(255, 255, 255, 0.05);
+    --sp-inset-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --sp-inset-hairline-strong: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --sp-shadow-panel: 0 24px 60px rgba(8, 10, 12, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .dark-mode {
@@ -71,6 +78,47 @@
 }
 
 /*
+ * Light-mode token block — cream paper, warm charcoal, deeper champagne and
+ * moss for legibility on a bright surface. Lets AppearanceProvider's "light"
+ * option keep working with a coherent moss + champagne aesthetic.
+ */
+.light-mode {
+    /* Warm cream surface ramp. */
+    --color-gray-25: rgb(253 250 243);
+    --color-gray-50: rgb(245 239 226);
+    --color-gray-100: rgb(232 224 207);
+    --color-gray-200: rgb(216 207 188);
+    --color-gray-300: rgb(174 168 152);
+    --color-gray-400: rgb(132 130 118);
+    --color-gray-500: rgb(100 98 88);
+    --color-gray-600: rgb(74 76 68);
+    --color-gray-700: rgb(58 62 54);
+    --color-gray-800: rgb(40 44 38);
+    --color-gray-900: rgb(28 32 26);
+    --color-gray-950: rgb(20 24 20);
+
+    /* Deeper champagne + moss for contrast on warm cream. */
+    --color-brand-25: rgb(248 243 230);
+    --color-brand-50: rgb(238 230 207);
+    --color-brand-100: rgb(216 200 156);
+    --color-brand-200: rgb(192 172 116);
+    --color-brand-300: rgb(168 138 79);
+    --color-brand-400: rgb(141 113 60);
+    --color-brand-500: rgb(120 96 50);
+    --color-brand-600: rgb(98 78 40);
+    --color-brand-700: rgb(78 62 32);
+    --color-brand-800: rgb(60 48 24);
+    --color-brand-900: rgb(44 36 20);
+    --color-brand-950: rgb(28 22 14);
+
+    /* Hairline borders go soft black on warm paper. */
+    --color-border-secondary: rgba(0, 0, 0, 0.10);
+    --color-border-secondary_alt: rgba(0, 0, 0, 0.08);
+    --color-border-tertiary: rgba(0, 0, 0, 0.06);
+    --color-border-tertiary_alt: rgba(0, 0, 0, 0.05);
+}
+
+/*
  * Animations + utilities ported from the marketing 1B refinement.
  */
 
@@ -95,6 +143,15 @@
     }
 }
 
+@keyframes sp-skeleton-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
 .sp-aurora {
     animation: sp-aurora-drift 18s ease-in-out infinite;
 }
@@ -115,9 +172,24 @@
     animation: sp-shimmer 6s linear infinite;
 }
 
+/*
+ * Skeleton shimmer for loading states — moss-tinted gradient sweep.
+ */
+.sp-skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(127, 184, 154, 0.04) 0%,
+        rgba(127, 184, 154, 0.10) 50%,
+        rgba(127, 184, 154, 0.04) 100%
+    );
+    background-size: 200% 100%;
+    animation: sp-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .sp-aurora,
-    .sp-shimmer-text {
+    .sp-shimmer-text,
+    .sp-skeleton {
         animation: none;
     }
 }
@@ -137,6 +209,24 @@
 }
 
 /*
+ * Standard "kicker" + "microcopy" type styles. Apply once instead of inlining
+ * mono+tracking+size every time a section needs the pattern.
+ */
+.sp-kicker {
+    font-family: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.65rem;
+    color: rgb(120 113 108); /* stone-500 */
+}
+
+.sp-microcopy {
+    font-family: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+    font-size: 0.72rem;
+    color: rgb(120 113 108); /* stone-500 */
+}
+
+/*
  * Subtle warm aurora wash for the dashboard surface. Pinned background
  * applied at the html/body so all routes share the moss feel.
  */
@@ -145,5 +235,13 @@
     background-image:
         radial-gradient(circle at 18% 8%, rgba(127, 184, 154, 0.05), transparent 32%),
         radial-gradient(circle at 82% 4%, rgba(212, 197, 156, 0.04), transparent 30%);
+    background-attachment: fixed;
+}
+
+.light-mode body {
+    background-color: #fdfaf3;
+    background-image:
+        radial-gradient(circle at 18% 8%, rgba(141, 113, 60, 0.04), transparent 32%),
+        radial-gradient(circle at 82% 4%, rgba(95, 145, 121, 0.04), transparent 30%);
     background-attachment: fixed;
 }

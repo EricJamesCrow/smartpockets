@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { getLocalTimeZone } from "@internationalized/date";
 import { api } from "@convex/_generated/api";
 import { TransactionsHeader } from "./TransactionsHeader";
@@ -28,6 +28,8 @@ const PAGE_SIZE = 50;
  * - Transaction detail drawer
  */
 export function TransactionsContent() {
+  const { isAuthenticated } = useConvexAuth();
+
   // Filter state
   const [filters, setFilters] = useState<TransactionsFiltersState>(
     defaultTransactionsFilters
@@ -46,22 +48,31 @@ export function TransactionsContent() {
     ? filters.dateRange.end.toDate(getLocalTimeZone()).toISOString().split("T")[0]
     : undefined;
 
-  // Fetch transactions from API
-  const transactionsData = useQuery(api.transactions.queries.listAllForUser, {
-    page: currentPage,
-    pageSize: PAGE_SIZE,
-    searchQuery: filters.searchQuery || undefined,
-    category: filters.category !== "all" ? filters.category : undefined,
-    status: filters.status !== "all" ? filters.status : undefined,
-    dateFrom,
-    dateTo,
-    cardIds: filters.cardIds.length > 0 ? filters.cardIds : undefined,
-    amountMin: filters.amountMin,
-    amountMax: filters.amountMax,
-  });
+  // Skip Convex queries until auth is ready — calling them unauthenticated
+  // raises "Authentication required" and blanks the route.
+  const transactionsData = useQuery(
+    api.transactions.queries.listAllForUser,
+    isAuthenticated
+      ? {
+          page: currentPage,
+          pageSize: PAGE_SIZE,
+          searchQuery: filters.searchQuery || undefined,
+          category: filters.category !== "all" ? filters.category : undefined,
+          status: filters.status !== "all" ? filters.status : undefined,
+          dateFrom,
+          dateTo,
+          cardIds: filters.cardIds.length > 0 ? filters.cardIds : undefined,
+          amountMin: filters.amountMin,
+          amountMax: filters.amountMax,
+        }
+      : "skip"
+  );
 
   // Fetch user's credit cards for the source filter dropdown
-  const creditCards = useQuery(api.creditCards.queries.list, {});
+  const creditCards = useQuery(
+    api.creditCards.queries.list,
+    isAuthenticated ? {} : "skip"
+  );
 
   // Build card options for filter dropdown
   const cardOptions = useMemo(() => {

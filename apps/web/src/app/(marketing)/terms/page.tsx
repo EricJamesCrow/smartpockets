@@ -9,9 +9,11 @@ export const metadata: Metadata = {
 export default function TermsPage() {
     return (
         <LegalPageLayout
+            kicker="III · Terms"
             title="Terms and Conditions"
             subtitle="Effective February 6, 2026"
             description="By accessing or using the SmartPockets application and website, you agree to be bound by these Terms. If you do not agree, do not use the Service."
+            italicWord="Terms"
         >
             <p>
                 Please read these Terms and Conditions (&ldquo;Terms&rdquo;) carefully before using the SmartPockets application and website (the

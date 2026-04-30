@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -43,6 +43,7 @@ function CreditCardsContentInner() {
   const [filters, setFilters] = useState<CardFilters>(DEFAULT_CARD_FILTERS);
   const [isAddCardsOpen, setIsAddCardsOpen] = useState(false);
   const { user } = useUser();
+  const { isAuthenticated } = useConvexAuth();
   const { animatingCardId, endAnimation } = useSharedLayoutAnimation();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -51,20 +52,21 @@ function CreditCardsContentInner() {
   const walletIdParam = searchParams.get("wallet");
   const walletId = walletIdParam as Id<"wallets"> | null;
 
-  // Fetch wallet info if filtering by wallet
+  // Skip Convex queries until auth is ready — calling them unauthenticated
+  // raises "Authentication required" and blanks the route.
   const walletInfo = useQuery(
     api.wallets.queries.get,
-    walletId ? { walletId } : "skip"
+    isAuthenticated && walletId ? { walletId } : "skip"
   );
 
   // Fetch credit cards - use wallet-filtered query if wallet param exists
   const allCardsData = useQuery(
     api.creditCards.queries.list,
-    walletId ? "skip" : {}
+    isAuthenticated && !walletId ? {} : "skip"
   );
   const walletCardsData = useQuery(
     api.wallets.cardQueries.listByWallet,
-    walletId ? { walletId } : "skip"
+    isAuthenticated && walletId ? { walletId } : "skip"
   );
 
   // Use the appropriate data source
@@ -199,26 +201,26 @@ export function CreditCardsGridSkeleton({
   onAnimationComplete,
 }: CreditCardsGridSkeletonProps) {
   return (
-    <div className="flex flex-wrap gap-4 justify-start">
+    <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2 lg:grid-cols-3">
       {/* Animated card placeholder - renders first with matching layoutId */}
       {animatingCardId && (
         <motion.div
           layoutId={`card-${animatingCardId}`}
           layout
           onLayoutAnimationComplete={onAnimationComplete}
-          className="inline-block w-[280px]"
+          className="inline-block"
         >
-          <div className="aspect-[1.586/1] w-full rounded-xl bg-gradient-to-br from-tertiary/30 to-tertiary/10 animate-pulse" />
+          <div className="aspect-[1.586/1] w-full max-w-[280px] rounded-xl border border-secondary bg-primary sp-skeleton dark:border-[var(--sp-moss-line)] dark:bg-[var(--sp-surface-panel)]" />
         </motion.div>
       )}
-      {/* Regular skeleton cards */}
+      {/* Regular skeleton cards — moss-toned shimmer matches the 1B aesthetic */}
       {[...Array(animatingCardId ? 5 : 6)].map((_, i) => (
-        <div
-          key={i}
-          className="inline-block w-[280px] animate-pulse"
-        >
-          {/* Card visual skeleton */}
-          <div className="aspect-[1.586/1] w-full rounded-xl bg-tertiary/20" />
+        <div key={i} className="inline-block">
+          <div className="aspect-[1.586/1] w-full max-w-[280px] rounded-xl border border-secondary bg-primary sp-skeleton dark:border-[var(--sp-moss-line)] dark:bg-[var(--sp-surface-panel)]" />
+          <div className="mt-3 space-y-2">
+            <div className="h-3 w-2/3 rounded sp-skeleton" />
+            <div className="h-3 w-1/2 rounded sp-skeleton" />
+          </div>
         </div>
       ))}
     </div>

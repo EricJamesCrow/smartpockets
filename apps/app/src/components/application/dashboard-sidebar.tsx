@@ -132,7 +132,7 @@ export function DashboardSidebar() {
                     initial={false}
                     animate={{ width: isSlim ? "auto" : 296 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="relative h-full overflow-hidden border-r bg-primary border-secondary dark:border-white/[0.08]"
+                    className="relative h-full overflow-hidden border-r bg-primary border-secondary dark:border-[var(--sp-moss-line)]"
                 >
                     {/* Soft mossy aurora wash anchors the sidebar in dark mode */}
                     <div

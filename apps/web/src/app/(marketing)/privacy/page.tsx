@@ -9,9 +9,11 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
     return (
         <LegalPageLayout
+            kicker="II · Privacy"
             title="Privacy Policy"
             subtitle="Effective February 6, 2026"
             description="Your privacy is important to us at SmartPockets. We respect your privacy regarding any information we may collect from you across our service."
+            italicWord="Privacy"
         >
             <p>
                 CrowDevelopment LLC (&ldquo;SmartPockets,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) operates the SmartPockets
