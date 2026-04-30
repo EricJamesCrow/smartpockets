@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Selection } from "react-aria-components";
 import {
-    BarChartSquare02,
     ClockRewind,
     CreditCard01,
     Home03,
@@ -34,7 +33,6 @@ const footerItems: NavItemType[] = [
 
 const commandRoutes: Record<string, string> = {
     home: "/",
-    overview: "/overview",
     "credit-cards": "/credit-cards",
     transactions: "/transactions",
     wallets: "/wallets",
@@ -74,11 +72,6 @@ export function DashboardSidebar() {
             label: "Home",
             href: "/",
             icon: Home03,
-        },
-        {
-            label: "Overview",
-            href: "/overview",
-            icon: BarChartSquare02,
         },
         {
             label: "History",
@@ -212,7 +205,6 @@ export function DashboardSidebar() {
                 <CommandMenu.List>
                     <CommandMenu.Section title="Navigation">
                         <CommandMenu.Item id="home" label="Home" type="icon" icon={Home03} />
-                        <CommandMenu.Item id="overview" label="Overview" type="icon" icon={BarChartSquare02} />
                         <CommandMenu.Item id="credit-cards" label="Credit Cards" type="icon" icon={CreditCard01} />
                         <CommandMenu.Item id="transactions" label="Transactions" type="icon" icon={Receipt} />
                         <CommandMenu.Item id="wallets" label="Wallets" type="icon" icon={Wallet01} />

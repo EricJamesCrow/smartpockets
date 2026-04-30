@@ -84,7 +84,6 @@ Final enumerated list in `[threadId]/page.tsx`:
 
 ```ts
 const RESERVED_SLUGS = new Set([
-  "overview",
   "credit-cards",
   "transactions",
   "wallets",
