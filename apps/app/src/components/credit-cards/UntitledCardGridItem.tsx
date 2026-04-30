@@ -181,15 +181,17 @@ export function UntitledCardGridItem({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="mt-3"
+            className="mt-3 border-t border-white/[0.06] pt-3"
           >
             {/* Card Name & Payment Status */}
-            <div className="mb-2 flex items-start justify-between gap-2">
+            <div className="mb-3 flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold text-primary">
+                <h3 className="truncate font-[family-name:var(--font-display)] text-sm font-semibold uppercase tracking-tight text-zinc-50">
                   {card.cardName}
                 </h3>
-                <p className="text-xs text-tertiary">{card.company}</p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                  {card.company}
+                </p>
               </div>
               <PaymentDueBadge
                 nextPaymentDueDate={card.nextPaymentDueDate}
@@ -203,8 +205,8 @@ export function UntitledCardGridItem({
             {/* Utilization Bar */}
             <div className="mb-3">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs text-tertiary">Utilization</span>
-                <span className="text-xs font-medium tabular-nums text-primary">
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">UTIL</span>
+                <span className="font-mono text-[11px] font-medium tabular-nums text-zinc-200">
                   {card.utilization !== null ? `${card.utilization}%` : "--"}
                 </span>
               </div>
@@ -212,37 +214,27 @@ export function UntitledCardGridItem({
             </div>
 
             {/* Statement Balance, Min Payment, Due Date, APR */}
-            <div className="flex justify-between text-xs">
-              <div>
-                <p className="text-tertiary">Statement</p>
-                <p className="font-medium text-primary">
-                  {formatDisplayCurrency(card.lastStatementBalance)}
-                </p>
-              </div>
-              <div>
-                <p className="text-tertiary">Min Payment</p>
-                <p className="font-medium text-primary">
-                  {formatDisplayCurrency(card.minimumPaymentAmount)}
-                </p>
-              </div>
-              <div>
-                <p className="text-tertiary">Due Date</p>
-                <p className="font-medium text-primary">
-                  {card.nextPaymentDueDate
-                    ? formatDueDate(card.nextPaymentDueDate)
-                    : "--"}
-                </p>
-              </div>
-              <div>
-                <p className="text-tertiary">APR</p>
-                <p className="font-medium text-primary">
-                  {formatApr(card.apr)}
-                </p>
-              </div>
+            <div className="grid grid-cols-4 gap-3 font-mono text-[11px]">
+              <CardSpec label="STMT" value={formatDisplayCurrency(card.lastStatementBalance)} />
+              <CardSpec label="MIN" value={formatDisplayCurrency(card.minimumPaymentAmount)} />
+              <CardSpec
+                label="DUE"
+                value={card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--"}
+              />
+              <CardSpec label="APR" value={formatApr(card.apr)} />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
+  );
+}
+
+function CardSpec({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[9.5px] uppercase tracking-[0.18em] text-zinc-600">{label}</span>
+      <span className="font-medium tabular-nums text-zinc-100">{value}</span>
+    </div>
   );
 }

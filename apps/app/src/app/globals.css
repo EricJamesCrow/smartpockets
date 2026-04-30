@@ -1,0 +1,130 @@
+/*
+ * 2B Bloomberg-Terminal cockpit overrides for apps/app.
+ *
+ * Goal: zero soft corners across the dashboard. Every Tailwind radius utility
+ * (rounded, rounded-md/lg/xl/2xl/3xl) collapses to 0 except `rounded-full`,
+ * which is reserved for status pulse-dots and the SP/cardholder avatars.
+ *
+ * Cascade strategy: we declare these in `@layer utilities` so they win the
+ * specificity tie with Tailwind's generated utilities (same layer, declared
+ * after) without resorting to `!important`. The few places that genuinely
+ * need a circle keep `rounded-full`, which we leave untouched.
+ *
+ * Also opts the entire app into IBM Plex Sans Condensed display, JetBrains
+ * Mono numerals, and a cockpit-dark default by overriding the @repo/ui font
+ * tokens that were defined for Inter.
+ */
+
+@layer theme {
+    :root,
+    .dark-mode,
+    .light-mode {
+        /*
+         * Override @repo/ui's font tokens so every component (UntitledUI
+         * Tabs, Buttons, Inputs, Tables) renders in the cockpit type stack.
+         * These resolve back to the next/font CSS variables we wired in
+         * apps/app/src/app/layout.tsx.
+         */
+        --font-body: var(--font-geist), -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        --font-display: var(--font-display), -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+}
+
+@layer utilities {
+    /*
+     * Brutalist square edges. Override every radius utility but `rounded-full`
+     * (kept for status dots + circular avatars). These selectors win because
+     * they are declared in the same `utilities` layer as Tailwind's generated
+     * radius utilities and appear after them in the import order.
+     */
+    .rounded,
+    .rounded-xs,
+    .rounded-sm,
+    .rounded-md,
+    .rounded-lg,
+    .rounded-xl,
+    .rounded-2xl,
+    .rounded-3xl,
+    .rounded-t,
+    .rounded-t-md,
+    .rounded-t-lg,
+    .rounded-t-xl,
+    .rounded-t-2xl,
+    .rounded-t-3xl,
+    .rounded-r,
+    .rounded-r-md,
+    .rounded-r-lg,
+    .rounded-r-xl,
+    .rounded-r-2xl,
+    .rounded-r-3xl,
+    .rounded-b,
+    .rounded-b-md,
+    .rounded-b-lg,
+    .rounded-b-xl,
+    .rounded-b-2xl,
+    .rounded-b-3xl,
+    .rounded-l,
+    .rounded-l-md,
+    .rounded-l-lg,
+    .rounded-l-xl,
+    .rounded-l-2xl,
+    .rounded-l-3xl,
+    .rounded-tl,
+    .rounded-tr,
+    .rounded-bl,
+    .rounded-br,
+    .rounded-tl-md,
+    .rounded-tr-md,
+    .rounded-bl-md,
+    .rounded-br-md,
+    .rounded-tl-lg,
+    .rounded-tr-lg,
+    .rounded-bl-lg,
+    .rounded-br-lg,
+    .rounded-tl-xl,
+    .rounded-tr-xl,
+    .rounded-bl-xl,
+    .rounded-br-xl {
+        border-radius: 0;
+    }
+
+    /* Numeric data — tabular figures, slashed zero. */
+    .num-tabular {
+        font-variant-numeric: tabular-nums slashed-zero;
+        font-feature-settings: "tnum", "zero";
+    }
+
+    /* Cockpit eyebrow — uppercase, condensed, micro-tracked. */
+    .eyebrow {
+        font-family: var(--font-jetbrains-mono);
+        font-size: 10.5px;
+        line-height: 1;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgb(148 151 156);
+    }
+
+    /* Display heading — IBM Plex Condensed, semibold, tight tracking. */
+    .display-condensed {
+        font-family: var(--font-display);
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+}
+
+/*
+ * Make number-y utilities tabular by default. Targets tailwind classes the
+ * dashboard already uses for monetary readouts (font-medium tabular-nums is
+ * sprinkled through credit-cards). This is additive — a normal `tabular-nums`
+ * still wins, this just adds slashed zero so JetBrains Mono ø reads better.
+ */
+.tabular-nums {
+    font-variant-numeric: tabular-nums slashed-zero;
+    font-feature-settings: "tnum", "zero";
+}
+
+/* Reduce focus-ring jankiness on dark cockpit chrome. */
+.dark-mode :where(input, textarea, select, button):focus-visible {
+    outline-color: rgb(60 203 127);
+}

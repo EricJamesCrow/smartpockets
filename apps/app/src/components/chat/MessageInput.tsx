@@ -10,7 +10,7 @@ interface MessageInputProps {
 
 export function MessageInput({ onSend, isLoading, disabled }: MessageInputProps) {
   return (
-    <div className="bg-primary px-4 pb-6 pt-2 md:px-8">
+    <div className="border-t border-white/[0.06] bg-primary px-4 pb-6 pt-3 md:px-8">
       <div className="mx-auto max-w-4xl">
         <MessageActionMinimal
           onSubmit={onSend}
@@ -18,8 +18,8 @@ export function MessageInput({ onSend, isLoading, disabled }: MessageInputProps)
           disabled={disabled}
           className="w-full"
         />
-        <p className="mt-2 text-center text-xs text-tertiary">
-          Assistant can make mistakes. Check important info.
+        <p className="mt-2 text-center font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-600">
+          ⚠ AGENT MAY ERR · VERIFY CRITICAL READOUTS
         </p>
       </div>
     </div>

@@ -13,12 +13,16 @@ interface UtilizationProgressProps {
 }
 
 /**
- * Progress bar component for displaying credit utilization
+ * Square utilization progress bar.
  *
  * Color coding:
  * - Green: <30% utilization (good)
  * - Yellow: 30-69% utilization (moderate)
  * - Red: 70%+ utilization (high)
+ *
+ * Brand green is reserved for live ticking deltas. The static utilization
+ * bar uses semantic success/warning/error tokens so the label color reads
+ * as health, not as "live".
  */
 export function UtilizationProgress({
   utilization,
@@ -31,12 +35,12 @@ export function UtilizationProgress({
     return (
       <div className={cx("flex flex-col gap-1", className)}>
         {showLabel && (
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-tertiary">Utilization</span>
-            <span className="text-tertiary">--</span>
+          <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.12em]">
+            <span className="text-zinc-500">UTILIZATION</span>
+            <span className="text-zinc-600">--</span>
           </div>
         )}
-        <div className="h-2 w-full rounded-full bg-tertiary/20" />
+        <div className="h-1.5 w-full bg-white/[0.04]" />
       </div>
     );
   }
@@ -47,10 +51,10 @@ export function UtilizationProgress({
   return (
     <div className={cx("flex flex-col gap-1", className)}>
       {showLabel && (
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-tertiary">Utilization</span>
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="font-mono uppercase tracking-[0.12em] text-zinc-500">UTILIZATION</span>
           {showPercentage && (
-            <span className={cx("font-medium", colors.text)}>
+            <span className={cx("font-mono tabular-nums font-medium", colors.text)}>
               {formatPercentage(utilization, 0)}
             </span>
           )}
@@ -62,17 +66,16 @@ export function UtilizationProgress({
         max={100}
         className={cx(
           size === "sm" ? "h-1.5" : "h-2",
-          "rounded-full",
-          colors.progressBg
+          colors.progressBg,
         )}
-        progressClassName={cx("rounded-full transition-all", colors.progress)}
+        progressClassName={cx("transition-all", colors.progress)}
       />
     </div>
   );
 }
 
 /**
- * Compact utilization indicator (just the bar, no labels)
+ * Compact utilization indicator (just the bar, no labels).
  */
 export function UtilizationBar({
   utilization,
@@ -83,9 +86,7 @@ export function UtilizationBar({
 }) {
   if (utilization === null) {
     return (
-      <div
-        className={cx("h-1 w-full rounded-full bg-tertiary/20", className)}
-      />
+      <div className={cx("h-1 w-full bg-white/[0.04]", className)} />
     );
   }
 
@@ -97,8 +98,8 @@ export function UtilizationBar({
       value={clampedValue}
       min={0}
       max={100}
-      className={cx("h-1 rounded-full", colors.progressBg, className)}
-      progressClassName={cx("rounded-full", colors.progress)}
+      className={cx("h-1", colors.progressBg, className)}
+      progressClassName={cx(colors.progress)}
     />
   );
 }

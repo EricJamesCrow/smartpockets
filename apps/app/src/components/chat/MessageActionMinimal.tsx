@@ -46,28 +46,34 @@ export function MessageActionMinimal({
   return (
     <div
       className={cx(
-        "relative flex items-end gap-2 rounded-2xl border border-secondary bg-primary p-2 shadow-xs",
+        "relative flex items-end gap-2 border border-white/10 bg-[#0a0d10] p-2 transition-colors duration-150 focus-within:border-brand-500/50",
         className,
       )}
     >
+      <span
+        className="pointer-events-none select-none px-2 pt-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-600"
+        aria-hidden="true"
+      >
+        ▸
+      </span>
       <textarea
         ref={textareaRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
-        placeholder="Ask SmartPockets anything..."
+        placeholder="Query the ledger…"
         aria-label="Send a message"
         rows={1}
         disabled={disabled}
-        className="flex-1 resize-none bg-transparent px-3 py-2 text-sm text-primary placeholder:text-quaternary focus:outline-none"
+        className="flex-1 resize-none bg-transparent px-1 py-2 font-[family-name:var(--font-jetbrains-mono)] text-[13.5px] tracking-[0.01em] text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
       />
       <button
         type="button"
         onClick={submit}
         disabled={!canSubmit}
         aria-label="Send"
-        className="flex size-9 items-center justify-center rounded-full bg-brand-solid text-white transition-colors disabled:opacity-40"
+        className="flex size-9 items-center justify-center bg-brand-500 text-[#04140a] transition-[transform,background-color,box-shadow] duration-150 hover:bg-brand-400 active:translate-y-px disabled:opacity-30"
       >
         <ArrowUp className="size-5" />
       </button>

@@ -131,7 +131,7 @@ export function CreditCardsFilterBar({
   const filterDescriptions = getActiveFilterDescriptions(filters);
 
   return (
-    <div className={cx("border-b border-secondary", className)}>
+    <div className={cx("border-b border-white/[0.06]", className)}>
       {/* Main Filter Row */}
       <div className="px-4 py-3 md:px-6">
         <div className="flex flex-wrap items-center gap-3">
@@ -209,21 +209,21 @@ export function CreditCardsFilterBar({
 
           {/* Right: View Toggle & Count */}
           <div className="flex items-center gap-3">
-            {/* Card Count */}
+            {/* Card Count - cockpit readout */}
             {totalCount !== undefined && filteredCount !== undefined && (
-              <span className="text-xs tabular-nums text-tertiary">
+              <span className="font-mono text-[11px] uppercase tracking-[0.12em] tabular-nums text-zinc-500">
                 {filteredCount === totalCount
-                  ? `${totalCount} cards`
-                  : `${filteredCount} of ${totalCount}`}
+                  ? `${String(totalCount).padStart(2, "0")} CARDS`
+                  : `${filteredCount} / ${totalCount}`}
               </span>
             )}
 
             {/* View Toggle */}
             {onExtendedChange && (
               <>
-                <div className="h-6 w-px bg-secondary" />
+                <div className="h-6 w-px bg-white/[0.08]" />
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-tertiary">Details</span>
+                  <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-500">DETAILS</span>
                   <Toggle
                     isSelected={isExtended}
                     onChange={onExtendedChange}

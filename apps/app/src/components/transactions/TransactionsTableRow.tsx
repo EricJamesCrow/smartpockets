@@ -70,14 +70,16 @@ export function TransactionsTableRow({ transaction, onSelect }: TransactionsTabl
 
     return (
         <Table.Row id={transaction.transactionId} className="cursor-pointer" onAction={() => onSelect(transaction)}>
-            {/* Date */}
-            <Table.Cell className="text-secondary whitespace-nowrap text-sm tabular-nums">{formatTransactionDate(transaction.date)}</Table.Cell>
+            {/* Date - mono, tabular */}
+            <Table.Cell className="whitespace-nowrap font-[family-name:var(--font-jetbrains-mono)] text-[12.5px] tabular-nums text-zinc-400">
+                {formatTransactionDate(transaction.date)}
+            </Table.Cell>
 
             {/* Merchant with Logo */}
             <Table.Cell>
                 <div className="flex items-center gap-3">
                     <MerchantLogo logoUrl={transaction.merchantEnrichment?.logoUrl} merchantName={merchantName} size="sm" />
-                    <span className="text-primary max-w-[200px] truncate text-sm font-medium">{merchantName}</span>
+                    <span className="max-w-[200px] truncate text-sm font-medium text-zinc-100">{merchantName}</span>
                 </div>
             </Table.Cell>
 
@@ -98,16 +100,18 @@ export function TransactionsTableRow({ transaction, onSelect }: TransactionsTabl
                 />
             </Table.Cell>
 
-            {/* Status */}
+            {/* Status - cockpit pill */}
             <Table.Cell>
                 <Badge color={transaction.pending ? "warning" : "success"} size="sm">
-                    {transaction.pending ? "Pending" : "Posted"}
+                    {transaction.pending ? "PENDING" : "POSTED"}
                 </Badge>
             </Table.Cell>
 
-            {/* Amount */}
+            {/* Amount - mono, tabular, color-coded */}
             <Table.Cell className="text-right">
-                <span className={`text-sm font-medium tabular-nums ${amountColor}`}>{amountText}</span>
+                <span className={`font-[family-name:var(--font-jetbrains-mono)] text-[13px] font-medium tabular-nums ${amountColor}`}>
+                    {amountText}
+                </span>
             </Table.Cell>
         </Table.Row>
     );

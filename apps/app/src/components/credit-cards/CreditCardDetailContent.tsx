@@ -158,7 +158,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
       className="flex h-full flex-col"
     >
       {/* Header with Card Info and Payment Due */}
-      <div className="border-b border-secondary bg-primary px-4 py-4 lg:px-6">
+      <div className="border-b border-white/[0.06] bg-primary px-4 py-4 lg:px-6">
         <div className="flex items-center justify-between">
           {/* Left: Breadcrumbs */}
           <Breadcrumbs divider="chevron">
@@ -206,11 +206,11 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         {/* Card Title and Subtitle */}
         <div className="mt-4 flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-primary lg:text-3xl">
+            <h1 className="font-[family-name:var(--font-display)] text-[26px] font-semibold uppercase leading-[0.95] tracking-tight text-zinc-50 lg:text-[34px]">
               {card.cardName}
             </h1>
-            <p className="mt-1 text-sm text-tertiary">
-              CREDIT • {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} •••• {card.lastFour}
+            <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500 tabular-nums">
+              CREDIT · {card.brand.toUpperCase()} ·  •••• {card.lastFour}
             </p>
             {/* Provider Dashboard Link */}
             <div className="mt-1 flex items-center">
@@ -241,10 +241,10 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
 
           {/* Payment Due Info */}
           <div className="flex flex-col items-end gap-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-tertiary">
-              Payment Due
+            <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-500">
+              PAYMENT DUE
             </span>
-            <span className="text-base font-semibold text-primary">
+            <span className="font-[family-name:var(--font-jetbrains-mono)] text-[15px] font-medium tabular-nums text-zinc-50">
               {card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--"}
             </span>
             <PaymentDueBadge
@@ -264,23 +264,23 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         </div>
 
         {/* Tab Navigation - Below card */}
-        <div className="border-b border-secondary px-4 lg:px-6">
-          <nav className="flex justify-center gap-6" aria-label="Card detail tabs">
+        <div className="border-b border-white/[0.06] px-4 lg:px-6">
+          <nav className="flex justify-center gap-8" aria-label="Card detail tabs">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setSelectedTab(tab.id)}
                 className={cx(
-                  "relative pb-3 text-sm font-semibold transition-colors",
+                  "relative pb-3 pt-2 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors duration-150",
                   selectedTab === tab.id
-                    ? "text-utility-brand-600"
-                    : "text-tertiary hover:text-secondary"
+                    ? "text-brand-400"
+                    : "text-zinc-500 hover:text-zinc-300"
                 )}
               >
                 {tab.label}
                 {selectedTab === tab.id && (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-utility-brand-600" />
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-brand-400" />
                 )}
               </button>
             ))}

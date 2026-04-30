@@ -84,16 +84,22 @@ export function WalletsContent() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-secondary px-6 py-4">
-        <div>
-          <h1 className="text-display-xs font-semibold text-primary">Wallets</h1>
-          <p className="text-sm text-tertiary">
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-5">
+        <div className="flex flex-col gap-2">
+          <span className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-500">
+            <span className="size-1.5 animate-pulse rounded-full bg-brand-400 shadow-[0_0_10px_rgba(60,203,127,0.7)]" />
+            WALLETS / GROUPS
+          </span>
+          <h1 className="font-[family-name:var(--font-display)] text-[28px] font-semibold uppercase leading-[0.95] tracking-tight text-zinc-50 lg:text-[34px]">
+            Wallets
+          </h1>
+          <p className="text-sm text-zinc-400">
             Organize your credit cards into custom groups
           </p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-tertiary">Details</span>
+            <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-500">DETAILS</span>
             <Toggle
               isSelected={isExtended}
               onChange={setIsExtended}

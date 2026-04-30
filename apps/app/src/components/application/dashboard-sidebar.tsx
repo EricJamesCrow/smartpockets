@@ -135,9 +135,19 @@ export function DashboardSidebar() {
                     initial={false}
                     animate={{ width: isSlim ? "auto" : 296 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="h-full bg-primary overflow-hidden border-r border-secondary"
+                    className="h-full bg-[#0a0d10] overflow-hidden border-r border-white/[0.06]"
                 >
                     <div className={isSlim ? "w-auto h-full min-w-[68px]" : "w-[296px] h-full min-w-[296px]"}>
+                        {/* Cockpit-style status bar above the sidebar nav. */}
+                        {!isSlim && (
+                            <div className="flex items-center justify-between border-b border-white/[0.06] px-5 pb-3 pt-4 font-mono text-[10px] uppercase tracking-[0.18em]">
+                                <span className="flex items-center gap-2 text-zinc-500">
+                                    <span className="size-1.5 animate-pulse rounded-full bg-brand-400 shadow-[0_0_10px_rgba(60,203,127,0.7)]" />
+                                    SP/01 · LIVE
+                                </span>
+                                <span className="text-zinc-700">v0.1</span>
+                            </div>
+                        )}
                         {isSlim ? (
                              <SidebarSlimDesktop
                                 activeUrl={pathname}

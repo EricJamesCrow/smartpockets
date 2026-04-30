@@ -99,8 +99,9 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
     return (
       <div
         role="status"
-        className="rounded-md border border-secondary bg-secondary px-4 py-2 text-sm text-tertiary"
+        className="border border-white/10 bg-white/[0.03] px-4 py-2 font-mono text-[12px] uppercase tracking-[0.04em] text-zinc-400"
       >
+        <span className="mr-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">SYS</span>
         {displayText}
       </div>
     );
@@ -110,20 +111,25 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
     <div className={cx("group/msg relative flex gap-4", isUser && "flex-row-reverse")}>
       <div
         className={cx(
-          "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-          isUser ? "bg-brand-solid text-white" : "bg-secondary text-primary",
+          "flex size-10 shrink-0 items-center justify-center border font-mono text-[10px] uppercase tracking-[0.16em]",
+          isUser
+            ? "border-brand-500/40 bg-brand-500/10 text-brand-300"
+            : "border-white/10 bg-[#0a0d10] text-zinc-300",
         )}
         aria-hidden
       >
-        {isUser ? "You" : "SP"}
+        {isUser ? "YOU" : "SP"}
       </div>
-      <div className={cx("flex max-w-[80%] flex-col gap-1", isUser ? "items-end" : "items-start")}>
+      <div className={cx("flex max-w-[80%] flex-col gap-1.5", isUser ? "items-end" : "items-start")}>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+          {isUser ? "INPUT · YOU" : "OUTPUT · SP/AGENT"}
+        </span>
         <div
           className={cx(
-            "rounded-2xl px-5 py-3 text-sm",
+            "border px-5 py-3 text-sm",
             isUser
-              ? "rounded-tr-none bg-brand-solid text-white"
-              : "min-h-[42px] rounded-tl-none bg-secondary text-primary",
+              ? "border-brand-500/30 bg-brand-500/[0.08] text-zinc-50"
+              : "min-h-[42px] border-white/10 bg-[#0a0d10] font-[family-name:var(--font-jetbrains-mono)] text-[13.5px] leading-relaxed text-zinc-200",
           )}
         >
           {isUser ? (

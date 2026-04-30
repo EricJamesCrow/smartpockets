@@ -1,18 +1,38 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import "@repo/ui/globals.css";
+import "./globals.css";
 import { Toaster } from "@repo/ui/untitledui/application/notifications/toaster";
 import { cx } from "@repo/ui/utils";
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Geist, IBM_Plex_Sans_Condensed, JetBrains_Mono } from "next/font/google";
 import { AppearanceProvider } from "@/providers/appearance-provider";
 import { ConvexClientProvider } from "@/providers/convex-provider";
 import { RouteProvider } from "@/providers/router-provider";
 import { Theme } from "@/providers/theme";
 
-const inter = Inter({
+// 2B Bloomberg-Terminal cockpit fonts. Display = IBM Plex Sans Condensed
+// (industrial readout face that pairs with JetBrains Mono numerals). Body =
+// Geist for human prose. Mono = JetBrains Mono for tabular figures, codes,
+// and live-data deltas.
+const ibmPlexCondensed = IBM_Plex_Sans_Condensed({
     subsets: ["latin"],
+    weight: ["500", "600", "700"],
+    variable: "--font-display",
     display: "swap",
-    variable: "--font-inter",
+});
+
+const geist = Geist({
+    subsets: ["latin"],
+    weight: ["300", "400", "500", "600", "700"],
+    variable: "--font-geist",
+    display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+    subsets: ["latin"],
+    weight: ["400", "500", "600"],
+    variable: "--font-jetbrains-mono",
+    display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -21,8 +41,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-    themeColor: "#7f56d9",
-    colorScheme: "light dark",
+    themeColor: "#0c0e12",
+    colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -31,8 +51,15 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" suppressHydrationWarning>
-            <body className={cx(inter.variable, "bg-primary antialiased")}>
+        <html lang="en" className="dark-mode" suppressHydrationWarning>
+            <body
+                className={cx(
+                    ibmPlexCondensed.variable,
+                    geist.variable,
+                    jetbrainsMono.variable,
+                    "bg-primary text-primary antialiased",
+                )}
+            >
                 <ClerkProvider>
                     <ConvexClientProvider>
                         <RouteProvider>
