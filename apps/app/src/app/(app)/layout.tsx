@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertBanner } from "@/components/application/AlertBanner";
 import { DashboardSidebar } from "@/components/application/dashboard-sidebar";
 import { api } from "@convex/_generated/api";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -72,7 +73,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="bg-primary flex min-h-screen flex-col lg:flex-row">
             <DashboardSidebar />
-            <div className="min-w-0 flex-1">{children}</div>
+            <div className="min-w-0 flex-1 flex flex-col">
+                <AlertBanner />
+                {children}
+            </div>
         </div>
     );
 }

@@ -37,7 +37,7 @@ export function AlertBanner() {
   const hiddenCount = alerts.length - visibleAlerts.length - dismissedIds.size;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 px-4 pt-4 lg:px-8 lg:pt-6">
       {visibleAlerts.map((alert) => (
         <div
           key={alert.id}
