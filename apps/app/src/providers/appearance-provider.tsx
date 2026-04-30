@@ -8,12 +8,10 @@ import { applyBrandColor, removeBrandColor } from "@/utils/brand-colors";
 
 interface AppearanceContextValue {
   brandColor: string | null;
-  transparentSidebar: boolean;
 }
 
 const AppearanceContext = createContext<AppearanceContextValue>({
   brandColor: null,
-  transparentSidebar: true,
 });
 
 export function useAppearance() {
@@ -54,7 +52,6 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 
   const value: AppearanceContextValue = {
     brandColor: prefs?.appearance?.brandColor ?? null,
-    transparentSidebar: prefs?.appearance?.transparentSidebar ?? true,
   };
 
   return (
