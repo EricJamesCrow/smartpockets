@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Placement } from "@react-types/overlays";
 import { useClerk, useOrganization, useOrganizationList, useUser } from "@clerk/nextjs";
-import { BookOpen01, ChevronSelectorVertical, LogOut01, Plus, Settings01, User01 } from "@untitledui/icons";
+import { ChevronSelectorVertical, LogOut01, Plus, Settings01 } from "@untitledui/icons";
 import { useFocusManager } from "react-aria";
 import type { DialogProps as AriaDialogProps } from "react-aria-components";
 import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover } from "react-aria-components";
@@ -131,9 +131,14 @@ export const NavAccountMenu = ({
 
                 {/* Menu actions */}
                 <div className="flex flex-col gap-0.5 py-1.5">
-                    <NavAccountCardMenuItem label="View profile" icon={User01} shortcut="⌘K->P" />
-                    <NavAccountCardMenuItem label="Account settings" icon={Settings01} shortcut="⌘S" />
-                    <NavAccountCardMenuItem label="Documentation" icon={BookOpen01} />
+                    <NavAccountCardMenuItem
+                        label="Account settings"
+                        icon={Settings01}
+                        onClick={() => {
+                            onClose?.();
+                            router.push("/settings");
+                        }}
+                    />
                 </div>
 
                 {/* Organization switcher */}
@@ -202,7 +207,7 @@ export const NavAccountMenu = ({
 
             {/* Sign out */}
             <div className="pt-1 pb-1.5">
-                <NavAccountCardMenuItem label="Sign out" icon={LogOut01} shortcut="⌥⇧Q" onClick={handleSignOut} />
+                <NavAccountCardMenuItem label="Sign out" icon={LogOut01} onClick={handleSignOut} />
             </div>
         </AriaDialog>
     );
