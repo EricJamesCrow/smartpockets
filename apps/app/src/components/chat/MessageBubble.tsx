@@ -111,11 +111,13 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
       <div
         className={cx(
           "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-          isUser ? "bg-brand-solid text-white" : "bg-secondary text-primary",
+          isUser
+            ? "bg-brand-solid text-white"
+            : "border border-secondary bg-secondary text-primary dark:border-white/[0.08] dark:bg-white/[0.04]",
         )}
         aria-hidden
       >
-        {isUser ? "You" : "SP"}
+        {isUser ? "You" : <span className="font-[family-name:var(--font-fraunces)] italic">SP</span>}
       </div>
       <div className={cx("flex max-w-[80%] flex-col gap-1", isUser ? "items-end" : "items-start")}>
         <div
@@ -123,7 +125,7 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
             "rounded-2xl px-5 py-3 text-sm",
             isUser
               ? "rounded-tr-none bg-brand-solid text-white"
-              : "min-h-[42px] rounded-tl-none bg-secondary text-primary",
+              : "min-h-[42px] rounded-tl-none border border-secondary bg-secondary text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
           )}
         >
           {isUser ? (

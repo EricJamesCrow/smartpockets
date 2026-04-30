@@ -206,11 +206,14 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
         {/* Card Title and Subtitle */}
         <div className="mt-4 flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-primary lg:text-3xl">
-              {card.cardName}
+            <h1 className="text-2xl font-medium leading-tight tracking-[-0.02em] text-primary lg:text-[1.85rem]">
+              <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 dark:text-stone-300">
+                {card.cardName}
+              </em>
             </h1>
-            <p className="mt-1 text-sm text-tertiary">
-              CREDIT • {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} •••• {card.lastFour}
+            <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+              <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
+              CREDIT &middot; {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} &middot; •••• {card.lastFour}
             </p>
             {/* Provider Dashboard Link */}
             <div className="mt-1 flex items-center">
@@ -241,10 +244,13 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
 
           {/* Payment Due Info */}
           <div className="flex flex-col items-end gap-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-tertiary">
-              Payment Due
+            <span className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+              <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">
+                Payment
+              </em>{" "}
+              due
             </span>
-            <span className="text-base font-semibold text-primary">
+            <span className="text-base font-semibold tabular-nums text-primary">
               {card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--"}
             </span>
             <PaymentDueBadge

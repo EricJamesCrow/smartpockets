@@ -1,0 +1,149 @@
+/*
+ * App-local theme overrides for the SmartPockets dashboard.
+ *
+ * Layered on top of @repo/ui/globals.css + @repo/ui/theme.css.
+ * Implements the 1B "moss + champagne" variant — deep graphite ground with
+ * champagne and mossy mint accents. Hairline borders. Geist body, Fraunces
+ * for italic accent words.
+ *
+ * NOTE: This file ONLY retunes the dark-mode gray ramp + neutral surfaces.
+ * The brand chain (--color-brand-25..950 → --color-bg-brand-solid) is left
+ * intact so AppearanceProvider's runtime applyBrandColor() override still
+ * wins. Defaults below shift the brand toward mossy mint when no user
+ * override is present.
+ */
+
+:root {
+    /* SmartPockets palette tokens — usable directly in components. */
+    --sp-moss-bg: #080a0c;
+    --sp-moss-panel: #0a1014;
+    --sp-moss-panel-2: #0c1014;
+    --sp-moss-line: rgba(255, 255, 255, 0.08);
+    --sp-moss-line-strong: rgba(255, 255, 255, 0.12);
+    --sp-moss-mint: #7fb89a;
+    --sp-moss-mint-bright: #a3d7bf;
+    --sp-champagne: #d4c59c;
+    --sp-champagne-soft: #c8b88a;
+}
+
+.dark-mode {
+    /*
+     * Re-tint the gray ramp toward warm graphite. Downstream UntitledUI
+     * tokens (bg-primary, text-primary, border-secondary, etc.) all reference
+     * the gray ramp, so this single hand-off cascades through.
+     */
+    --color-gray-25: rgb(248 244 232);
+    --color-gray-50: rgb(245 241 232);
+    --color-gray-100: rgb(228 222 207);
+    --color-gray-200: rgb(216 211 196);
+    --color-gray-300: rgb(165 159 141);
+    --color-gray-400: rgb(127 122 108);
+    --color-gray-500: rgb(108 102 87);
+    --color-gray-600: rgb(73 69 60);
+    --color-gray-700: rgb(40 46 53);
+    --color-gray-800: rgb(22 28 35);
+    --color-gray-900: rgb(13 17 22);
+    --color-gray-950: rgb(8 10 12);
+
+    /*
+     * Default brand ramp — shifts to mossy mint when no user override is set.
+     * AppearanceProvider's runtime applyBrandColor() injects on :root and
+     * still wins because runtime <style> comes last in <head>.
+     */
+    --color-brand-25: rgb(244 250 247);
+    --color-brand-50: rgb(232 244 238);
+    --color-brand-100: rgb(207 232 220);
+    --color-brand-200: rgb(176 217 197);
+    --color-brand-300: rgb(141 199 174);
+    --color-brand-400: rgb(127 184 154);
+    --color-brand-500: rgb(112 168 140);
+    --color-brand-600: rgb(95 145 121);
+    --color-brand-700: rgb(80 122 102);
+    --color-brand-800: rgb(64 96 81);
+    --color-brand-900: rgb(48 72 61);
+    --color-brand-950: rgb(32 48 41);
+
+    /* Hairline borders — wash the secondary border slightly cooler. */
+    --color-border-secondary: rgba(255, 255, 255, 0.08);
+    --color-border-secondary_alt: rgba(255, 255, 255, 0.08);
+    --color-border-tertiary: rgba(255, 255, 255, 0.06);
+    --color-border-tertiary_alt: rgba(255, 255, 255, 0.06);
+}
+
+/*
+ * Animations + utilities ported from the marketing 1B refinement.
+ */
+
+@keyframes sp-aurora-drift {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 0.55;
+    }
+    50% {
+        transform: translate3d(2%, -1%, 0) scale(1.04);
+        opacity: 0.75;
+    }
+}
+
+@keyframes sp-shimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
+.sp-aurora {
+    animation: sp-aurora-drift 18s ease-in-out infinite;
+}
+
+.sp-shimmer-text {
+    background: linear-gradient(
+        90deg,
+        rgba(229, 231, 235, 0.55) 0%,
+        rgba(229, 231, 235, 0.55) 38%,
+        rgba(212, 197, 156, 1) 50%,
+        rgba(229, 231, 235, 0.55) 62%,
+        rgba(229, 231, 235, 0.55) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: sp-shimmer 6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sp-aurora,
+    .sp-shimmer-text {
+        animation: none;
+    }
+}
+
+/*
+ * Typography helpers — opt-in classes keep us from touching every primitive.
+ */
+
+.sp-fraunces {
+    font-family: var(--font-fraunces, "Fraunces"), Georgia, "Times New Roman", serif;
+    font-feature-settings: "ss01";
+}
+
+.sp-mono {
+    font-family: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+    letter-spacing: 0.02em;
+}
+
+/*
+ * Subtle warm aurora wash for the dashboard surface. Pinned background
+ * applied at the html/body so all routes share the moss feel.
+ */
+.dark-mode body {
+    background-color: #080a0c;
+    background-image:
+        radial-gradient(circle at 18% 8%, rgba(127, 184, 154, 0.05), transparent 32%),
+        radial-gradient(circle at 82% 4%, rgba(212, 197, 156, 0.04), transparent 30%);
+    background-attachment: fixed;
+}
