@@ -49,6 +49,15 @@ export default function TeamPage() {
         }
     }, [activeOrg]);
 
+    // Revoke any blob preview URL when it's replaced or the component unmounts.
+    useEffect(() => {
+        return () => {
+            if (avatarPreview?.startsWith("blob:")) {
+                URL.revokeObjectURL(avatarPreview);
+            }
+        };
+    }, [avatarPreview]);
+
     const handleAvatarUpload = (files: FileList | null) => {
         const file = files?.[0];
         if (file) {
