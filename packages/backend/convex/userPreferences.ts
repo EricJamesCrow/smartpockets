@@ -1,6 +1,9 @@
 import { v } from "convex/values";
 import { query, mutation } from "./functions";
 
+// Read validator stays permissive so existing rows containing legacy
+// transparentSidebar/language/bannerAppearance fields still deserialize.
+// The write side (updateAppearance.args) blocks new writes of those fields.
 const appearanceValidator = v.optional(
   v.object({
     theme: v.optional(
@@ -51,15 +54,6 @@ export const updateAppearance = mutation({
       v.union(v.literal("system"), v.literal("light"), v.literal("dark"))
     ),
     brandColor: v.optional(v.string()),
-    transparentSidebar: v.optional(v.boolean()),
-    language: v.optional(v.string()),
-    bannerAppearance: v.optional(
-      v.union(
-        v.literal("default"),
-        v.literal("simplified"),
-        v.literal("custom")
-      )
-    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
