@@ -15,6 +15,31 @@
 
 @source './node_modules/streamdown/dist';
 
+/*
+ * Streamdown / shadcn-compat utility resolution (CROWDEV-329 PR 5).
+ *
+ * Streamdown's bundled components emit shadcn-style utility classes
+ * (`bg-background`, `bg-muted`, `text-foreground`, `text-muted-foreground`,
+ * `border-border`, `border-muted-foreground`, `text-primary-foreground`).
+ * Tailwind v4 only generates a `bg-FOO` utility when `--color-FOO` is declared
+ * inside an `@theme` block — `:root`-level vars alone won't compile. The
+ * `inline` keyword keeps these as runtime references so the underlying
+ * `--background` / `--foreground` etc. tokens (defined in `:root` and
+ * overridden in `.light-mode` below) reshape with the moss palette.
+ *
+ * `--color-primary` / `--color-bg-primary` / `--color-text-primary` are NOT
+ * redefined here — the @repo/ui theme owns those. Streamdown's `bg-primary`
+ * / `text-primary` cleanly inherit UntitledUI's primary surface tokens.
+ */
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-border: var(--border);
+    --color-primary-foreground: var(--primary-foreground);
+}
+
 :root {
     /* SmartPockets palette tokens — usable directly in components. */
     --sp-moss-bg: #080a0c;
@@ -57,6 +82,28 @@
     --sp-motion-base: 220ms;   /* banner, dialog, sidebar item */
     --sp-motion-slow: 320ms;   /* large layout — rare in chat */
     --sp-ease-productive: cubic-bezier(0.32, 0.72, 0, 1);
+
+    /* Streamdown / shadcn-compat surface tokens — mapped to the moss palette
+     * (CROWDEV-329 PR 5). These let streamdown's bundled components
+     * (code blocks, tables, blockquotes, etc.) inherit Set 1B aesthetic.
+     * Dark-mode is the canonical palette here; .light-mode below provides parity.
+     *
+     * Wired into Tailwind via the `@theme inline` block above so utilities
+     * like `bg-background`, `text-foreground`, `border-border`, etc. resolve.
+     */
+    --background: var(--sp-moss-bg);
+    --foreground: rgb(228 222 207);
+    --card: var(--sp-surface-panel-strong);
+    --card-foreground: rgb(228 222 207);
+    --muted: var(--sp-surface-panel);
+    --muted-foreground: rgb(170 160 140);
+    --border: var(--sp-moss-line);
+    --ring: var(--sp-moss-mint);
+    --popover: var(--sp-surface-panel-strong);
+    --popover-foreground: rgb(228 222 207);
+    --accent: var(--sp-surface-panel);
+    --accent-foreground: rgb(228 222 207);
+    --primary-foreground: rgb(8 10 12);
 }
 
 .dark-mode {
@@ -165,6 +212,24 @@
      * not muddy.
      */
     --sp-fraunces-accent: rgb(122 94 42);
+
+    /* Streamdown / shadcn-compat — light-mode parity (CROWDEV-329 PR 5).
+     * Match the cream-paper gray ramp set above. text-quaternary equivalent
+     * for muted-foreground keeps streamdown's secondary text legible on cream.
+     */
+    --background: rgb(253 250 243);
+    --foreground: rgb(28 32 26);
+    --card: rgb(245 239 226);
+    --card-foreground: rgb(28 32 26);
+    --muted: rgb(232 224 207);
+    --muted-foreground: rgb(100 98 88);
+    --border: rgba(0, 0, 0, 0.10);
+    --ring: rgb(95 145 121);
+    --popover: rgb(245 239 226);
+    --popover-foreground: rgb(28 32 26);
+    --accent: rgb(232 224 207);
+    --accent-foreground: rgb(28 32 26);
+    --primary-foreground: rgb(253 250 243);
 }
 
 /*
