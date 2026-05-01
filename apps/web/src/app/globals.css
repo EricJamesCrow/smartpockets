@@ -1,0 +1,62 @@
+@keyframes sp-aurora-drift {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 0.55;
+    }
+    50% {
+        transform: translate3d(2%, -1%, 0) scale(1.04);
+        opacity: 0.75;
+    }
+}
+
+@keyframes sp-marquee {
+    0% {
+        transform: translate3d(0, 0, 0);
+    }
+    100% {
+        transform: translate3d(-50%, 0, 0);
+    }
+}
+
+@keyframes sp-shimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
+.sp-aurora {
+    animation: sp-aurora-drift 18s ease-in-out infinite;
+}
+
+.sp-marquee {
+    animation: sp-marquee 38s linear infinite;
+    will-change: transform;
+}
+
+.sp-shimmer-text {
+    background: linear-gradient(
+        90deg,
+        rgba(229, 231, 235, 0.55) 0%,
+        rgba(229, 231, 235, 0.55) 38%,
+        rgba(212, 197, 156, 1) 50%,
+        rgba(229, 231, 235, 0.55) 62%,
+        rgba(229, 231, 235, 0.55) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: sp-shimmer 6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sp-aurora,
+    .sp-marquee,
+    .sp-shimmer-text {
+        animation: none;
+    }
+}
