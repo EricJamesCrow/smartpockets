@@ -202,6 +202,18 @@ Only use production Clerk keys on previews if the preview is hosted on an approv
 
 Preview auth should use the shared `https://preview.smartpockets.com` auth host and force post-login redirects to the configured stable app origin. Do not build custom app-side `redirect_url` values from generated or shared preview URLs, do not add Clerk satellite props unless the Clerk instance is explicitly configured and smoke-tested for those domains, and do not use generated `smartpockets-app-*.vercel.app` URLs as post-login destinations.
 
+### Plaid In Previews
+
+Plaid environment is configured per Convex deployment (in the Convex dashboard's environment variables), not per Vercel env. The policy:
+
+- **Production Convex (`prod:smartpockets`)** — `PLAID_ENV=production`. Required.
+- **`dev:canny-turtle-982`** — documented exception. Intentionally runs `PLAID_ENV=production` so the owner can test against richer real-account fixture data than Plaid Sandbox provides. Treat the data on this deployment as real PII and never bulk-export, never share, and never hand it to other teammates.
+- **Any other dev/preview Convex** — must use `PLAID_ENV=sandbox` (or `development` if explicitly approved). Real bank data and Plaid production billing must not flow through ad-hoc preview deployments.
+
+`apps/app/scripts/vercel-build.sh` enforces this policy when `PLAID_ENV` is set in the Vercel build env (defense-in-depth — most leaks would manifest there if someone copies prod Plaid keys to Vercel). The script allows `PLAID_ENV=production` only when `VERCEL_ENV=production` or `CONVEX_DEPLOYMENT` is one of the documented exceptions in `PLAID_PROD_EXCEPTION_DEPLOYMENTS`. To add a new exception, edit that array in the script and update this section.
+
+The actual Plaid env value usually lives in the Convex deployment's env vars, not in Vercel's. The Vercel guardrail catches the rare case where someone sets `PLAID_ENV` in Vercel directly. The primary discipline is: when provisioning a new dev/preview Convex deployment, set `PLAID_ENV=sandbox` in its dashboard before any code calls Plaid.
+
 ### Never Do
 
 | Action | Why |
