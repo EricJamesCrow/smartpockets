@@ -13,6 +13,8 @@
  * override is present.
  */
 
+@source './node_modules/streamdown/dist';
+
 :root {
     /* SmartPockets palette tokens — usable directly in components. */
     --sp-moss-bg: #080a0c;
@@ -46,6 +48,15 @@
      */
     --sp-fraunces-accent: rgb(214 211 209);
     --sp-microcopy: rgb(120 113 108);
+
+    /* Motion timing tokens (CROWDEV-329 PR 1).
+     * Use across chat surfaces and elsewhere where motion is intentional.
+     * Spring overshoot capped at ~5% — antithesis of bouncy.
+     */
+    --sp-motion-fast: 150ms;   /* button press, hover state changes */
+    --sp-motion-base: 220ms;   /* banner, dialog, sidebar item */
+    --sp-motion-slow: 320ms;   /* large layout — rare in chat */
+    --sp-ease-productive: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .dark-mode {
