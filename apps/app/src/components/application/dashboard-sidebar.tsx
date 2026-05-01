@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import type { Selection } from "react-aria-components";
 import { useConvexAuth } from "convex/react";
 import {
@@ -22,7 +22,40 @@ import { SidebarNavigationSimple, SidebarSimpleDesktop } from "@repo/ui/untitled
 import { SidebarNavigationSlim, SidebarSlimDesktop } from "@repo/ui/untitledui/application/app-navigation/sidebar-navigation/sidebar-slim";
 import { Tooltip } from "@repo/ui/untitledui/base/tooltip/tooltip";
 import { CommandMenu } from "@repo/ui/untitledui/application/command-menus/command-menu";
+import { ChatHistoryGroup } from "@/components/chat/sidebar/ChatHistoryGroup";
+import { ChatHistoryItem } from "@/components/chat/sidebar/ChatHistoryItem";
 import { PinnedWalletsSidebar } from "@/components/wallets/PinnedWalletsSidebar";
+
+type ThreadSummary = {
+    threadId: string;
+    title?: string;
+    summary?: string;
+    updatedAt: number;
+};
+
+function bucketByRecency(threads: ThreadSummary[]) {
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const todayMs = startOfToday.getTime();
+    const yesterdayMs = todayMs - day;
+    const buckets: { label: string; threads: ThreadSummary[] }[] = [
+        { label: "Today", threads: [] },
+        { label: "Yesterday", threads: [] },
+        { label: "Last 7 days", threads: [] },
+        { label: "Last 30 days", threads: [] },
+        { label: "Older", threads: [] },
+    ];
+    for (const t of threads) {
+        if (t.updatedAt >= todayMs) buckets[0]!.threads.push(t);
+        else if (t.updatedAt >= yesterdayMs) buckets[1]!.threads.push(t);
+        else if (t.updatedAt >= now - 7 * day) buckets[2]!.threads.push(t);
+        else if (t.updatedAt >= now - 30 * day) buckets[3]!.threads.push(t);
+        else buckets[4]!.threads.push(t);
+    }
+    return buckets.filter((b) => b.threads.length > 0);
+}
 
 const footerItems: NavItemType[] = [
     {
@@ -57,31 +90,24 @@ export function DashboardSidebar() {
     };
     const router = useRouter();
     const pathname = usePathname();
+    const params = useParams<{ threadId?: string }>();
+    const activeThreadId = params?.threadId ?? null;
     const { isAuthenticated } = useConvexAuth();
 
     // Skip the threads query until Convex auth is ready — calling it
     // unauthenticated raises "Authentication required" and blanks the route.
     const threadsResult = useQuery(api.agent.threads.listForUser, isAuthenticated ? {} : "skip") as
-        | Array<{ threadId: string; title?: string; summary?: string; updatedAt: number }>
+        | ThreadSummary[]
         | undefined;
     const threads = threadsResult ?? [];
 
-    const historyItems: NavItemType["items"] = threads.map((thread) => ({
-        label: thread.title ?? "Untitled",
-        href: `/${thread.threadId}`,
-    }));
+    const buckets = useMemo(() => bucketByRecency(threads), [threads]);
 
     const navItemsSimple: NavItemType[] = [
         {
             label: "Home",
             href: "/",
             icon: Home03,
-        },
-        {
-            label: "History",
-            href: "/",
-            icon: ClockRewind,
-            ...(historyItems.length > 0 && { items: historyItems }),
         },
         {
             label: "Credit Cards",
@@ -159,6 +185,26 @@ export function DashboardSidebar() {
                                 onSearchClick={() => setIsCommandMenuOpen(true)}
                                 hideBorder
                              >
+                                {buckets.length > 0 && (
+                                    <nav
+                                        aria-label="Chat history"
+                                        className="flex flex-col gap-3 px-2 pt-2 lg:px-4"
+                                    >
+                                        {buckets.map((bucket) => (
+                                            <ChatHistoryGroup key={bucket.label} label={bucket.label}>
+                                                {bucket.threads.map((thread) => (
+                                                    <ChatHistoryItem
+                                                        key={thread.threadId}
+                                                        threadId={thread.threadId}
+                                                        title={thread.title ?? "Untitled"}
+                                                        summary={thread.summary}
+                                                        isActive={thread.threadId === activeThreadId}
+                                                    />
+                                                ))}
+                                            </ChatHistoryGroup>
+                                        ))}
+                                    </nav>
+                                )}
                                 <PinnedWalletsSidebar />
                              </SidebarSimpleDesktop>
                         )}
@@ -196,6 +242,26 @@ export function DashboardSidebar() {
                         footerItems={finalFooterItems}
                         onSearchClick={() => setIsCommandMenuOpen(true)}
                     >
+                        {buckets.length > 0 && (
+                            <nav
+                                aria-label="Chat history"
+                                className="flex flex-col gap-3 px-2 pt-2 lg:px-4"
+                            >
+                                {buckets.map((bucket) => (
+                                    <ChatHistoryGroup key={bucket.label} label={bucket.label}>
+                                        {bucket.threads.map((thread) => (
+                                            <ChatHistoryItem
+                                                key={thread.threadId}
+                                                threadId={thread.threadId}
+                                                title={thread.title ?? "Untitled"}
+                                                summary={thread.summary}
+                                                isActive={thread.threadId === activeThreadId}
+                                            />
+                                        ))}
+                                    </ChatHistoryGroup>
+                                ))}
+                            </nav>
+                        )}
                         <PinnedWalletsSidebar />
                     </SidebarNavigationSimple>
                 )}
