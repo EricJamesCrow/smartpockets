@@ -16,16 +16,30 @@ export const metadata = {
 
 function HeaderCentered() {
 	return (
-		<section className="bg-primary py-16 md:py-24">
-			<div className="mx-auto max-w-container px-4 md:px-8">
+		<section className="relative overflow-hidden bg-primary py-16 md:py-24">
+			{/* Soft moss + champagne aurora wash */}
+			<div
+				aria-hidden="true"
+				className="pointer-events-none absolute inset-0 hidden dark:block"
+				style={{
+					backgroundImage:
+						"radial-gradient(circle at 22% 18%, rgba(127,184,154,0.06), transparent 36%), radial-gradient(circle at 78% 14%, rgba(212,197,156,0.04), transparent 32%)",
+				}}
+			/>
+			<div className="relative mx-auto max-w-container px-4 md:px-8">
 				<div className="mx-auto max-w-3xl text-center">
-					<span className="text-brand-secondary text-sm font-semibold md:text-md">
-						About us
-					</span>
-					<h1 className="text-primary mt-3 text-display-md font-semibold md:text-display-lg">
-						Built by a power user, for power users.
+					<p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.28em] text-tertiary dark:text-stone-500">
+						<span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint,#7fb89a)]" />
+						I &middot; About
+					</p>
+					<h1 className="text-primary mt-4 text-balance text-display-md font-medium leading-[1.05] tracking-[-0.025em] md:text-display-lg">
+						Built by a{" "}
+						<em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300">
+							power
+						</em>{" "}
+						user, for power users.
 					</h1>
-					<p className="text-tertiary mt-4 text-lg md:mt-5 md:text-xl">
+					<p className="text-tertiary mt-5 max-w-2xl mx-auto text-pretty text-md leading-7 md:mt-6 md:text-lg">
 						SmartPockets started because I manage 12+ credit cards and every app
 						I tried either broke at scale, charged too much, or sold my data. So
 						I built what I actually needed — starting with the credit card
@@ -34,7 +48,7 @@ function HeaderCentered() {
 					</p>
 				</div>
 				<div className="mt-12 md:mt-16">
-					<div className="bg-tertiary aspect-video w-full rounded-2xl md:rounded-3xl" />
+					<div className="aspect-video w-full rounded-2xl border border-secondary bg-tertiary md:rounded-3xl dark:border-[var(--sp-moss-line,rgba(255,255,255,0.08))]" />
 				</div>
 			</div>
 		</section>

@@ -14,6 +14,7 @@ import { Breadcrumbs } from "@repo/ui/untitledui/application/breadcrumbs/breadcr
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { useToggleCardLocked } from "@/hooks/useToggleCardLocked";
 import { UntitledCardVisual } from "./UntitledCardVisual";
+import { CardSchemaPanel } from "./CardSchemaPanel";
 import { CreditCardStatusBadge } from "./CreditCardStatusBadge";
 import { PaymentDueBadge } from "./PaymentDueBadge";
 import { KeyMetrics } from "./KeyMetrics";
@@ -211,7 +212,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
                 {card.cardName}
               </em>
             </h1>
-            <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+            <p className="mt-2 sp-kicker text-tertiary dark:text-stone-500">
               <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
               CREDIT &middot; {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} &middot; •••• {card.lastFour}
             </p>
@@ -244,7 +245,7 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
 
           {/* Payment Due Info */}
           <div className="flex flex-col items-end gap-1">
-            <span className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+            <span className="sp-kicker text-tertiary dark:text-stone-500">
               <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">
                 Payment
               </em>{" "}
@@ -299,6 +300,27 @@ export function CreditCardDetailContent({ cardId }: CreditCardDetailContentProps
           <>
             {/* Key Metrics Row */}
             <KeyMetrics card={card} />
+
+            {/* Schema Panel — reactive query preview that mirrors the marketing landing */}
+            <div className="px-4 pt-8 lg:px-6">
+              <p className="sp-kicker tracking-[0.24em] text-tertiary dark:text-stone-500">
+                <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
+                02 / Schema &middot; live
+              </p>
+              <h2 className="mt-1.5 text-display-xs font-medium leading-tight tracking-[-0.02em] text-primary">
+                <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 dark:text-stone-300">
+                  Architecture
+                </em>{" "}
+                under the card.
+              </h2>
+              <p className="mt-2 max-w-xl text-sm text-tertiary">
+                The reactive query feeding this page. WebSocket push, indexed by
+                user-card, p95 under 100ms.
+              </p>
+              <div className="mt-5">
+                <CardSchemaPanel card={card} />
+              </div>
+            </div>
 
             {/* Transactions Section */}
             <div className="px-4 py-6 lg:px-6">

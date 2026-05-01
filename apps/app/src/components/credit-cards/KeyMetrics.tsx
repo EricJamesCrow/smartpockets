@@ -36,14 +36,14 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
   const recommendedPayment = card.lastStatementBalance ?? card.currentBalance ?? 0;
 
   return (
-    <div className="border-y border-secondary bg-primary dark:border-white/[0.06]">
+    <div className="border-y border-secondary bg-primary dark:border-[var(--sp-moss-line)]">
       <div className="px-4 py-5 lg:px-6">
         {/* Key Metrics - 4 columns with vertical dividers on lg+ */}
         <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:flex lg:flex-row lg:gap-0">
           {/* Current Balance */}
           <div className="flex flex-1 flex-col gap-1.5 lg:pr-6">
             <div className="flex items-center justify-between">
-              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+              <p className="sp-kicker text-tertiary dark:text-stone-500">
                 <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">Current</em>{" "}
                 Balance
               </p>
@@ -68,12 +68,12 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch border-l border-secondary lg:block dark:border-white/[0.06]" />
+          <div className="hidden w-px self-stretch border-l border-secondary lg:block dark:border-[var(--sp-moss-line)]" />
 
           {/* Minimum Payment */}
           <div className="flex flex-1 flex-col gap-1.5 lg:px-6">
             <div className="flex items-center justify-between">
-              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+              <p className="sp-kicker text-tertiary dark:text-stone-500">
                 <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">Minimum</em>{" "}
                 Payment
               </p>
@@ -90,11 +90,11 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch border-l border-secondary lg:block dark:border-white/[0.06]" />
+          <div className="hidden w-px self-stretch border-l border-secondary lg:block dark:border-[var(--sp-moss-line)]" />
 
           {/* APR (Purchase) */}
           <div className="flex flex-1 flex-col gap-1.5 lg:px-6">
-            <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+            <p className="sp-kicker text-tertiary dark:text-stone-500">
               <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">APR</em>{" "}
               (purchase)
             </p>
@@ -105,11 +105,11 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch border-l border-secondary lg:block dark:border-white/[0.06]" />
+          <div className="hidden w-px self-stretch border-l border-secondary lg:block dark:border-[var(--sp-moss-line)]" />
 
           {/* Available Credit */}
           <div className="flex flex-1 flex-col gap-1.5 lg:pl-6">
-            <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+            <p className="sp-kicker text-tertiary dark:text-stone-500">
               <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">Available</em>{" "}
               Credit
             </p>

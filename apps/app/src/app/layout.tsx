@@ -1,4 +1,5 @@
 import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import "@repo/ui/globals.css";
 import "./globals.css";
 import { Toaster } from "@repo/ui/untitledui/application/notifications/toaster";
@@ -27,10 +28,15 @@ const geistMono = Geist_Mono({
 // Fraunces is opt-in via the .sp-fraunces utility (or the Tailwind arbitrary
 // font-[family-name:var(--font-fraunces)] pattern) — never used as a body or
 // display sans replacement, only for one-word italic accents.
+//
+// IMPORTANT: must include `style: ["italic"]` so the italic axis is actually
+// downloaded for the variable font. Without this, every `italic` accent
+// silently falls back to a synthetic italic over the system serif.
 const fraunces = Fraunces({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-fraunces",
+    style: ["italic"],
     axes: ["opsz", "SOFT"],
 });
 
@@ -59,7 +65,29 @@ export default function RootLayout({
                     "bg-primary antialiased",
                 )}
             >
-                <ClerkProvider>
+                <ClerkProvider
+                    appearance={{
+                        baseTheme: dark,
+                        variables: {
+                            colorPrimary: "#3d6649",
+                            colorBackground: "#0a1014",
+                            colorText: "#e8e4d6",
+                            colorInputBackground: "rgba(255,255,255,0.04)",
+                            colorInputText: "#e8e4d6",
+                            fontFamily: "var(--font-inter), system-ui, sans-serif",
+                        },
+                        elements: {
+                            card: "bg-[#0a1014] border border-[rgba(255,255,255,0.08)] rounded-2xl shadow-[0_24px_60px_rgba(8,10,12,0.45)]",
+                            formButtonPrimary:
+                                "bg-[#3d6649] hover:bg-[#4a7a57] text-white",
+                            headerTitle:
+                                "font-medium tracking-[-0.02em] text-stone-100",
+                            headerSubtitle: "text-stone-400",
+                            socialButtonsBlockButton:
+                                "border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.06)]",
+                        },
+                    }}
+                >
                     <ConvexClientProvider>
                         <RouteProvider>
                             <Theme>

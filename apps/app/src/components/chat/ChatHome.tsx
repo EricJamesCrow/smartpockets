@@ -25,7 +25,7 @@ export function ChatHome({ onSend }: ChatHomeProps) {
       />
       <div className="relative flex w-full max-w-2xl flex-col items-center gap-10">
         <div className="text-center">
-          <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] uppercase tracking-[0.28em] text-tertiary dark:text-stone-500">
+          <p className="sp-kicker tracking-[0.28em] dark:text-stone-500">
             <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
             SmartPockets v0.1
           </p>
@@ -52,7 +52,7 @@ function SuggestionChip({ label, onClick }: { label: string; onClick: () => void
     <button
       type="button"
       onClick={onClick}
-      className="group relative overflow-hidden rounded-full border border-secondary bg-primary px-4 py-2 text-sm font-medium text-secondary shadow-xs transition-[transform,background-color,border-color,color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 hover:bg-secondary dark:border-white/[0.10] dark:bg-white/[0.04] dark:text-stone-300 dark:hover:border-white/20 dark:hover:bg-white/[0.07]"
+      className="group relative overflow-hidden rounded-full border border-secondary bg-primary px-4 py-2 text-sm font-medium text-secondary shadow-xs transition-[transform,background-color,border-color,color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 hover:bg-secondary active:translate-y-0 dark:border-[var(--sp-moss-line-strong)] dark:bg-[var(--sp-surface-panel-strong)] dark:text-stone-300 dark:hover:border-white/20 dark:hover:bg-white/[0.07]"
     >
       <span className="relative flex items-center gap-2">
         <span className="h-1 w-1 rounded-full bg-[var(--sp-moss-mint)]/70 dark:bg-[#7fb89a]/70" />

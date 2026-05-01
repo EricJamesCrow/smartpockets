@@ -25,16 +25,21 @@ export function ReconsentModal({ plaidItemId, onDismiss }: ReconsentModalProps) 
     >
       <Modal className="max-w-md">
         <Dialog className="flex-col">
-          <div className="flex w-full flex-col gap-5 rounded-xl bg-primary p-6 shadow-xl ring-1 ring-primary ring-inset">
+          <div className="flex w-full flex-col gap-5 rounded-2xl border border-secondary bg-primary p-6 shadow-xl dark:border-[var(--sp-moss-line-strong)] dark:bg-[var(--sp-moss-panel)] dark:shadow-[var(--sp-shadow-panel)]">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning-primary" />
               <div className="flex-1">
-                <AriaHeading slot="title" className="text-base font-semibold text-primary">
-                  Bank reconnection required
+                <p className="sp-kicker text-tertiary dark:text-stone-500">
+                  <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
+                  Action required
+                </p>
+                <AriaHeading slot="title" className="mt-1 text-base font-medium leading-tight tracking-[-0.02em] text-primary">
+                  <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 dark:text-stone-300">Bank</em>{" "}
+                  reconnection required
                 </AriaHeading>
                 <p className="mt-2 text-sm text-tertiary">
                   Your bank asked us to reconnect this item before we can sync new data.
-                  Item ID: <code className="text-xs">{plaidItemId}</code>
+                  Item ID: <code className="font-[family-name:var(--font-geist-mono)] text-xs">{plaidItemId}</code>
                 </p>
               </div>
             </div>

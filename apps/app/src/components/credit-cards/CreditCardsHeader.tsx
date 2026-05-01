@@ -26,9 +26,9 @@ export function CreditCardsHeader({
   const showWalletAddCards = Boolean(walletName && onAddCardsToWallet);
 
   return (
-    <div className="flex items-center justify-between border-b border-secondary px-6 py-5 dark:border-white/[0.06]">
+    <div className="flex items-center justify-between border-b border-secondary px-6 py-5 dark:border-[var(--sp-moss-line)]">
       <div>
-        <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.24em] text-tertiary dark:text-stone-500">
+        <p className="sp-kicker tracking-[0.24em] text-tertiary dark:text-stone-500">
           <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
           {walletName ? "Wallet" : "Section"}
         </p>

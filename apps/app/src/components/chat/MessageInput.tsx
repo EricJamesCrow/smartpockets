@@ -18,7 +18,7 @@ export function MessageInput({ onSend, isLoading, disabled }: MessageInputProps)
           disabled={disabled}
           className="w-full"
         />
-        <p className="mt-3 text-center font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+        <p className="sp-kicker mt-3 text-center text-tertiary dark:text-stone-500">
           Assistant can make mistakes &middot; check important info
         </p>
       </div>

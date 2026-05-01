@@ -113,7 +113,7 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
           "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
           isUser
             ? "bg-brand-solid text-white"
-            : "border border-secondary bg-secondary text-primary dark:border-white/[0.08] dark:bg-white/[0.04]",
+            : "border border-secondary bg-secondary text-primary dark:border-[var(--sp-moss-line)] dark:bg-[var(--sp-surface-panel-strong)]",
         )}
         aria-hidden
       >
@@ -125,7 +125,7 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
             "rounded-2xl px-5 py-3 text-sm",
             isUser
               ? "rounded-tr-none bg-brand-solid text-white"
-              : "min-h-[42px] rounded-tl-none border border-secondary bg-secondary text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+              : "min-h-[42px] rounded-tl-none border border-secondary bg-secondary text-primary dark:border-[var(--sp-moss-line)] dark:bg-[var(--sp-surface-panel-strong)] dark:shadow-[var(--sp-inset-hairline)]",
           )}
         >
           {isUser ? (

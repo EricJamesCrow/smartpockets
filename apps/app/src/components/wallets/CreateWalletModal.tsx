@@ -102,7 +102,7 @@ export function CreateWalletModal({ isOpen, onClose }: CreateWalletModalProps) {
     <ModalOverlay isOpen={isOpen} onOpenChange={(open) => !open && handleClose()} isDismissable>
       <Modal>
         <Dialog>
-          <div className="relative w-full overflow-hidden rounded-2xl bg-primary shadow-xl sm:max-w-100">
+          <div className="relative w-full overflow-hidden rounded-2xl border border-secondary bg-primary shadow-xl dark:border-[var(--sp-moss-line-strong)] dark:bg-[var(--sp-moss-panel)] dark:shadow-[var(--sp-shadow-panel)] sm:max-w-100">
             {/* Close button */}
             <CloseButton
               onClick={handleClose}
@@ -122,8 +122,13 @@ export function CreateWalletModal({ isOpen, onClose }: CreateWalletModalProps) {
                 />
               </div>
               <div className="z-10 flex flex-col gap-0.5">
-                <AriaHeading slot="title" className="text-md font-semibold text-primary">
-                  Create Wallet
+                <p className="sp-kicker text-tertiary dark:text-stone-500">
+                  <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
+                  New wallet
+                </p>
+                <AriaHeading slot="title" className="mt-1 text-md font-medium leading-tight tracking-[-0.02em] text-primary">
+                  Create a{" "}
+                  <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 dark:text-stone-300">wallet</em>
                 </AriaHeading>
                 <p className="text-sm text-tertiary">
                   Organize your credit cards into custom collections
