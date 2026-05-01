@@ -26,16 +26,16 @@ type BackfillTransactionEnrichmentsResult = {
  * The host app should call this before opening Plaid Link modal.
  */
 export declare const createLinkToken: import("convex/server").RegisteredAction<"public", {
+    clientName?: string | undefined;
     products?: string[] | undefined;
     accountFilters?: any;
     countryCodes?: string[] | undefined;
     language?: string | undefined;
-    clientName?: string | undefined;
     webhookUrl?: string | undefined;
-    userId: string;
     plaidClientId: string;
     plaidSecret: string;
     plaidEnv: string;
+    userId: string;
 }, Promise<{
     linkToken: string;
 }>>;
@@ -53,12 +53,12 @@ export declare const createLinkToken: import("convex/server").RegisteredAction<"
  */
 export declare const exchangePublicToken: import("convex/server").RegisteredAction<"public", {
     products?: string[] | undefined;
-    userId: string;
+    encryptionKey: string;
     plaidClientId: string;
     plaidSecret: string;
     plaidEnv: string;
+    userId: string;
     publicToken: string;
-    encryptionKey: string;
 }, Promise<{
     success: boolean;
     itemId: string;
@@ -74,11 +74,11 @@ export declare const exchangePublicToken: import("convex/server").RegisteredActi
  * 4. Bulk upsert accounts
  */
 export declare const fetchAccounts: import("convex/server").RegisteredAction<"public", {
+    encryptionKey: string;
     plaidItemId: string;
     plaidClientId: string;
     plaidSecret: string;
     plaidEnv: string;
-    encryptionKey: string;
 }, Promise<{
     accountCount: number;
 }>>;
@@ -107,11 +107,11 @@ export declare const fetchAccounts: import("convex/server").RegisteredAction<"pu
 export declare const syncTransactions: import("convex/server").RegisteredAction<"public", {
     maxPages?: number | undefined;
     maxTransactions?: number | undefined;
+    encryptionKey: string;
     plaidItemId: string;
     plaidClientId: string;
     plaidSecret: string;
     plaidEnv: string;
-    encryptionKey: string;
 }, Promise<{
     added: number;
     modified: number;
@@ -132,11 +132,11 @@ export declare const syncTransactions: import("convex/server").RegisteredAction<
 export declare const backfillTransactionEnrichments: import("convex/server").RegisteredAction<"public", {
     maxPages?: number | undefined;
     maxTransactions?: number | undefined;
+    encryptionKey: string;
     plaidItemId: string;
     plaidClientId: string;
     plaidSecret: string;
     plaidEnv: string;
-    encryptionKey: string;
 }, Promise<BackfillTransactionEnrichmentsResult>>;
 /**
  * Fetch and store credit card liability data.
@@ -149,11 +149,11 @@ export declare const backfillTransactionEnrichments: import("convex/server").Reg
  * 3. Upsert credit card liabilities (APR, balances, payments)
  */
 export declare const fetchLiabilities: import("convex/server").RegisteredAction<"public", {
+    encryptionKey: string;
     plaidItemId: string;
     plaidClientId: string;
     plaidSecret: string;
     plaidEnv: string;
-    encryptionKey: string;
 }, Promise<{
     creditCards: number;
     mortgages: number;
@@ -174,11 +174,11 @@ export declare const fetchLiabilities: import("convex/server").RegisteredAction<
  * 4. Bulk upsert recurring streams
  */
 export declare const fetchRecurringStreams: import("convex/server").RegisteredAction<"public", {
+    encryptionKey: string;
     plaidItemId: string;
     plaidClientId: string;
     plaidSecret: string;
     plaidEnv: string;
-    encryptionKey: string;
 }, Promise<{
     inflows: number;
     outflows: number;
@@ -196,11 +196,11 @@ export declare const fetchRecurringStreams: import("convex/server").RegisteredAc
  */
 export declare const createUpdateLinkToken: import("convex/server").RegisteredAction<"public", {
     mode?: "reauth" | "account_select" | undefined;
+    encryptionKey: string;
     plaidItemId: string;
     plaidClientId: string;
     plaidSecret: string;
     plaidEnv: string;
-    encryptionKey: string;
 }, Promise<{
     linkToken: string;
 }>>;
@@ -216,16 +216,31 @@ export declare const completeReauth: import("convex/server").RegisteredAction<"p
     success: boolean;
 }>>;
 /**
- * Enrich transactions with merchant data using Plaid Enrich API.
+ * Enrich transactions with merchant data using Plaid `/transactions/enrich`.
  *
- * Takes a batch of transactions and enriches them with:
- * - Counterparty name, type, and entity ID
- * - Merchant logo URL and website
- * - Confidence level
+ * Returns counterparty name + entity_id + logo + confidence level for each
+ * transaction Plaid recognizes. Results are upserted into `merchantEnrichments`
+ * (de-duped by entity_id) and linked back to the transaction row via
+ * `merchantId` + `enrichmentData`.
  *
- * Results are cached in merchantEnrichments table and linked to transactions.
+ * The caller MUST tag each transaction with its source `account_type`
+ * (`"credit"` or `"depository"`). Plaid's Enrich API accepts only one
+ * `account_type` per request and uses it to interpret transaction direction
+ * and route through its merchant database. Mis-typing credit-card transactions
+ * as depository materially degrades match rate. Transactions whose source
+ * account is `"loan"` / `"investment"` / `"other"` are silently skipped —
+ * the API rejects those types entirely.
+ *
+ * `description` should be the raw bank-statement descriptor (Plaid's
+ * `original_description` field) when available, falling back to `name`. The
+ * cleaned `merchant_name` produces poor match rates because Plaid's
+ * enrichment heuristics expect the messy raw form.
  */
 export declare const enrichTransactions: import("convex/server").RegisteredAction<"public", {
+    encryptionKey: string;
+    plaidClientId: string;
+    plaidSecret: string;
+    plaidEnv: string;
     transactions: {
         iso_currency_code?: string | undefined;
         mcc?: string | undefined;
@@ -239,11 +254,8 @@ export declare const enrichTransactions: import("convex/server").RegisteredActio
         amount: number;
         description: string;
         direction: "INFLOW" | "OUTFLOW";
+        account_type: "credit" | "depository";
     }[];
-    plaidClientId: string;
-    plaidSecret: string;
-    plaidEnv: string;
-    encryptionKey: string;
 }, Promise<{
     enriched: number;
     failed: number;
@@ -258,11 +270,11 @@ export declare const enrichTransactions: import("convex/server").RegisteredActio
  * and will return PRODUCTS_NOT_SUPPORTED.
  */
 export declare const triggerTransactionsRefresh: import("convex/server").RegisteredAction<"public", {
+    encryptionKey: string;
     plaidItemId: string;
     plaidClientId: string;
     plaidSecret: string;
     plaidEnv: string;
-    encryptionKey: string;
 }, Promise<{
     success: boolean;
     requestId: string;

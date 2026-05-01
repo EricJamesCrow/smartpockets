@@ -25,7 +25,7 @@ export declare const getItemsByUser: import("convex/server").RegisteredQuery<"pu
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -63,7 +63,7 @@ export declare const getItem: import("convex/server").RegisteredQuery<"public", 
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -102,7 +102,7 @@ export declare const getItemByPlaidItemId: import("convex/server").RegisteredQue
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -138,7 +138,7 @@ export declare const getAllActiveItems: import("convex/server").RegisteredQuery<
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -235,6 +235,7 @@ export declare const getTransactionsByAccount: import("convex/server").Registere
     datetime: string | undefined;
     name: string;
     merchantName: string | undefined;
+    originalDescription: string | undefined;
     pending: boolean;
     categoryPrimary: string | undefined;
     categoryDetailed: string | undefined;
@@ -274,6 +275,7 @@ export declare const getTransactionsByUser: import("convex/server").RegisteredQu
     datetime: string | undefined;
     name: string;
     merchantName: string | undefined;
+    originalDescription: string | undefined;
     pending: boolean;
     categoryPrimary: string | undefined;
     categoryDetailed: string | undefined;
@@ -549,7 +551,7 @@ export declare const getMerchantEnrichment: import("convex/server").RegisteredQu
     categoryIconUrl: string | undefined;
     website: string | undefined;
     phoneNumber: string | undefined;
-    confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+    confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
     lastEnriched: number;
 } | null>>;
 /**

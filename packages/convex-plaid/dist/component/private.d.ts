@@ -21,7 +21,7 @@ export declare const getPlaidItem: import("convex/server").RegisteredQuery<"inte
     cursor: string | undefined;
     institutionId: string | undefined;
     institutionName: string | undefined;
-    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -36,6 +36,8 @@ export declare const getPlaidItemByItemId: import("convex/server").RegisteredQue
 }, Promise<{
     _id: import("convex/values").GenericId<"plaidItems">;
     _creationTime: number;
+    errorCode?: string | undefined;
+    errorMessage?: string | undefined;
     cursor?: string | undefined;
     institutionId?: string | undefined;
     institutionName?: string | undefined;
@@ -43,8 +45,6 @@ export declare const getPlaidItemByItemId: import("convex/server").RegisteredQue
     syncError?: string | undefined;
     lastSyncedAt?: number | undefined;
     activatedAt?: number | undefined;
-    errorCode?: string | undefined;
-    errorMessage?: string | undefined;
     errorAt?: number | undefined;
     reauthReason?: string | undefined;
     reauthAt?: number | undefined;
@@ -60,11 +60,11 @@ export declare const getPlaidItemByItemId: import("convex/server").RegisteredQue
     newAccountsAvailableAt?: number | undefined;
     firstErrorAt?: number | undefined;
     lastDispatchedAt?: number | undefined;
-    userId: string;
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     itemId: string;
+    userId: string;
     accessToken: string;
     products: string[];
-    status: "pending" | "syncing" | "active" | "error" | "needs_reauth" | "deleting";
     createdAt: number;
 } | null>>;
 /**
@@ -75,11 +75,11 @@ export declare const createPlaidItem: import("convex/server").RegisteredMutation
     institutionId?: string | undefined;
     institutionName?: string | undefined;
     isActive?: boolean | undefined;
-    userId: string;
+    status: string;
     itemId: string;
+    userId: string;
     accessToken: string;
     products: string[];
-    status: string;
 }, Promise<string>>;
 /**
  * Update plaidItem status.
@@ -87,8 +87,8 @@ export declare const createPlaidItem: import("convex/server").RegisteredMutation
  */
 export declare const updateItemStatus: import("convex/server").RegisteredMutation<"internal", {
     syncError?: string | undefined;
-    status: string;
     plaidItemId: string;
+    status: string;
 }, Promise<null>>;
 /**
  * Update lastSyncedAt timestamp for a plaidItem.
@@ -104,8 +104,8 @@ export declare const updateLastSyncedAt: import("convex/server").RegisteredMutat
  * Uses O(1) lookup via ctx.db.normalizeId() + ctx.db.get().
  */
 export declare const updateItemCursor: import("convex/server").RegisteredMutation<"internal", {
-    cursor: string;
     plaidItemId: string;
+    cursor: string;
 }, Promise<null>>;
 /**
  * Acquire a sync lock using optimistic locking.
@@ -156,9 +156,9 @@ export declare const acquireSyncLock: import("convex/server").RegisteredMutation
  * Uses O(1) lookup via ctx.db.normalizeId() + ctx.db.get().
  */
 export declare const completeSyncWithVersion: import("convex/server").RegisteredMutation<"internal", {
+    plaidItemId: string;
     cursor: string;
     syncVersion: number;
-    plaidItemId: string;
 }, Promise<{
     success: boolean;
     reason: string;
@@ -178,11 +178,11 @@ export declare const completeSyncWithVersion: import("convex/server").Registered
  * dispatch with a visible label).
  */
 export declare const releaseSyncLock: import("convex/server").RegisteredMutation<"internal", {
-    syncError?: string | undefined;
     errorCode?: string | undefined;
+    syncError?: string | undefined;
+    plaidItemId: string;
     status: string;
     syncVersion: number;
-    plaidItemId: string;
 }, Promise<null>>;
 /**
  * Mark plaidItem as needing re-authentication.
@@ -243,8 +243,8 @@ export declare const resetCircuitBreaker: import("convex/server").RegisteredMuta
  * concurrent calls might both try to insert the same account.
  */
 export declare const bulkUpsertAccounts: import("convex/server").RegisteredMutation<"internal", {
-    userId: string;
     plaidItemId: string;
+    userId: string;
     accounts: {
         officialName?: string | undefined;
         mask?: string | undefined;
@@ -273,11 +273,12 @@ export declare const bulkUpsertAccounts: import("convex/server").RegisteredMutat
  * for O(1) lookups. This reduces query count from O(n) to O(1).
  */
 export declare const bulkUpsertTransactions: import("convex/server").RegisteredMutation<"internal", {
-    userId: string;
     plaidItemId: string;
+    userId: string;
     added: {
         datetime?: string | undefined;
         merchantName?: string | undefined;
+        originalDescription?: string | undefined;
         pendingTransactionId?: string | undefined;
         categoryPrimary?: string | undefined;
         categoryDetailed?: string | undefined;
@@ -302,7 +303,7 @@ export declare const bulkUpsertTransactions: import("convex/server").RegisteredM
             phoneNumber?: string | undefined;
             merchantName: string;
             merchantId: string;
-            confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+            confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
         } | undefined;
         pending: boolean;
         accountId: string;
@@ -315,6 +316,7 @@ export declare const bulkUpsertTransactions: import("convex/server").RegisteredM
     modified: {
         datetime?: string | undefined;
         merchantName?: string | undefined;
+        originalDescription?: string | undefined;
         pendingTransactionId?: string | undefined;
         categoryPrimary?: string | undefined;
         categoryDetailed?: string | undefined;
@@ -339,7 +341,7 @@ export declare const bulkUpsertTransactions: import("convex/server").RegisteredM
             phoneNumber?: string | undefined;
             merchantName: string;
             merchantId: string;
-            confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+            confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
         } | undefined;
         pending: boolean;
         accountId: string;
@@ -367,6 +369,7 @@ export declare const backfillTransactionEnrichments: import("convex/server").Reg
     transactions: {
         datetime?: string | undefined;
         merchantName?: string | undefined;
+        originalDescription?: string | undefined;
         pendingTransactionId?: string | undefined;
         categoryPrimary?: string | undefined;
         categoryDetailed?: string | undefined;
@@ -391,7 +394,7 @@ export declare const backfillTransactionEnrichments: import("convex/server").Reg
             phoneNumber?: string | undefined;
             merchantName: string;
             merchantId: string;
-            confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+            confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
         } | undefined;
         pending: boolean;
         accountId: string;
@@ -421,8 +424,8 @@ export declare const upsertCreditCardLiability: import("convex/server").Register
     lastStatementIssueDate?: string | undefined;
     minimumPaymentAmount?: number | undefined;
     nextPaymentDueDate?: string | undefined;
-    userId: string;
     plaidItemId: string;
+    userId: string;
     accountId: string;
     aprs: {
         balanceSubjectToApr?: number | undefined;
@@ -438,8 +441,8 @@ export declare const upsertCreditCardLiability: import("convex/server").Register
  * Uses safe upsert pattern to handle TOCTOU race conditions.
  */
 export declare const bulkUpsertCreditCardLiabilities: import("convex/server").RegisteredMutation<"internal", {
-    userId: string;
     plaidItemId: string;
+    userId: string;
     creditCards: {
         lastPaymentAmount?: number | undefined;
         lastPaymentDate?: string | undefined;
@@ -551,17 +554,17 @@ export declare const getItemWithToken: import("convex/server").RegisteredQuery<"
  * concurrent calls might both try to insert the same stream.
  */
 export declare const bulkUpsertRecurringStreams: import("convex/server").RegisteredMutation<"internal", {
-    userId: string;
     plaidItemId: string;
+    userId: string;
     streams: {
         merchantName?: string | undefined;
         category?: string | undefined;
         firstDate?: string | undefined;
         lastDate?: string | undefined;
         predictedNextDate?: string | undefined;
+        status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
         type: "inflow" | "outflow";
         isActive: boolean;
-        status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
         accountId: string;
         isoCurrencyCode: string;
         streamId: string;
@@ -616,8 +619,8 @@ export declare const upsertMortgageLiability: import("convex/server").Registered
         postalCode?: string | undefined;
         country?: string | undefined;
     } | undefined;
-    userId: string;
     plaidItemId: string;
+    userId: string;
     accountId: string;
     interestRatePercentage: number;
 }, Promise<string>>;
@@ -627,8 +630,8 @@ export declare const upsertMortgageLiability: import("convex/server").Registered
  * Uses safe upsert pattern to handle TOCTOU race conditions.
  */
 export declare const bulkUpsertMortgageLiabilities: import("convex/server").RegisteredMutation<"internal", {
-    userId: string;
     plaidItemId: string;
+    userId: string;
     mortgages: {
         lastPaymentAmount?: number | undefined;
         lastPaymentDate?: string | undefined;
@@ -703,8 +706,8 @@ export declare const upsertStudentLoanLiability: import("convex/server").Registe
         postalCode?: string | undefined;
         country?: string | undefined;
     } | undefined;
-    userId: string;
     plaidItemId: string;
+    userId: string;
     accountId: string;
     interestRatePercentage: number;
 }, Promise<string>>;
@@ -714,8 +717,8 @@ export declare const upsertStudentLoanLiability: import("convex/server").Registe
  * Uses safe upsert pattern to handle TOCTOU race conditions.
  */
 export declare const bulkUpsertStudentLoanLiabilities: import("convex/server").RegisteredMutation<"internal", {
-    userId: string;
     plaidItemId: string;
+    userId: string;
     studentLoans: {
         isOverdue?: boolean | undefined;
         lastPaymentAmount?: number | undefined;
@@ -774,7 +777,7 @@ export declare const upsertMerchantEnrichment: import("convex/server").Registere
     phoneNumber?: string | undefined;
     merchantName: string;
     merchantId: string;
-    confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+    confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
 }, Promise<string>>;
 /**
  * Link transaction to merchant by updating merchantId field.
@@ -806,8 +809,8 @@ export declare const updateTransactionEnrichment: import("convex/server").Regist
 export declare const createWebhookLog: import("convex/server").RegisteredMutation<"internal", {
     errorMessage?: string | undefined;
     scheduledFunctionId?: string | undefined;
-    itemId: string;
     status: "received" | "processing" | "processed" | "duplicate" | "failed";
+    itemId: string;
     webhookId: string;
     webhookType: string;
     webhookCode: string;
@@ -866,8 +869,8 @@ export declare const pruneOldWebhookLogs: import("convex/server").RegisteredMuta
  * Returns the sync log ID for later completion.
  */
 export declare const createSyncLog: import("convex/server").RegisteredMutation<"internal", {
-    userId: string;
     plaidItemId: string;
+    userId: string;
     syncType: "transactions" | "liabilities" | "recurring" | "accounts" | "onboard";
     trigger: "onboard" | "webhook" | "scheduled" | "manual";
 }, Promise<string>>;

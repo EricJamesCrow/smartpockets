@@ -12,6 +12,15 @@
 import { PlaidApi, type Transaction, type RemovedTransaction } from "plaid";
 export declare const DEFAULT_PLAID_PRODUCTS: readonly ["transactions", "liabilities"];
 type ConfidenceLevel = "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+type PlaidCounterparty = {
+    name?: string | null;
+    type?: string | null;
+    logo_url?: string | null;
+    website?: string | null;
+    entity_id?: string | null;
+    confidence_level?: string | null;
+    phone_number?: string | null;
+};
 type TransactionMerchantEnrichment = {
     merchantId: string;
     merchantName: string;
@@ -56,6 +65,21 @@ export declare function convertAmountToMilliunits(amount: number): number;
  */
 export declare function convertMilliunitsToDollars(milliunits: number): number;
 /**
+ * Pick the most likely merchant counterparty from a Plaid counterparties array.
+ *
+ * Resolution order:
+ *   1. Filter to entries with `type === "merchant"` and `entity_id` set, then
+ *      pick the highest `confidence_level`. Stable for equal confidences.
+ *   2. If no merchant-typed entry exists, fall back to the first counterparty
+ *      with any `entity_id` (e.g. marketplaces, processors).
+ *   3. Otherwise return undefined.
+ *
+ * Plaid's payment-processor flows (Square, Stripe, DoorDash) often place the
+ * processor at index 0 with the actual merchant later in the array, so a
+ * blind `[0]` pick misses the merchant entirely.
+ */
+export declare function selectMerchantCounterparty(counterparties: PlaidCounterparty[] | null | undefined): PlaidCounterparty | undefined;
+/**
  * Extract merchant enrichment fields that Plaid already returns from
  * /transactions/sync. This avoids a separate Enrich API call for Plaid-sourced
  * transactions while preserving the same normalized merchant storage model.
@@ -76,6 +100,7 @@ export declare function transformTransaction(txn: Transaction): {
     datetime: string | undefined;
     name: string;
     merchantName: string | undefined;
+    originalDescription: string | undefined;
     pending: boolean;
     pendingTransactionId: string | undefined;
     categoryPrimary: string | undefined;
@@ -102,11 +127,51 @@ export declare function transformTransaction(txn: Transaction): {
     datetime: string | undefined;
     name: string;
     merchantName: string | undefined;
+    originalDescription: string | undefined;
     pending: boolean;
     pendingTransactionId: string | undefined;
     categoryPrimary: string | undefined;
     categoryDetailed: string | undefined;
     paymentChannel: import("plaid").TransactionPaymentChannelEnum;
+};
+/**
+ * Account types Plaid `/transactions/enrich` accepts. Other Plaid account
+ * subtypes (loan, investment, other) are rejected by the API.
+ */
+export type EnrichAccountType = "credit" | "depository";
+/**
+ * Single transaction in a `/transactions/enrich` request. The API requires
+ * `account_type` to be a single value per request, so callers tag each
+ * transaction with its source account type and the partition splits them
+ * into one batch per type.
+ */
+export interface EnrichInputTransaction {
+    id: string;
+    description: string;
+    amount: number;
+    direction: "INFLOW" | "OUTFLOW";
+    account_type: EnrichAccountType;
+    iso_currency_code?: string;
+    mcc?: string;
+    location?: {
+        city?: string;
+        region?: string;
+        postal_code?: string;
+        country?: string;
+    };
+}
+/**
+ * Partition `/transactions/enrich` input into one batch per account_type.
+ * Transactions with unsupported account types (e.g. "loan", "investment",
+ * "other") land in `skipped` so the caller can log/report them rather than
+ * sending an API call that would reject them.
+ */
+export declare function partitionEnrichmentInput(transactions: ReadonlyArray<EnrichInputTransaction & {
+    account_type: string;
+}>): {
+    credit: EnrichInputTransaction[];
+    depository: EnrichInputTransaction[];
+    skipped: EnrichInputTransaction[];
 };
 /** Result from transaction sync pagination */
 export interface TransactionSyncResult {

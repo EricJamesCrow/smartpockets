@@ -186,6 +186,7 @@ const transactionValidator = v.object({
   datetime: v.optional(v.string()),
   name: v.string(),
   merchantName: v.optional(v.string()),
+  originalDescription: v.optional(v.string()),
   pending: v.boolean(),
   pendingTransactionId: v.optional(v.string()),
   categoryPrimary: v.optional(v.string()),

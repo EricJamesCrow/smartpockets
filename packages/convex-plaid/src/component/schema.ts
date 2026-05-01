@@ -128,8 +128,13 @@ export default defineSchema({
     datetime: v.optional(v.string()), // ISO datetime if available
 
     // Display fields
-    name: v.string(), // Raw transaction name from Plaid
+    name: v.string(), // Plaid's lightly-cleaned transaction name
     merchantName: v.optional(v.string()), // Cleaned merchant name
+    // Raw bank-statement descriptor as Plaid received it (e.g.
+    // "AMAZON MKTPL*B90VX7M20"). Only populated when sync runs with
+    // `options.include_original_description: true`. Used as the optimal
+    // input for /transactions/enrich during backfill.
+    originalDescription: v.optional(v.string()),
     pending: v.boolean(),
     pendingTransactionId: v.optional(v.string()),
 
