@@ -31,6 +31,21 @@
     --sp-inset-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     --sp-inset-hairline-strong: inset 0 1px 0 rgba(255, 255, 255, 0.08);
     --sp-shadow-panel: 0 24px 60px rgba(8, 10, 12, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+    /*
+     * Accessibility-tuned text tokens.
+     *
+     * --sp-fraunces-accent — single source of truth for inline italic Fraunces
+     * accent words ("cards", "money", "Architecture"). Defaults to the dark-
+     * mode value (stone-300, ~12.85:1 on moss panel); .light-mode overrides
+     * with deep champagne for ≥AA on cream.
+     *
+     * --sp-microcopy — color used by .sp-kicker / .sp-microcopy. Defaults to
+     * the light-mode value (stone-500, 4.60:1 on cream); .dark-mode overrides
+     * with a brighter warm gray (7.40:1 on moss panel).
+     */
+    --sp-fraunces-accent: rgb(214 211 209);
+    --sp-microcopy: rgb(120 113 108);
 }
 
 .dark-mode {
@@ -75,6 +90,21 @@
     --color-border-secondary_alt: rgba(255, 255, 255, 0.08);
     --color-border-tertiary: rgba(255, 255, 255, 0.06);
     --color-border-tertiary_alt: rgba(255, 255, 255, 0.06);
+
+    /*
+     * AA contrast lift: gray-400 (rgb 127 122 108) on moss panel only clears
+     * 4.47:1, and 4.02:1 once the glass-blurred panel-strong stacks. Bump
+     * tertiary/quaternary text up the ramp to gray-300 so small labels
+     * ("ORIGINAL STATEMENT", "DATE", "Notes") clear AA on every dark surface.
+     */
+    --color-text-tertiary: rgb(165 159 141);
+    --color-text-quaternary: rgb(165 159 141);
+
+    /*
+     * Lift kicker/microcopy color so .sp-kicker and .sp-microcopy clear AA on
+     * moss panel (7.40:1 vs 3.99:1 with the prior stone-500).
+     */
+    --sp-microcopy: rgb(170 160 140);
 }
 
 /*
@@ -116,6 +146,14 @@
     --color-border-secondary_alt: rgba(0, 0, 0, 0.08);
     --color-border-tertiary: rgba(0, 0, 0, 0.06);
     --color-border-tertiary_alt: rgba(0, 0, 0, 0.05);
+
+    /*
+     * Deeper champagne so italic Fraunces accents ("cards", "money", etc.)
+     * clear AA on the cream surface. stone-300 → 1.43:1 was catastrophically
+     * below AA; rgb(122 94 42) lands at 5.82:1 and reads as warm champagne,
+     * not muddy.
+     */
+    --sp-fraunces-accent: rgb(122 94 42);
 }
 
 /*
@@ -217,13 +255,13 @@
     text-transform: uppercase;
     letter-spacing: 0.22em;
     font-size: 0.65rem;
-    color: rgb(120 113 108); /* stone-500 */
+    color: var(--sp-microcopy);
 }
 
 .sp-microcopy {
     font-family: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
     font-size: 0.72rem;
-    color: rgb(120 113 108); /* stone-500 */
+    color: var(--sp-microcopy);
 }
 
 /*

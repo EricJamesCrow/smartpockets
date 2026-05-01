@@ -31,7 +31,7 @@ export function ChatHome({ onSend }: ChatHomeProps) {
           </p>
           <h1 className="mt-4 text-balance text-[clamp(1.6rem,2.6vw,2.4rem)] font-medium leading-[1.1] tracking-[-0.025em] text-primary">
             Ask SmartPockets anything about{" "}
-            <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300">money</em>.
+            <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-[var(--sp-fraunces-accent)]">money</em>.
           </h1>
           <p className="mt-3 text-pretty text-sm leading-6 text-tertiary">
             Balances, promos, transactions, spend breakdowns. Ask in plain language.

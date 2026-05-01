@@ -14,7 +14,7 @@ export default function SettingsLayout({
             Workspace
           </p>
           <h1 className="mt-1.5 text-display-xs font-medium leading-tight tracking-[-0.02em] text-primary">
-            <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 dark:text-stone-300">
+            <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-[var(--sp-fraunces-accent)]">
               Settings
             </em>
           </h1>

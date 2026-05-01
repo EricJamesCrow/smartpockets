@@ -44,7 +44,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           <div className="flex flex-1 flex-col gap-1.5 lg:pr-6">
             <div className="flex items-center justify-between">
               <p className="sp-kicker text-tertiary dark:text-stone-500">
-                <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">Current</em>{" "}
+                <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-[var(--sp-fraunces-accent)]">Current</em>{" "}
                 Balance
               </p>
               {card.utilization !== null && (
@@ -74,7 +74,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           <div className="flex flex-1 flex-col gap-1.5 lg:px-6">
             <div className="flex items-center justify-between">
               <p className="sp-kicker text-tertiary dark:text-stone-500">
-                <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">Minimum</em>{" "}
+                <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-[var(--sp-fraunces-accent)]">Minimum</em>{" "}
                 Payment
               </p>
               <span className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] uppercase tracking-[0.18em] text-tertiary dark:text-stone-500">
@@ -95,7 +95,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           {/* APR (Purchase) */}
           <div className="flex flex-1 flex-col gap-1.5 lg:px-6">
             <p className="sp-kicker text-tertiary dark:text-stone-500">
-              <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">APR</em>{" "}
+              <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-[var(--sp-fraunces-accent)]">APR</em>{" "}
               (purchase)
             </p>
             <p className="text-xl font-semibold text-primary tabular-nums lg:text-[1.65rem]">
@@ -110,7 +110,7 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           {/* Available Credit */}
           <div className="flex flex-1 flex-col gap-1.5 lg:pl-6">
             <p className="sp-kicker text-tertiary dark:text-stone-500">
-              <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">Available</em>{" "}
+              <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-[var(--sp-fraunces-accent)]">Available</em>{" "}
               Credit
             </p>
             <p className="text-xl font-semibold text-primary tabular-nums lg:text-[1.65rem]">

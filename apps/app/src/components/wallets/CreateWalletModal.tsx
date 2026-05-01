@@ -128,7 +128,7 @@ export function CreateWalletModal({ isOpen, onClose }: CreateWalletModalProps) {
                 </p>
                 <AriaHeading slot="title" className="mt-1 text-md font-medium leading-tight tracking-[-0.02em] text-primary">
                   Create a{" "}
-                  <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 dark:text-stone-300">wallet</em>
+                  <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-[var(--sp-fraunces-accent)]">wallet</em>
                 </AriaHeading>
                 <p className="text-sm text-tertiary">
                   Organize your credit cards into custom collections

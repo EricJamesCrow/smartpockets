@@ -35,11 +35,11 @@ export function CreditCardsHeader({
         <h1 className="mt-1.5 text-display-xs font-medium leading-tight tracking-[-0.02em] text-primary">
           {walletName ? (
             <span>
-              <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300">{walletName}</em>
+              <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-[var(--sp-fraunces-accent)]">{walletName}</em>
             </span>
           ) : (
             <span>
-              Credit <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300">cards</em>
+              Credit <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-[var(--sp-fraunces-accent)]">cards</em>
             </span>
           )}
         </h1>

@@ -36,7 +36,7 @@ export default function NotFound() {
                         </p>
                         <h1 className="text-balance text-[clamp(2rem,4vw,3.5rem)] font-medium leading-[1.05] tracking-[-0.025em] text-primary">
                             This page{" "}
-                            <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300">
+                            <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-[var(--sp-fraunces-accent)]">
                                 isn&rsquo;t
                             </em>{" "}
                             part of the workshop.
