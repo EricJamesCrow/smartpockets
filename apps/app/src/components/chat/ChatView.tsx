@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex-helpers/react/cache/hooks";
+import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { ChatBanner, type ChatBannerState } from "@/components/chat/ChatBanner";
@@ -86,6 +87,8 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [banner, setBanner] = useState<ChatBannerState | null>(null);
   const [reconsent, setReconsent] = useState<{ plaidItemId: string } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Convex codegen typing for new mutation lags one regen.
+  const abortRun = useMutation((api as any).agent.threads.abortRun);
 
   // W2 emits a role: "system" row during provider outages; surface the most
   // recent one as llm_down.
@@ -93,6 +96,35 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     api.agent.threads.listMessages,
     threadId ? { threadId } : "skip",
   ) as AgentMessage[] | undefined;
+
+  // Streaming detection. The user-turn marker is inserted with
+  // `isStreaming: true`, and the run is "in flight" until either an assistant
+  // row lands ordered after the user row, or `abortRun` flips the flag.
+  // Derivation requires BOTH signals so the stop button doesn't linger if one
+  // signal lags (assistant row already landed but user-marker flag wasn't
+  // patched, or vice versa).
+  const isStreaming = useMemo(() => {
+    if (!messages || messages.length === 0) return false;
+    const lastUser = [...messages]
+      .reverse()
+      .find((m) => m.role === "user");
+    if (!lastUser || lastUser.isStreaming !== true) return false;
+    const hasAssistantAfter = messages.some(
+      (m) =>
+        m.role === "assistant" &&
+        (m._creationTime ?? 0) > (lastUser._creationTime ?? 0),
+    );
+    return !hasAssistantAfter;
+  }, [messages]);
+
+  const handleStop = useCallback(async () => {
+    if (!threadId) return;
+    try {
+      await abortRun({ threadId });
+    } catch (err) {
+      console.error("[ChatView] abortRun failed", err);
+    }
+  }, [abortRun, threadId]);
 
   useEffect(() => {
     const latestSystemRow = messages
@@ -165,7 +197,12 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
           onMessagesLoaded={handleMessagesLoaded}
         />
       )}
-      <MessageInput onSend={handleSend} isLoading={isLoading} />
+      <MessageInput
+        onSend={handleSend}
+        onStop={handleStop}
+        isLoading={isLoading}
+        isStreaming={isStreaming}
+      />
       {reconsent && (
         <ReconsentModal
           plaidItemId={reconsent.plaidItemId}
