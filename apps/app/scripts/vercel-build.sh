@@ -12,6 +12,11 @@ CLERK_PUBLISHABLE_KEY_VALUE="${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}"
 CLERK_SECRET_KEY_VALUE="${CLERK_SECRET_KEY:-}"
 CLERK_FRONTEND_API_URL_VALUE="${NEXT_PUBLIC_CLERK_FRONTEND_API_URL:-}"
 PRODUCTION_CLERK_FRONTEND_API_HOST="clerk.smartpockets.com"
+PLAID_ENV_VALUE="${PLAID_ENV:-}"
+# Documented exceptions: Convex deployments allowed to run with PLAID_ENV=production
+# in non-production Vercel builds. canny-turtle-982 is the user's personal dev Convex,
+# intentionally configured against production Plaid for richer fixture data.
+PLAID_PROD_EXCEPTION_DEPLOYMENTS=("dev:canny-turtle-982")
 
 require_clerk_env() {
   if [[ -z "${CLERK_PUBLISHABLE_KEY_VALUE}" ]]; then
@@ -108,10 +113,59 @@ validate_clerk_env() {
   fi
 }
 
+validate_plaid_env() {
+  # Plaid env is normally configured on the Convex deployment, not on Vercel.
+  # If it isn't set in Vercel's build env, there is nothing for this script
+  # to enforce — the actual policy is documented in CLAUDE.md ("Plaid In Previews")
+  # and convex-deploy-guardrails.md.
+  if [[ -z "${PLAID_ENV_VALUE}" ]]; then
+    return
+  fi
+
+  case "${PLAID_ENV_VALUE}" in
+    sandbox|development|production) ;;
+    *)
+      echo "[vercel-build] ERROR: PLAID_ENV must be one of: sandbox, development, production. Got: '${PLAID_ENV_VALUE}'." >&2
+      exit 1
+      ;;
+  esac
+
+  if [[ "${VERCEL_ENV_VALUE}" == "production" ]]; then
+    if [[ "${PLAID_ENV_VALUE}" != "production" ]]; then
+      echo "[vercel-build] ERROR: production builds require PLAID_ENV=production." >&2
+      exit 1
+    fi
+    return
+  fi
+
+  if [[ "${PLAID_ENV_VALUE}" != "production" ]]; then
+    return
+  fi
+
+  local exception_match=0
+  for allowed in "${PLAID_PROD_EXCEPTION_DEPLOYMENTS[@]}"; do
+    if [[ "${CONVEX_DEPLOYMENT_VALUE}" == "${allowed}" ]]; then
+      exception_match=1
+      break
+    fi
+  done
+
+  if [[ "${exception_match}" -eq 0 ]]; then
+    echo "[vercel-build] ERROR: ${VERCEL_ENV_VALUE} builds cannot use PLAID_ENV=production with CONVEX_DEPLOYMENT='${CONVEX_DEPLOYMENT_VALUE}'." >&2
+    echo "[vercel-build] Documented exception list: ${PLAID_PROD_EXCEPTION_DEPLOYMENTS[*]}." >&2
+    echo "[vercel-build] See CLAUDE.md > 'Plaid In Previews' for the rationale." >&2
+    echo "[vercel-build] Set PLAID_ENV=sandbox or PLAID_ENV=development on the Convex deployment used by this Vercel env." >&2
+    exit 1
+  fi
+
+  echo "[vercel-build] Note: PLAID_ENV=production allowed for documented exception CONVEX_DEPLOYMENT=${CONVEX_DEPLOYMENT_VALUE}."
+}
+
 main() {
   echo "[vercel-build] VERCEL_ENV=${VERCEL_ENV_VALUE}"
 
   validate_clerk_env
+  validate_plaid_env
 
   # Production deploys are the only builds allowed to trigger `convex deploy`.
   if [[ "${VERCEL_ENV_VALUE}" == "production" ]]; then

@@ -17,6 +17,7 @@ The web build command is `bash ./scripts/vercel-build.sh` in `apps/web/vercel.js
 - If `CONVEX_DEPLOYMENT` is set, it must be `prod:*`.
 - Requires production Clerk keys: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_*` and `CLERK_SECRET_KEY=sk_live_*`.
 - Requires production Clerk frontend domain: `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://clerk.smartpockets.com`.
+- If `PLAID_ENV` is set in Vercel env, it must be `production`.
 
 2. `VERCEL_ENV=preview` or `VERCEL_ENV=development`
 
@@ -27,6 +28,23 @@ The web build command is `bash ./scripts/vercel-build.sh` in `apps/web/vercel.js
 - Requires development Clerk frontend domain: `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`.
 - Rejects production Clerk keys and any `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` that points at `smartpockets.com`.
 - The Clerk key/domain checks apply to both `smartpockets-app` and `smartpockets-web` preview deployments.
+- If `PLAID_ENV` is set in Vercel env, it must be `sandbox` or `development` unless `CONVEX_DEPLOYMENT` is on the documented exception list (`PLAID_PROD_EXCEPTION_DEPLOYMENTS` in `vercel-build.sh`). Today the only entry is `dev:canny-turtle-982` (the project owner's personal dev Convex, intentionally on production Plaid).
+
+## Plaid environment policy
+
+Plaid environment is configured per Convex deployment (Convex dashboard env vars), not per Vercel env. Most preview/dev Convex deployments don't set `PLAID_ENV` in Vercel — the build script's Plaid guardrail is defense-in-depth for the rare case where someone copies it there. The primary policy:
+
+- **Production Convex (`prod:smartpockets`)** uses `PLAID_ENV=production` (real money, real PII).
+- **`dev:canny-turtle-982`** uses `PLAID_ENV=production` — documented exception for the project owner's testing flow.
+- **All other dev/preview Convex deployments** must use `PLAID_ENV=sandbox` (or `development` if explicitly approved).
+
+To add a new dev Convex deployment that should run on production Plaid:
+
+1. Add its `dev:<name>` to `PLAID_PROD_EXCEPTION_DEPLOYMENTS` in `apps/app/scripts/vercel-build.sh`.
+2. Update the "Plaid In Previews" section in `CLAUDE.md` with the rationale and ownership.
+3. Update this file's Section 2 bullet list to mention the new exception.
+
+See `CLAUDE.md` > "Plaid In Previews" for the full policy and rationale.
 
 ## Required Vercel envs
 
