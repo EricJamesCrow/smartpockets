@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex-helpers/react/cache/hooks";
 import { api } from "@convex/_generated/api";
@@ -18,6 +18,8 @@ import {
 import { MessageInput } from "@/components/chat/MessageInput";
 import { MessageList } from "@/components/chat/MessageList";
 import { ReconsentModal } from "@/components/chat/ReconsentModal";
+
+type AgentMessage = Doc<"agentMessages">;
 
 interface ChatViewProps {
   initialThreadId?: Id<"agentThreads">;
@@ -56,10 +58,32 @@ function translateError(err: unknown): AgentError | null {
   return null;
 }
 
+/**
+ * Build a synthesized user-role row that satisfies `Doc<"agentMessages">`'s
+ * shape closely enough for `MessageBubble` to render it. The cast is local —
+ * `MessageBubble` only reads `_id` (React key), `role`, `text`, and
+ * `isStreaming`, so the synthesized fields are sufficient.
+ */
+function buildOptimisticUserMessage(
+  prompt: string,
+  threadId: Id<"agentThreads"> | null,
+): AgentMessage {
+  const now = Date.now();
+  return {
+    _id: `optimistic_${now}` as Id<"agentMessages">,
+    _creationTime: now,
+    agentThreadId: (threadId ?? "optimistic_thread") as Id<"agentThreads">,
+    role: "user",
+    text: prompt,
+    createdAt: now,
+    isStreaming: false,
+  } as AgentMessage;
+}
+
 function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
   const { sendMessage } = useChatInteraction();
   const [isLoading, setIsLoading] = useState(false);
-  const [optimisticPrompt, setOptimisticPrompt] = useState<string | null>(null);
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [banner, setBanner] = useState<ChatBannerState | null>(null);
   const [reconsent, setReconsent] = useState<{ plaidItemId: string } | null>(null);
 
@@ -68,7 +92,7 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
   const messages = useQuery(
     api.agent.threads.listMessages,
     threadId ? { threadId } : "skip",
-  ) as Doc<"agentMessages">[] | undefined;
+  ) as AgentMessage[] | undefined;
 
   useEffect(() => {
     const latestSystemRow = messages
@@ -80,6 +104,11 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
       setBanner((current) => (current?.kind === "llm_down" ? null : current));
     }
   }, [messages]);
+
+  const optimisticUserMessage = useMemo<AgentMessage | null>(() => {
+    if (!pendingPrompt) return null;
+    return buildOptimisticUserMessage(pendingPrompt, threadId);
+  }, [pendingPrompt, threadId]);
 
   const routeError = (err: unknown) => {
     const typed = translateError(err);
@@ -108,31 +137,35 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     const trimmed = prompt.trim();
     if (!trimmed) return;
     setIsLoading(true);
-    setOptimisticPrompt(trimmed);
+    setPendingPrompt(trimmed);
     setBanner(null);
     try {
       await sendMessage({ text: trimmed });
     } catch (err) {
       routeError(err);
-      setOptimisticPrompt(null);
+      setPendingPrompt(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleMessagesLoaded = () => {
-    if (threadId) setOptimisticPrompt(null);
+    if (!threadId || !pendingPrompt) return;
+    const matched = messages?.some(
+      (m) => m.role === "user" && m.text?.trim() === pendingPrompt.trim(),
+    );
+    if (matched) setPendingPrompt(null);
   };
 
   return (
     <ChatContainer>
       {banner && <ChatBanner state={banner} onDismiss={() => setBanner(null)} />}
-      {!threadId && !optimisticPrompt ? (
+      {!threadId ? (
         <ChatHome onSend={handleSend} />
       ) : (
         <MessageList
           threadId={threadId}
-          optimisticPrompt={optimisticPrompt}
+          optimisticUserMessage={optimisticUserMessage}
           onMessagesLoaded={handleMessagesLoaded}
         />
       )}
