@@ -5,6 +5,8 @@ import { proposalFallback, toolResultRegistry } from "./registry";
 import type { ReadToolName, ToolResultComponentProps } from "./types";
 import { ToolErrorRow } from "@/components/chat/ToolErrorRow";
 import { ToolCallDisplay } from "@/components/chat/ToolCallDisplay";
+import { deriveSummary } from "@/lib/chat/toolSummary";
+import { getToolIcon } from "@/lib/icons/toolIconMap";
 
 const PROPOSAL_PREFIX = "propose_";
 const PROPOSAL_READ_TOOL = "get_proposal";
@@ -41,6 +43,8 @@ export function ToolResultRenderer(props: ToolResultComponentProps) {
       output={props.output ?? undefined}
       error={errorText}
       state={state}
+      icon={getToolIcon(toolName)}
+      summary={deriveSummary(toolName, props.output)}
     />
   );
 }
