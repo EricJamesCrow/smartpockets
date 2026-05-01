@@ -208,6 +208,72 @@ export const deleteThread = mutation({
   },
 });
 
+/**
+ * Public mutation: user-initiated abort of an in-flight agent run.
+ *
+ * UX-level stop. This codebase doesn't use the `@convex-dev/agent` streaming
+ * infrastructure (the runtime calls AI SDK's `streamText` directly inside a
+ * scheduled action — see `runtime.ts`), so the agent component's `abortStream`
+ * helper has nothing to abort. As a Path-(b) measure per the polish plan
+ * Revision 1, this mutation:
+ *   1. Flips `isStreaming: false` on any user-turn marker rows for the thread,
+ *      so the UI immediately drops the streaming-cursor / shows MessageActions /
+ *      derives `isStreaming === false` and swaps stop → send.
+ *   2. Inserts a `system`-role tombstone row indicating user-initiated stop,
+ *      so the assistant has context about why the run ended on the next turn.
+ *
+ * The actual `streamText` call in the scheduled action continues to run — a
+ * full backend cancellation (a per-run cancel flag table that `onStepFinish`
+ * checks and breaks the loop on) is a follow-up sub-issue.
+ *
+ * Idempotent: safe to call when no run is active (no-ops the patch loop, no
+ * extra tombstone row written if the most recent system row already says
+ * "stopped").
+ */
+export const abortRun = mutation({
+  args: {
+    threadId: v.id("agentThreads"),
+  },
+  returns: v.null(),
+  handler: async (ctx, { threadId }) => {
+    const viewer = ctx.viewerX();
+    const thread = await ctx.table("agentThreads").getX(threadId);
+    if (thread.userId !== viewer._id) throw new Error("Not authorized");
+
+    const messages = await thread.edge("agentMessages").order("asc");
+
+    let flippedCount = 0;
+    for (const msg of messages) {
+      if (msg.role === "user" && msg.isStreaming === true) {
+        const writable = await ctx.table("agentMessages").getX(msg._id);
+        await writable.patch({ isStreaming: false });
+        flippedCount += 1;
+      }
+    }
+
+    // No active streaming-marker rows — nothing to do, stay idempotent.
+    if (flippedCount === 0) return null;
+
+    const lastMessage = messages[messages.length - 1];
+    const lastIsStopTombstone =
+      lastMessage?.role === "system" &&
+      typeof lastMessage.text === "string" &&
+      lastMessage.text.includes("stopped by user");
+
+    if (!lastIsStopTombstone) {
+      await ctx.table("agentMessages").insert({
+        agentThreadId: threadId,
+        role: "system",
+        text: "Run stopped by user.",
+        createdAt: Date.now(),
+        isStreaming: false,
+      });
+    }
+
+    return null;
+  },
+});
+
 export const writeSummary = internalMutation({
   args: {
     threadId: v.id("agentThreads"),
