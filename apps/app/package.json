@@ -43,6 +43,7 @@
     "recharts": "^3.7.0",
     "remark-gfm": "^4.0.1",
     "resend": "^6.5.2",
+    "streamdown": "^2.5.0",
     "tailwindcss": "^4.1.11",
     "zod": "^4.1.13"
   },
