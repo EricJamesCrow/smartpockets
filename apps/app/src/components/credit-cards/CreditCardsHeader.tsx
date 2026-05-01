@@ -26,12 +26,24 @@ export function CreditCardsHeader({
   const showWalletAddCards = Boolean(walletName && onAddCardsToWallet);
 
   return (
-    <div className="flex items-center justify-between border-b border-secondary px-6 py-4">
+    <div className="flex items-center justify-between border-b border-secondary px-6 py-5 dark:border-white/[0.06]">
       <div>
-        <h1 className="text-display-xs font-semibold text-primary">
-          {walletName ? walletName : "Credit Cards"}
+        <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.24em] text-tertiary dark:text-stone-500">
+          <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
+          {walletName ? "Wallet" : "Section"}
+        </p>
+        <h1 className="mt-1.5 text-display-xs font-medium leading-tight tracking-[-0.02em] text-primary">
+          {walletName ? (
+            <span>
+              <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300">{walletName}</em>
+            </span>
+          ) : (
+            <span>
+              Credit <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300">cards</em>
+            </span>
+          )}
         </h1>
-        <p className="text-sm text-tertiary">
+        <p className="mt-1 text-sm text-tertiary">
           {walletName
             ? "Cards in this wallet"
             : "Track your balances, payments, and utilization"}

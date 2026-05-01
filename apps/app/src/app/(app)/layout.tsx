@@ -51,7 +51,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (isAuthLoading || (isAuthenticated && viewer === undefined)) {
         return (
             <div className="bg-primary flex min-h-screen items-center justify-center p-6">
-                <p className="text-sm text-tertiary">Loading your workspace...</p>
+                <div className="flex items-center gap-3 font-[family-name:var(--font-geist-mono)] text-[0.72rem] uppercase tracking-[0.22em] text-tertiary">
+                    <span className="h-1 w-1 rounded-full bg-[var(--sp-moss-mint)] shadow-[0_0_8px_2px_rgba(127,184,154,0.5)]" />
+                    Loading your workspace
+                </div>
             </div>
         );
     }
@@ -61,7 +64,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         return (
             <div className="bg-primary flex min-h-screen items-center justify-center p-6">
                 <div className="max-w-md text-center">
-                    <p className="text-md font-semibold text-primary">Setting up your account</p>
+                    <p className="text-md font-semibold text-primary">
+                        Setting up your <em className="font-[family-name:var(--font-fraunces)] font-medium italic">account</em>
+                    </p>
                     <p className="mt-2 text-sm text-tertiary">
                         We are finishing account setup. This usually takes a moment.
                     </p>

@@ -36,21 +36,24 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
   const recommendedPayment = card.lastStatementBalance ?? card.currentBalance ?? 0;
 
   return (
-    <div className="border-y border-secondary bg-primary">
-      <div className="px-4 py-4 lg:px-6">
+    <div className="border-y border-secondary bg-primary dark:border-white/[0.06]">
+      <div className="px-4 py-5 lg:px-6">
         {/* Key Metrics - 4 columns with vertical dividers on lg+ */}
         <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:flex lg:flex-row lg:gap-0">
           {/* Current Balance */}
-          <div className="flex flex-1 flex-col gap-1 lg:pr-6">
+          <div className="flex flex-1 flex-col gap-1.5 lg:pr-6">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-tertiary">Current Balance</p>
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+                <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">Current</em>{" "}
+                Balance
+              </p>
               {card.utilization !== null && (
-                <span className={cx("text-sm font-medium", getUtilizationColor(card.utilization))}>
+                <span className={cx("font-[family-name:var(--font-geist-mono)] text-xs font-semibold tabular-nums", getUtilizationColor(card.utilization))}>
                   {formatPercentage(card.utilization, 0)}
                 </span>
               )}
             </div>
-            <p className="text-xl font-semibold text-primary tabular-nums lg:text-2xl">
+            <p className="text-xl font-semibold text-primary tabular-nums lg:text-[1.65rem]">
               {formatDisplayCurrency(card.currentBalance)}
             </p>
             <div className="flex flex-col gap-0.5 text-xs text-tertiary">
@@ -65,17 +68,20 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch border-l border-secondary lg:block" />
+          <div className="hidden w-px self-stretch border-l border-secondary lg:block dark:border-white/[0.06]" />
 
           {/* Minimum Payment */}
-          <div className="flex flex-1 flex-col gap-1 lg:px-6">
+          <div className="flex flex-1 flex-col gap-1.5 lg:px-6">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-tertiary">Minimum Payment</p>
-              <span className="text-xs text-tertiary">
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+                <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">Minimum</em>{" "}
+                Payment
+              </p>
+              <span className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] uppercase tracking-[0.18em] text-tertiary dark:text-stone-500">
                 Due {card.nextPaymentDueDate ? formatDueDate(card.nextPaymentDueDate) : "--"}
               </span>
             </div>
-            <p className="text-xl font-semibold text-primary tabular-nums lg:text-2xl">
+            <p className="text-xl font-semibold text-primary tabular-nums lg:text-[1.65rem]">
               {formatDisplayCurrency(card.minimumPaymentAmount)}
             </p>
             <p className="text-xs text-tertiary">
@@ -84,24 +90,30 @@ export function KeyMetrics({ card, transactions = [] }: KeyMetricsProps) {
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch border-l border-secondary lg:block" />
+          <div className="hidden w-px self-stretch border-l border-secondary lg:block dark:border-white/[0.06]" />
 
           {/* APR (Purchase) */}
-          <div className="flex flex-1 flex-col gap-1 lg:px-6">
-            <p className="text-sm font-medium text-tertiary">APR (Purchase)</p>
-            <p className="text-xl font-semibold text-primary tabular-nums lg:text-2xl">
+          <div className="flex flex-1 flex-col gap-1.5 lg:px-6">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+              <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">APR</em>{" "}
+              (purchase)
+            </p>
+            <p className="text-xl font-semibold text-primary tabular-nums lg:text-[1.65rem]">
               {formatApr(card.apr)}
             </p>
             <p className="text-xs text-tertiary">Annual Percentage Rate</p>
           </div>
 
           {/* Vertical Divider */}
-          <div className="hidden w-px self-stretch border-l border-secondary lg:block" />
+          <div className="hidden w-px self-stretch border-l border-secondary lg:block dark:border-white/[0.06]" />
 
           {/* Available Credit */}
-          <div className="flex flex-1 flex-col gap-1 lg:pl-6">
-            <p className="text-sm font-medium text-tertiary">Available Credit</p>
-            <p className="text-xl font-semibold text-primary tabular-nums lg:text-2xl">
+          <div className="flex flex-1 flex-col gap-1.5 lg:pl-6">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] uppercase tracking-[0.22em] text-tertiary dark:text-stone-500">
+              <em className="font-[family-name:var(--font-fraunces)] italic font-medium normal-case tracking-normal text-stone-300 dark:text-stone-300">Available</em>{" "}
+              Credit
+            </p>
+            <p className="text-xl font-semibold text-primary tabular-nums lg:text-[1.65rem]">
               {formatDisplayCurrency(card.availableCredit)}
             </p>
             <p className="text-xs text-tertiary">

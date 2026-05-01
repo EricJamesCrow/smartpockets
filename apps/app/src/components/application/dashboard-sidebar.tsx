@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Selection } from "react-aria-components";
+import { useConvexAuth } from "convex/react";
 import {
     ClockRewind,
     CreditCard01,
@@ -56,8 +57,11 @@ export function DashboardSidebar() {
     };
     const router = useRouter();
     const pathname = usePathname();
+    const { isAuthenticated } = useConvexAuth();
 
-    const threadsResult = useQuery(api.agent.threads.listForUser, {}) as
+    // Skip the threads query until Convex auth is ready — calling it
+    // unauthenticated raises "Authentication required" and blanks the route.
+    const threadsResult = useQuery(api.agent.threads.listForUser, isAuthenticated ? {} : "skip") as
         | Array<{ threadId: string; title?: string; summary?: string; updatedAt: number }>
         | undefined;
     const threads = threadsResult ?? [];
@@ -128,9 +132,18 @@ export function DashboardSidebar() {
                     initial={false}
                     animate={{ width: isSlim ? "auto" : 296 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="h-full bg-primary overflow-hidden border-r border-secondary"
+                    className="relative h-full overflow-hidden border-r bg-primary border-secondary dark:border-white/[0.08]"
                 >
-                    <div className={isSlim ? "w-auto h-full min-w-[68px]" : "w-[296px] h-full min-w-[296px]"}>
+                    {/* Soft mossy aurora wash anchors the sidebar in dark mode */}
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 hidden dark:block"
+                        style={{
+                            backgroundImage:
+                                "radial-gradient(circle at 22% 6%, rgba(127,184,154,0.06), transparent 38%), radial-gradient(circle at 80% 92%, rgba(212,197,156,0.04), transparent 34%)",
+                        }}
+                    />
+                    <div className={isSlim ? "relative w-auto h-full min-w-[68px]" : "relative w-[296px] h-full min-w-[296px]"}>
                         {isSlim ? (
                              <SidebarSlimDesktop
                                 activeUrl={pathname}
