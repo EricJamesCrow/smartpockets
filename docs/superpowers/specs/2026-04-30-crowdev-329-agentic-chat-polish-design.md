@@ -8,6 +8,9 @@ parent_issue: CROWDEV-329
 
 # Agentic chat UI/UX polish pass — MVP-grade
 
+> **⚠ REVISED — read Revision 1 alongside this document.**
+> External-research findings applied as overrides at `docs/superpowers/specs/2026-04-30-crowdev-329-agentic-chat-polish-revision-1.md`. Streamdown adopted for PR 5 (replaces rehype-highlight). Reactbits dropped entirely. UntitledUI Pro mandated for behavior-heavy primitives in PR 8 (React Aria foundation). `optimisticallySendMessage` from `@convex-dev/agent` adopted for PR 2. `use-stick-to-bottom` adopted for PR 2. `awaiting-approval` state added for proposal flow in PR 6. iOS Safari 26 viewport bug noted for PR 10.
+
 Spec for a two-week polish pass on the SmartPockets agentic chat. Addresses Linear issue [CROWDEV-329](https://linear.app/crowdevelopment/issue/CROWDEV-329).
 
 ## 1. Goal & bar

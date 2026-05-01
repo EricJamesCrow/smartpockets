@@ -1,5 +1,8 @@
 # Agentic Chat Polish Implementation Plan
 
+> **⚠ REVISED — read Revision 1 alongside this plan.**
+> External-research findings applied as step-level overrides at `docs/superpowers/specs/2026-04-30-crowdev-329-agentic-chat-polish-revision-1.md`. **Treat the revision as authoritative wherever it conflicts with this plan.** Major deltas: streamdown replaces rehype-highlight in Task 5; `use-stick-to-bottom` library replaces hand-rolled hook in Task 2; `optimisticallySendMessage` adopted in Task 2 Step 2.6; `awaiting-approval` state added to Task 6 Step 6.2; UntitledUI Pro primitives mandated (NOT raw Radix) in Task 8; reactbits dropped from Task 1 / Task 12 / Task 13; concrete bundle gate added to Task 5; pre-sweep triage added as Task 13 Step 13.6.0; real-device iOS Safari 26 check added to Task 10; `axe` extension added to Task 11.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the 13-PR core polish stack (+3 stretch) on the SmartPockets agentic chat per spec at `docs/superpowers/specs/2026-04-30-crowdev-329-agentic-chat-polish-design.md`. Demo-able to a friend without apologizing — portfolio-centerpiece grade — within ~10 business days.
