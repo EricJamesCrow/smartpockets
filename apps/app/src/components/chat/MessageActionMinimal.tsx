@@ -2,18 +2,23 @@
 
 import { useRef, useState, type KeyboardEvent } from "react";
 import { ArrowUp } from "@untitledui/icons";
+import { StopButton } from "@/components/chat/StopButton";
 import { cx } from "@/utils/cx";
 
 interface MessageActionMinimalProps {
   onSubmit: (message: string) => void;
+  onStop?: () => void;
   isLoading?: boolean;
+  isStreaming?: boolean;
   disabled?: boolean;
   className?: string;
 }
 
 export function MessageActionMinimal({
   onSubmit,
+  onStop,
   isLoading,
+  isStreaming,
   disabled,
   className,
 }: MessageActionMinimalProps) {
@@ -21,6 +26,7 @@ export function MessageActionMinimal({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const canSubmit = Boolean(value.trim()) && !isLoading && !disabled;
+  const showStop = Boolean(isStreaming && onStop);
 
   const submit = () => {
     if (!canSubmit) return;
@@ -63,15 +69,19 @@ export function MessageActionMinimal({
         disabled={disabled}
         className="flex-1 resize-none bg-transparent px-3 py-2 text-sm text-primary placeholder:text-quaternary focus:outline-none dark:placeholder:text-stone-500"
       />
-      <button
-        type="button"
-        onClick={submit}
-        disabled={!canSubmit}
-        aria-label="Send"
-        className="flex size-9 items-center justify-center rounded-full bg-brand-solid text-white shadow-[0_4px_14px_rgba(127,184,154,0.25)] transition-all duration-300 disabled:opacity-40 hover:scale-[1.04] hover:brightness-110 active:scale-[0.96] active:brightness-95"
-      >
-        <ArrowUp className="size-5" />
-      </button>
+      {showStop && onStop ? (
+        <StopButton onStop={onStop} />
+      ) : (
+        <button
+          type="button"
+          onClick={submit}
+          disabled={!canSubmit}
+          aria-label="Send"
+          className="flex size-11 items-center justify-center rounded-full bg-brand-solid text-white shadow-[0_4px_14px_rgba(127,184,154,0.25)] transition-all duration-300 hover:scale-[1.04] hover:brightness-110 active:scale-[0.96] active:brightness-95 disabled:opacity-40 md:size-9"
+        >
+          <ArrowUp className="size-5" />
+        </button>
+      )}
     </div>
   );
 }
