@@ -245,4 +245,20 @@ describe("transaction merchant enrichment", () => {
     expect(stored.transactions[0]?.merchantId).toBe("merchant_peacock");
     expect(stored.merchant?.logoUrl).toBe("https://plaid-merchant-logos.plaid.com/peacock.png");
   });
+
+  it("captures original_description from Plaid sync when present", () => {
+    const transformed: any = transformTransaction(
+      plaidTransaction({
+        original_description: "PURCHASE AUTHORIZED 04/24 PEACOCK NBCUNI 800-XXXXXXX",
+      }) as any
+    );
+    expect(transformed.originalDescription).toBe(
+      "PURCHASE AUTHORIZED 04/24 PEACOCK NBCUNI 800-XXXXXXX"
+    );
+  });
+
+  it("omits originalDescription when Plaid does not return it", () => {
+    const transformed: any = transformTransaction(plaidTransaction() as any);
+    expect(transformed.originalDescription).toBeUndefined();
+  });
 });

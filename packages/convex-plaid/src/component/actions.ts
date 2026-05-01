@@ -21,6 +21,8 @@ import {
   transformTransaction,
   syncTransactionsPaginated,
   normalizePlaidProducts,
+  selectMerchantCounterparty,
+  partitionEnrichmentInput,
 } from "./utils.js";
 import { encryptToken, decryptToken } from "./encryption.js";
 import { categorizeError, requiresReauth, formatErrorForLog } from "./errors.js";
@@ -1157,14 +1159,25 @@ export const completeReauth = action({
 // =============================================================================
 
 /**
- * Enrich transactions with merchant data using Plaid Enrich API.
+ * Enrich transactions with merchant data using Plaid `/transactions/enrich`.
  *
- * Takes a batch of transactions and enriches them with:
- * - Counterparty name, type, and entity ID
- * - Merchant logo URL and website
- * - Confidence level
+ * Returns counterparty name + entity_id + logo + confidence level for each
+ * transaction Plaid recognizes. Results are upserted into `merchantEnrichments`
+ * (de-duped by entity_id) and linked back to the transaction row via
+ * `merchantId` + `enrichmentData`.
  *
- * Results are cached in merchantEnrichments table and linked to transactions.
+ * The caller MUST tag each transaction with its source `account_type`
+ * (`"credit"` or `"depository"`). Plaid's Enrich API accepts only one
+ * `account_type` per request and uses it to interpret transaction direction
+ * and route through its merchant database. Mis-typing credit-card transactions
+ * as depository materially degrades match rate. Transactions whose source
+ * account is `"loan"` / `"investment"` / `"other"` are silently skipped —
+ * the API rejects those types entirely.
+ *
+ * `description` should be the raw bank-statement descriptor (Plaid's
+ * `original_description` field) when available, falling back to `name`. The
+ * cleaned `merchant_name` produces poor match rates because Plaid's
+ * enrichment heuristics expect the messy raw form.
  */
 export const enrichTransactions = action({
   args: {
@@ -1174,6 +1187,7 @@ export const enrichTransactions = action({
         description: v.string(),
         amount: v.number(),
         direction: v.union(v.literal("INFLOW"), v.literal("OUTFLOW")),
+        account_type: v.union(v.literal("credit"), v.literal("depository")),
         iso_currency_code: v.optional(v.string()),
         mcc: v.optional(v.string()),
         location: v.optional(
@@ -1207,94 +1221,105 @@ export const enrichTransactions = action({
       args.plaidEnv
     );
 
-    // Prepare transactions for Plaid Enrich API
-    // Note: amount must be absolute value (>= 0), direction indicates flow
-    const enrichmentTransactions = args.transactions.map((tx) => ({
-      id: tx.id,
-      description: tx.description,
-      amount: Math.abs(tx.amount), // Plaid requires positive amounts
-      direction: tx.direction,
-      iso_currency_code: tx.iso_currency_code ?? "USD",
-      mcc: tx.mcc,
-      location: tx.location
-        ? {
-            city: tx.location.city,
-            region: tx.location.region,
-            postal_code: tx.location.postal_code,
-            country: tx.location.country,
-          }
-        : undefined,
-    }));
-
-    try {
-      const response = await plaidClient.transactionsEnrich({
-        account_type: "depository",
-        transactions: enrichmentTransactions as any,
-      });
-
-      let enriched = 0;
-      let failed = 0;
-
-      // Cast to any since Plaid SDK types may not include all enrichment properties
-      for (const enrichedTx of response.data.enriched_transactions as any[]) {
-        const enrichments = enrichedTx.enrichments ?? enrichedTx;
-        const counterparty = enrichments.counterparties?.[0];
-
-        if (counterparty?.entity_id) {
-          // Upsert merchant enrichment
-          await ctx.runMutation(internal.private.upsertMerchantEnrichment, {
-            merchantId: counterparty.entity_id,
-            merchantName: counterparty.name,
-            logoUrl: counterparty.logo_url ?? undefined,
-            categoryPrimary: enrichments.personal_finance_category?.primary,
-            categoryDetailed: enrichments.personal_finance_category?.detailed,
-            categoryIconUrl:
-              enrichments.personal_finance_category_icon_url ?? undefined,
-            website: counterparty.website ?? undefined,
-            phoneNumber: counterparty.phone_number ?? undefined,
-            confidenceLevel:
-              (counterparty.confidence_level as
-                | "VERY_HIGH"
-                | "HIGH"
-                | "MEDIUM"
-                | "LOW"
-                | "UNKNOWN") ?? "UNKNOWN",
-          });
-
-          // Update transaction with enrichment data
-          await ctx.runMutation(internal.private.updateTransactionEnrichment, {
-            transactionId: enrichedTx.id,
-            merchantId: counterparty.entity_id,
-            enrichmentData: {
-              counterpartyName: counterparty.name,
-              counterpartyType: counterparty.type,
-              counterpartyEntityId: counterparty.entity_id,
-              counterpartyConfidence: counterparty.confidence_level,
-              counterpartyLogoUrl: counterparty.logo_url ?? undefined,
-              counterpartyWebsite: counterparty.website ?? undefined,
-              counterpartyPhoneNumber: counterparty.phone_number ?? undefined,
-              enrichedAt: Date.now(),
-            },
-          });
-
-          enriched++;
-        } else {
-          failed++;
-        }
-      }
-
+    const partitioned = partitionEnrichmentInput(args.transactions);
+    if (partitioned.skipped.length > 0) {
       console.log(
-        `[Plaid Component] Enriched ${enriched} transactions, ${failed} failed`
+        `[Plaid Component] Skipping ${partitioned.skipped.length} transaction(s) with unsupported account_type.`
       );
-
-      return { enriched, failed };
-    } catch (error: any) {
-      console.error(
-        "[Plaid Component] Transaction enrichment failed:",
-        formatErrorForLog(error)
-      );
-      throw error;
     }
+
+    let totalEnriched = 0;
+    let totalFailed = 0;
+
+    for (const [accountType, batch] of [
+      ["credit", partitioned.credit],
+      ["depository", partitioned.depository],
+    ] as const) {
+      if (batch.length === 0) continue;
+
+      const enrichmentTransactions = batch.map((tx) => ({
+        id: tx.id,
+        description: tx.description,
+        amount: Math.abs(tx.amount),
+        direction: tx.direction,
+        iso_currency_code: tx.iso_currency_code ?? "USD",
+        mcc: tx.mcc,
+        location: tx.location
+          ? {
+              city: tx.location.city,
+              region: tx.location.region,
+              postal_code: tx.location.postal_code,
+              country: tx.location.country,
+            }
+          : undefined,
+      }));
+
+      try {
+        const response = await plaidClient.transactionsEnrich({
+          account_type: accountType,
+          transactions: enrichmentTransactions as any,
+        });
+
+        for (const enrichedTx of response.data.enriched_transactions as any[]) {
+          const enrichments = enrichedTx.enrichments ?? enrichedTx;
+          const counterparty = selectMerchantCounterparty(enrichments.counterparties);
+
+          if (counterparty?.entity_id && counterparty.name) {
+            await ctx.runMutation(internal.private.upsertMerchantEnrichment, {
+              merchantId: counterparty.entity_id,
+              merchantName: counterparty.name,
+              logoUrl: counterparty.logo_url ?? undefined,
+              categoryPrimary: enrichments.personal_finance_category?.primary,
+              categoryDetailed: enrichments.personal_finance_category?.detailed,
+              categoryIconUrl:
+                enrichments.personal_finance_category_icon_url ?? undefined,
+              website: counterparty.website ?? undefined,
+              phoneNumber: counterparty.phone_number ?? undefined,
+              confidenceLevel:
+                (counterparty.confidence_level as
+                  | "VERY_HIGH"
+                  | "HIGH"
+                  | "MEDIUM"
+                  | "LOW"
+                  | "UNKNOWN") ?? "UNKNOWN",
+            });
+
+            await ctx.runMutation(internal.private.updateTransactionEnrichment, {
+              transactionId: enrichedTx.id,
+              merchantId: counterparty.entity_id,
+              enrichmentData: {
+                counterpartyName: counterparty.name,
+                counterpartyType: counterparty.type ?? undefined,
+                counterpartyEntityId: counterparty.entity_id,
+                counterpartyConfidence: counterparty.confidence_level ?? undefined,
+                counterpartyLogoUrl: counterparty.logo_url ?? undefined,
+                counterpartyWebsite: counterparty.website ?? undefined,
+                counterpartyPhoneNumber: counterparty.phone_number ?? undefined,
+                enrichedAt: Date.now(),
+              },
+            });
+
+            totalEnriched++;
+          } else {
+            totalFailed++;
+          }
+        }
+      } catch (error: any) {
+        console.error(
+          `[Plaid Component] Transaction enrichment failed (account_type=${accountType}):`,
+          formatErrorForLog(error)
+        );
+        throw error;
+      }
+    }
+
+    totalFailed += partitioned.skipped.length;
+
+    console.log(
+      `[Plaid Component] Enriched ${totalEnriched} transactions, ${totalFailed} failed (incl. ${partitioned.skipped.length} skipped).`
+    );
+
+    return { enriched: totalEnriched, failed: totalFailed };
   },
 });
 

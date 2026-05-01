@@ -150,14 +150,21 @@ export declare class Plaid {
         plaidItemId: string;
     }): Promise<TriggerTransactionsRefreshResult>;
     /**
-     * Enrich transactions with merchant data using Plaid Enrich API.
+     * Enrich transactions with merchant data using Plaid /transactions/enrich.
      *
-     * Takes a batch of transactions and enriches them with:
-     * - Counterparty name, type, and entity ID
-     * - Merchant logo URL and website
-     * - Confidence level
+     * The caller MUST tag each transaction with its source `account_type`
+     * (`"credit"` or `"depository"`). Plaid's Enrich API accepts only one
+     * account_type per request and uses it to interpret transaction direction
+     * and route through its merchant database. Mis-typing credit-card
+     * transactions as depository materially degrades match rate, so the
+     * action splits inputs into per-account-type batches and makes one API
+     * call per type.
      *
-     * Results are cached in merchantEnrichments table and linked to transactions.
+     * `description` should be the raw bank-statement descriptor (Plaid's
+     * `original_description` field) when available, falling back to `name`.
+     *
+     * Results are cached in `merchantEnrichments` and linked to each
+     * transaction's `merchantId` + `enrichmentData`.
      */
     enrichTransactions(ctx: ActionCtx, args: {
         transactions: Array<{
@@ -165,6 +172,7 @@ export declare class Plaid {
             description: string;
             amount: number;
             direction: "INFLOW" | "OUTFLOW";
+            account_type: "credit" | "depository";
             iso_currency_code?: string;
             mcc?: string;
             location?: {

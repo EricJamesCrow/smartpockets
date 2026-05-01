@@ -82,11 +82,44 @@ function optionalString(value) {
 function normalizeConfidenceLevel(value) {
     return value && CONFIDENCE_LEVELS.has(value) ? value : "UNKNOWN";
 }
-function selectCounterparty(counterparties) {
+const CONFIDENCE_RANK = {
+    VERY_HIGH: 4,
+    HIGH: 3,
+    MEDIUM: 2,
+    LOW: 1,
+    UNKNOWN: 0,
+};
+/**
+ * Pick the most likely merchant counterparty from a Plaid counterparties array.
+ *
+ * Resolution order:
+ *   1. Filter to entries with `type === "merchant"` and `entity_id` set, then
+ *      pick the highest `confidence_level`. Stable for equal confidences.
+ *   2. If no merchant-typed entry exists, fall back to the first counterparty
+ *      with any `entity_id` (e.g. marketplaces, processors).
+ *   3. Otherwise return undefined.
+ *
+ * Plaid's payment-processor flows (Square, Stripe, DoorDash) often place the
+ * processor at index 0 with the actual merchant later in the array, so a
+ * blind `[0]` pick misses the merchant entirely.
+ */
+export function selectMerchantCounterparty(counterparties) {
     if (!counterparties?.length)
         return undefined;
-    return (counterparties.find((counterparty) => counterparty.type === "merchant" && counterparty.entity_id) ??
-        counterparties.find((counterparty) => counterparty.entity_id));
+    let bestMerchant;
+    let bestRank = -1;
+    for (const counterparty of counterparties) {
+        if (counterparty.type !== "merchant" || !counterparty.entity_id)
+            continue;
+        const rank = CONFIDENCE_RANK[normalizeConfidenceLevel(counterparty.confidence_level)];
+        if (rank > bestRank) {
+            bestMerchant = counterparty;
+            bestRank = rank;
+        }
+    }
+    if (bestMerchant)
+        return bestMerchant;
+    return counterparties.find((counterparty) => counterparty.entity_id);
 }
 /**
  * Extract merchant enrichment fields that Plaid already returns from
@@ -95,7 +128,7 @@ function selectCounterparty(counterparties) {
  */
 export function extractTransactionMerchantEnrichment(txn) {
     const enrichedTxn = txn;
-    const counterparty = selectCounterparty(enrichedTxn.counterparties);
+    const counterparty = selectMerchantCounterparty(enrichedTxn.counterparties);
     const merchantId = optionalString(enrichedTxn.merchant_entity_id) ?? optionalString(counterparty?.entity_id);
     const merchantName = optionalString(enrichedTxn.merchant_name) ?? optionalString(counterparty?.name);
     if (!merchantId || !merchantName) {
@@ -120,6 +153,7 @@ export function extractTransactionMerchantEnrichment(txn) {
  * @returns Transformed transaction data for storage
  */
 export function transformTransaction(txn) {
+    const enrichedTxn = txn;
     const merchantEnrichment = extractTransactionMerchantEnrichment(txn);
     const transformed = {
         accountId: txn.account_id,
@@ -130,6 +164,7 @@ export function transformTransaction(txn) {
         datetime: txn.datetime ?? undefined,
         name: txn.name,
         merchantName: txn.merchant_name ?? undefined,
+        originalDescription: optionalString(enrichedTxn.original_description),
         pending: txn.pending,
         pendingTransactionId: txn.pending_transaction_id ?? undefined,
         categoryPrimary: txn.personal_finance_category?.primary ?? undefined,
@@ -154,6 +189,31 @@ export function transformTransaction(txn) {
         },
         merchantEnrichment,
     };
+}
+const SUPPORTED_ENRICH_ACCOUNT_TYPES = new Set(["credit", "depository"]);
+/**
+ * Partition `/transactions/enrich` input into one batch per account_type.
+ * Transactions with unsupported account types (e.g. "loan", "investment",
+ * "other") land in `skipped` so the caller can log/report them rather than
+ * sending an API call that would reject them.
+ */
+export function partitionEnrichmentInput(transactions) {
+    const credit = [];
+    const depository = [];
+    const skipped = [];
+    for (const txn of transactions) {
+        if (!SUPPORTED_ENRICH_ACCOUNT_TYPES.has(txn.account_type)) {
+            skipped.push(txn);
+            continue;
+        }
+        if (txn.account_type === "credit") {
+            credit.push(txn);
+        }
+        else {
+            depository.push(txn);
+        }
+    }
+    return { credit, depository, skipped };
 }
 /** Default pagination limits */
 export const SYNC_PAGINATION_DEFAULTS = {
@@ -194,6 +254,11 @@ export async function syncTransactionsPaginated(plaidClient, accessToken, cursor
             cursor: currentCursor,
             options: {
                 include_personal_finance_category: true,
+                // Surfaces Plaid's `original_description` field — the raw bank-statement
+                // descriptor (e.g. "AMAZON MKTPL*B90VX7M20") — on each returned
+                // transaction. Required input for /transactions/enrich to maximize
+                // merchant match rate; persisted on the transaction row for backfill.
+                include_original_description: true,
             },
         });
         pagesProcessed++;
