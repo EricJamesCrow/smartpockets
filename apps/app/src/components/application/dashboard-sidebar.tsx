@@ -77,6 +77,8 @@ const commandRoutes: Record<string, string> = {
 export function DashboardSidebar() {
     const [isSlim, setIsSlim] = useState(false);
     const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
+    // Shared kebab-menu state — only one ChatHistoryItem menu can be open at a time.
+    const [openMenuThreadId, setOpenMenuThreadId] = useState<string | null>(null);
 
     useEffect(() => {
         const saved = localStorage.getItem("sidebar-slim");
@@ -199,6 +201,10 @@ export function DashboardSidebar() {
                                                         title={thread.title ?? "Untitled"}
                                                         summary={thread.summary}
                                                         isActive={thread.threadId === activeThreadId}
+                                                        isMenuOpen={openMenuThreadId === thread.threadId}
+                                                        onMenuOpenChange={(open) =>
+                                                            setOpenMenuThreadId(open ? thread.threadId : null)
+                                                        }
                                                     />
                                                 ))}
                                             </ChatHistoryGroup>
@@ -256,6 +262,10 @@ export function DashboardSidebar() {
                                                 title={thread.title ?? "Untitled"}
                                                 summary={thread.summary}
                                                 isActive={thread.threadId === activeThreadId}
+                                                isMenuOpen={openMenuThreadId === thread.threadId}
+                                                onMenuOpenChange={(open) =>
+                                                    setOpenMenuThreadId(open ? thread.threadId : null)
+                                                }
                                             />
                                         ))}
                                     </ChatHistoryGroup>
