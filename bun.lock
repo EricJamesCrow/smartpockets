@@ -92,13 +92,11 @@
         "qr-code-styling": "^1.9.2",
         "react": "19.1.1",
         "react-dom": "19.1.1",
-        "react-markdown": "^10.1.0",
         "react-plaid-link": "^4.1.1",
         "react-svg-credit-card-payment-icons": "^5.1.2",
         "recharts": "^3.7.0",
-        "remark-gfm": "^4.0.1",
         "resend": "^6.5.2",
-        "streamdown": "^2.5.0",
+        "streamdown": "~2.5.0",
         "tailwindcss": "^4.1.11",
         "use-stick-to-bottom": "^1.1.4",
         "zod": "^4.1.13",
@@ -1986,8 +1984,6 @@
     "react-hotkeys-hook": ["react-hotkeys-hook@5.2.3", "", { "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-Q27F8EuImYJOVSXAjSQrQPj9cx4GSNY+WdSdk5tSNN085H8/a00W6LZp0PrytEDwF6iT0pGTJeVEDKPRpEK2Bg=="],
 
     "react-is": ["react-is@16.13.1", "", {}, "sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ=="],
-
-    "react-markdown": ["react-markdown@10.1.0", "", { "dependencies": { "@types/hast": "^3.0.0", "@types/mdast": "^4.0.0", "devlop": "^1.0.0", "hast-util-to-jsx-runtime": "^2.0.0", "html-url-attributes": "^3.0.0", "mdast-util-to-hast": "^13.0.0", "remark-parse": "^11.0.0", "remark-rehype": "^11.0.0", "unified": "^11.0.0", "unist-util-visit": "^5.0.0", "vfile": "^6.0.0" }, "peerDependencies": { "@types/react": ">=18", "react": ">=18" } }, "sha512-qKxVopLT/TyA6BX3Ue5NwabOsAzm0Q7kAPwq6L+wWDwisYs7R8vZ0nRXqq6rkueboxpkjvLGU9fWifiX/ZZFxQ=="],
 
     "react-plaid-link": ["react-plaid-link@3.6.1", "", { "dependencies": { "prop-types": "^15.7.2", "react-script-hook": "^1.7.2" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0", "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0" } }, "sha512-nKxFPm9z8NiFCqOczNhhIp5R/xZY5BQ0lcQjkflIzpQ3Bx9Dsq2F1kORse0EU1aYkuGfVCfnySLwXhsu7rJSjQ=="],
 
