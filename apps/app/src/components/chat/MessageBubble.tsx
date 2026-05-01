@@ -2,8 +2,10 @@
 
 import { useSmoothText } from "@convex-dev/agent/react";
 import type { Doc, Id } from "@convex/_generated/dataModel";
+import { AssistantAvatar } from "@/components/chat/AssistantAvatar";
 import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { MessageActions } from "@/components/chat/MessageActions";
+import { UserAvatar } from "@/components/chat/UserAvatar";
 import { ToolResultRenderer } from "@/components/chat/tool-results/ToolResultRenderer";
 import { RawTextMessage } from "@/components/chat/tool-results/shared/RawTextMessage";
 import type { PartState, ToolName } from "@/components/chat/tool-results/types";
@@ -108,17 +110,7 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
 
   return (
     <div className={cx("group/msg relative flex gap-4", isUser && "flex-row-reverse")}>
-      <div
-        className={cx(
-          "flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-          isUser
-            ? "bg-brand-solid text-white"
-            : "border border-secondary bg-secondary text-primary dark:border-[var(--sp-moss-line)] dark:bg-[var(--sp-surface-panel-strong)]",
-        )}
-        aria-hidden
-      >
-        {isUser ? "You" : <span className="font-[family-name:var(--font-fraunces)] italic">SP</span>}
-      </div>
+      {isUser ? <UserAvatar /> : <AssistantAvatar />}
       <div className={cx("flex max-w-[80%] flex-col gap-1", isUser ? "items-end" : "items-start")}>
         <div
           className={cx(
