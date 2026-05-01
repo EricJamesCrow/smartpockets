@@ -19,6 +19,11 @@ import { v } from "convex/values";
 import { Plaid } from "@crowdevelopment/convex-plaid";
 import { components } from "./_generated/api";
 import { api, internal } from "./_generated/api";
+import {
+  mapAccountTypeForEnrich,
+  pickEnrichDescription,
+  inferEnrichDirection,
+} from "./plaidComponent.helpers";
 
 // =============================================================================
 // PLAID COMPONENT INITIALIZATION (LAZY)
@@ -505,6 +510,168 @@ export const backfillAllTransactionEnrichmentsInternal = internalAction({
     }
 
     return { scheduled: items.length };
+  },
+});
+
+const ENRICH_BATCH_SIZE = 100;
+
+/**
+ * Internal action: backfill merchant enrichment on existing un-enriched
+ * transactions for a user via Plaid `/transactions/enrich`.
+ *
+ * `backfillTransactionEnrichmentsInternal` only re-runs `transactionsSync`,
+ * which Plaid prod doesn't always re-emit historical rows for once the cursor
+ * has advanced. `/transactions/enrich` is the supported API for filling logo
+ * gaps on already-stored transactions and accepts up to 100 transactions per
+ * call.
+ *
+ * Iterates the user's active items + accounts, classifies each account by
+ * type (skipping loan/investment/other), batches un-enriched transactions
+ * (where `merchantId` is null) by 100, and dispatches one Enrich call per
+ * batch through the convex-plaid component.
+ */
+export const enrichUnenrichedTransactionsForUser = internalAction({
+  args: {
+    userId: v.string(),
+    maxTransactions: v.optional(v.number()),
+  },
+  returns: v.object({
+    enriched: v.number(),
+    failed: v.number(),
+    candidates: v.number(),
+    scanned: v.number(),
+    skippedAccountType: v.number(),
+    batches: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const items = await ctx.runQuery(components.plaid.public.getItemsByUser, {
+      userId: args.userId,
+    });
+    const activeItemIds = items
+      .filter((item) => item.isActive !== false && item.status !== "deleting")
+      .map((item) => item._id as string);
+
+    let scanned = 0;
+    let skippedAccountType = 0;
+
+    type EnrichInput = {
+      id: string;
+      description: string;
+      amount: number;
+      direction: "INFLOW" | "OUTFLOW";
+      account_type: "credit" | "depository";
+      iso_currency_code?: string;
+    };
+
+    const candidates: EnrichInput[] = [];
+
+    for (const plaidItemId of activeItemIds) {
+      const accounts = await ctx.runQuery(components.plaid.public.getAccountsByItem, {
+        plaidItemId,
+      });
+      for (const account of accounts) {
+        const accountType = mapAccountTypeForEnrich(account.type);
+        if (!accountType) {
+          skippedAccountType++;
+          continue;
+        }
+        const txns = await ctx.runQuery(
+          components.plaid.public.getTransactionsByAccount,
+          { accountId: account.accountId },
+        );
+        scanned += txns.length;
+        for (const t of txns) {
+          if (t.merchantId) continue;
+          const description = pickEnrichDescription({
+            originalDescription: t.originalDescription,
+            name: t.name,
+            merchantName: t.merchantName,
+          });
+          if (!description) continue;
+          candidates.push({
+            id: t.transactionId,
+            description: description.slice(0, 100),
+            amount: Math.abs(t.amount / 1000),
+            direction: inferEnrichDirection(t.amount),
+            account_type: accountType,
+            iso_currency_code: t.isoCurrencyCode,
+          });
+          if (args.maxTransactions && candidates.length >= args.maxTransactions) {
+            break;
+          }
+        }
+        if (args.maxTransactions && candidates.length >= args.maxTransactions) {
+          break;
+        }
+      }
+      if (args.maxTransactions && candidates.length >= args.maxTransactions) {
+        break;
+      }
+    }
+
+    let enriched = 0;
+    let failed = 0;
+    let batches = 0;
+
+    for (let i = 0; i < candidates.length; i += ENRICH_BATCH_SIZE) {
+      const batch = candidates.slice(i, i + ENRICH_BATCH_SIZE);
+      const result = await getPlaid().enrichTransactions(ctx, { transactions: batch });
+      enriched += result.enriched;
+      failed += result.failed;
+      batches++;
+    }
+
+    console.log(
+      `[enrichUnenrichedTransactionsForUser] user=${args.userId} scanned=${scanned} candidates=${candidates.length} enriched=${enriched} failed=${failed} batches=${batches}`,
+    );
+
+    return {
+      enriched,
+      failed,
+      candidates: candidates.length,
+      scanned,
+      skippedAccountType,
+      batches,
+    };
+  },
+});
+
+/**
+ * Public viewer-auth-gated wrapper around `enrichUnenrichedTransactionsForUser`.
+ *
+ * Lets the authenticated user trigger a backfill of their own un-enriched
+ * transactions (e.g. from a dashboard button) without exposing internal IDs.
+ */
+type EnrichBackfillResult = {
+  enriched: number;
+  failed: number;
+  candidates: number;
+  scanned: number;
+  skippedAccountType: number;
+  batches: number;
+};
+
+export const enrichMyUnenrichedTransactionsAction = action({
+  args: {
+    maxTransactions: v.optional(v.number()),
+  },
+  returns: v.object({
+    enriched: v.number(),
+    failed: v.number(),
+    candidates: v.number(),
+    scanned: v.number(),
+    skippedAccountType: v.number(),
+    batches: v.number(),
+  }),
+  handler: async (ctx, args): Promise<EnrichBackfillResult> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required");
+    }
+    return await ctx.runAction(internal.plaidComponent.enrichUnenrichedTransactionsForUser, {
+      userId: identity.subject,
+      maxTransactions: args.maxTransactions,
+    });
   },
 });
 

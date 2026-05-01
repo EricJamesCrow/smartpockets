@@ -46,6 +46,7 @@ import type * as agent_tools_read_listDeferredInterestPromos from "../agent/tool
 import type * as agent_tools_read_listInstallmentPlans from "../agent/tools/read/listInstallmentPlans.js";
 import type * as agent_tools_read_listReminders from "../agent/tools/read/listReminders.js";
 import type * as agent_tools_read_listTransactions from "../agent/tools/read/listTransactions.js";
+import type * as agent_tools_read_moneyPreview from "../agent/tools/read/moneyPreview.js";
 import type * as agent_tools_read_searchMerchants from "../agent/tools/read/searchMerchants.js";
 import type * as agent_usage from "../agent/usage.js";
 import type * as agent_writeTool from "../agent/writeTool.js";
@@ -97,6 +98,7 @@ import type * as items_queries from "../items/queries.js";
 import type * as lib_plaidWebhookVerification from "../lib/plaidWebhookVerification.js";
 import type * as members from "../members.js";
 import type * as migrations_seedPromptVersion from "../migrations/seedPromptVersion.js";
+import type * as money from "../money.js";
 import type * as notifications_hashing from "../notifications/hashing.js";
 import type * as organizations from "../organizations.js";
 import type * as paymentAttemptTypes from "../paymentAttemptTypes.js";
@@ -172,6 +174,7 @@ declare const fullApi: ApiFromModules<{
   "agent/tools/read/listInstallmentPlans": typeof agent_tools_read_listInstallmentPlans;
   "agent/tools/read/listReminders": typeof agent_tools_read_listReminders;
   "agent/tools/read/listTransactions": typeof agent_tools_read_listTransactions;
+  "agent/tools/read/moneyPreview": typeof agent_tools_read_moneyPreview;
   "agent/tools/read/searchMerchants": typeof agent_tools_read_searchMerchants;
   "agent/usage": typeof agent_usage;
   "agent/writeTool": typeof agent_writeTool;
@@ -223,6 +226,7 @@ declare const fullApi: ApiFromModules<{
   "lib/plaidWebhookVerification": typeof lib_plaidWebhookVerification;
   members: typeof members;
   "migrations/seedPromptVersion": typeof migrations_seedPromptVersion;
+  money: typeof money;
   "notifications/hashing": typeof notifications_hashing;
   organizations: typeof organizations;
   paymentAttemptTypes: typeof paymentAttemptTypes;
@@ -432,6 +436,27 @@ export declare const components: {
   };
   plaid: {
     actions: {
+      backfillTransactionEnrichments: FunctionReference<
+        "action",
+        "internal",
+        {
+          encryptionKey: string;
+          maxPages?: number;
+          maxTransactions?: number;
+          plaidClientId: string;
+          plaidEnv: string;
+          plaidItemId: string;
+          plaidSecret: string;
+        },
+        {
+          hasMore: boolean;
+          matched: number;
+          merchantsUpserted: number;
+          pagesProcessed: number;
+          scanned: number;
+          updated: number;
+        }
+      >;
       completeReauth: FunctionReference<
         "action",
         "internal",
@@ -477,6 +502,7 @@ export declare const components: {
           plaidEnv: string;
           plaidSecret: string;
           transactions: Array<{
+            account_type: "credit" | "depository";
             amount: number;
             description: string;
             direction: "INFLOW" | "OUTFLOW";
@@ -1358,6 +1384,7 @@ export declare const components: {
           merchantId?: string;
           merchantName?: string;
           name: string;
+          originalDescription?: string;
           pending: boolean;
           plaidItemId: string;
           transactionId: string;
@@ -1396,6 +1423,7 @@ export declare const components: {
           merchantId?: string;
           merchantName?: string;
           name: string;
+          originalDescription?: string;
           pending: boolean;
           plaidItemId: string;
           transactionId: string;
@@ -1427,6 +1455,19 @@ export declare const components: {
         { plaidItemId: string },
         null
       >;
+      recordWebhookReceived: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          bodyHash: string;
+          dedupeWindowMs?: number;
+          itemId: string;
+          receivedAt: number;
+          webhookCode: string;
+          webhookType: string;
+        },
+        { duplicate: boolean; duplicateOf?: string; webhookLogId: string }
+      >;
       setNewAccountsAvailableInternal: FunctionReference<
         "mutation",
         "internal",
@@ -1445,9 +1486,31 @@ export declare const components: {
         { itemId: string },
         { isActive: boolean }
       >;
+      updateWebhookProcessingStatus: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          errorMessage?: string;
+          processedAt?: number;
+          scheduledFunctionId?: string;
+          status:
+            | "received"
+            | "processing"
+            | "processed"
+            | "duplicate"
+            | "failed";
+          webhookLogId: string;
+        },
+        null
+      >;
     };
     testAuth: {
-      testAuth: FunctionReference<"query", "internal", {}, any>;
+      testAuth: FunctionReference<
+        "query",
+        "internal",
+        {},
+        { error: string | null; hasAuth: boolean; userId: string | null }
+      >;
     };
   };
   agent: {
