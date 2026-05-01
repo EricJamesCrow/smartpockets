@@ -35,27 +35,58 @@ export function MessageList({
     threadId ? { threadId } : "skip",
   ) as AgentMessage[] | undefined;
 
-  // Merge the optimistic user message into the list when present and not yet
-  // superseded by a matching real row.
-  const displayMessages = useMemo<AgentMessage[]>(() => {
-    if (!messages) return [];
-    if (!optimisticUserMessage) return messages;
-    const optimisticText = optimisticUserMessage.text?.trim();
-    const alreadyInQuery = optimisticText
-      ? messages.some(
-          (m) => m.role === "user" && m.text?.trim() === optimisticText,
-        )
-      : false;
-    if (alreadyInQuery) return messages;
-    return [...messages, optimisticUserMessage];
+  // The real query row has caught up to the optimistic prompt — used both to
+  // suppress the optimistic copy in `displayMessages` and to fire
+  // `onMessagesLoaded` exactly once on the transition.
+  const matched = useMemo(() => {
+    if (!messages || !optimisticUserMessage) return false;
+    const t = optimisticUserMessage.text?.trim();
+    return Boolean(t) && messages.some((m) => m.role === "user" && m.text?.trim() === t);
   }, [messages, optimisticUserMessage]);
 
-  useEffect(() => {
-    if (messages && onMessagesLoaded) onMessagesLoaded();
-  }, [messages, onMessagesLoaded]);
+  // Merge the optimistic user message into the list when present and not yet
+  // superseded by a matching real row. When the query hasn't returned yet
+  // (first-send window: threadId still null), render the optimistic-only list.
+  const displayMessages = useMemo<AgentMessage[]>(() => {
+    if (!messages) return optimisticUserMessage ? [optimisticUserMessage] : [];
+    if (matched) return messages;
+    return optimisticUserMessage ? [...messages, optimisticUserMessage] : messages;
+  }, [messages, optimisticUserMessage, matched]);
 
-  if (!threadId) return null;
-  if (messages === undefined) {
+  useEffect(() => {
+    if (matched) onMessagesLoaded?.();
+  }, [matched, onMessagesLoaded]);
+
+  // First-send window: threadId is still null (or arrived but query not yet
+  // returned) AND we have an optimistic bubble to show. Mount StickToBottom
+  // with the optimistic-only list so the layout doesn't shift when threadId
+  // arrives or when the real row lands. Skip the spinner — we have a real
+  // message to show; the spinner is for the thread-fetch loading state where
+  // we have nothing to render.
+  if (!threadId || messages === undefined) {
+    if (optimisticUserMessage) {
+      return (
+        <StickToBottom
+          className="relative flex flex-1 flex-col overflow-hidden"
+          resize="smooth"
+          initial="instant"
+        >
+          <StickToBottom.Content
+            role="log"
+            aria-live="polite"
+            className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8"
+          >
+            <MessageBubble
+              key={optimisticUserMessage._id}
+              message={optimisticUserMessage}
+              threadId={optimisticUserMessage.agentThreadId}
+            />
+          </StickToBottom.Content>
+          <ScrollToBottomButton />
+        </StickToBottom>
+      );
+    }
+    if (!threadId) return null;
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="size-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />

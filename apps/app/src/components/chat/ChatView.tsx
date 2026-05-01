@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex-helpers/react/cache/hooks";
 import { api } from "@convex/_generated/api";
@@ -149,18 +149,14 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     }
   };
 
-  const handleMessagesLoaded = () => {
-    if (!threadId || !pendingPrompt) return;
-    const matched = messages?.some(
-      (m) => m.role === "user" && m.text?.trim() === pendingPrompt.trim(),
-    );
-    if (matched) setPendingPrompt(null);
-  };
+  const handleMessagesLoaded = useCallback(() => {
+    setPendingPrompt(null);
+  }, []);
 
   return (
     <ChatContainer>
       {banner && <ChatBanner state={banner} onDismiss={() => setBanner(null)} />}
-      {!threadId ? (
+      {!threadId && !pendingPrompt ? (
         <ChatHome onSend={handleSend} />
       ) : (
         <MessageList
