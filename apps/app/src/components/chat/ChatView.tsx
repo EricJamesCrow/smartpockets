@@ -87,8 +87,7 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [banner, setBanner] = useState<ChatBannerState | null>(null);
   const [reconsent, setReconsent] = useState<{ plaidItemId: string } | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Convex codegen typing for new mutation lags one regen.
-  const abortRun = useMutation((api as any).agent.threads.abortRun);
+  const abortRun = useMutation(api.agent.threads.abortRun);
 
   // W2 emits a role: "system" row during provider outages; surface the most
   // recent one as llm_down.
