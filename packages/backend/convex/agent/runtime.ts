@@ -493,6 +493,26 @@ export const runAgentTurn = internalAction({
         // directive so it calls that tool directly instead of re-deliberating.
         const toolHintDirective = buildToolHintDirective(latestUserMessage?.toolCallsJson);
 
+        // CROWDEV-342: per-thread cancellation. `turnStartedAt` is the
+        // reference epoch-ms; `abortRun` writes
+        // `agentThreads.cancelledAtTurn = Date.now()` on stop. We treat any
+        // flag value `>= turnStartedAt` as an abort signal for THIS run.
+        // `controller` is wired into `streamText({ abortSignal })` so calling
+        // `controller.abort()` halts the underlying fetch immediately.
+        const turnStartedAt = Date.now();
+        const controller = new AbortController();
+        let cancelObserved = false;
+
+        const isCancelledForThisTurn = async (): Promise<boolean> => {
+            if (cancelObserved) return true;
+            const flag: number | null = await ctx.runQuery(agent.threads.getCancelFlag, { threadId });
+            if (flag !== null && flag >= turnStartedAt) {
+                cancelObserved = true;
+                return true;
+            }
+            return false;
+        };
+
         try {
             const { streamText } = await import("ai");
             const messages: Array<{ role: string; content: string }> = await ctx.runQuery(agent.threads.loadForStream, { threadId });
@@ -500,6 +520,7 @@ export const runAgentTurn = internalAction({
             const { stepCountIs } = await import("ai");
             const result = streamText({
                 model: getAnthropicModel(modelId) as any,
+                abortSignal: controller.signal,
                 system:
                     renderSystemPrompt({
                         promptVersion: thread.promptVersion ?? PROMPT_VERSION,
@@ -524,6 +545,20 @@ export const runAgentTurn = internalAction({
                         outputTokens?: number;
                     };
                 }) => {
+                    // CROWDEV-342: gate persistence on the cancel flag.
+                    // Pre-cancel steps fire `onStepFinish` before the flag is
+                    // observed and persist normally; post-cancel steps that
+                    // somehow still complete (race between flag-set and
+                    // step-finish) are dropped so the cancelled turn doesn't
+                    // produce orphan assistant rows after the system
+                    // tombstone written by `abortRun`. Tokens consumed
+                    // pre-cancel are still counted (correct billing); tokens
+                    // for dropped post-cancel steps are not — providers
+                    // typically don't charge for fully-aborted streams, and
+                    // the AI SDK doesn't surface mid-step token deltas
+                    // through `onStepFinish`.
+                    if (await isCancelledForThisTurn()) return;
+
                     const tokensIn = step.usage?.inputTokens ?? step.usage?.promptTokens;
                     const tokensOut = step.usage?.outputTokens ?? step.usage?.completionTokens;
                     await ctx.runMutation(agent.threads.persistStep, {
@@ -563,14 +598,47 @@ export const runAgentTurn = internalAction({
                     }
                 },
             } as any);
-            // Drain the stream so onStepFinish callbacks fire and the underlying
-            // fetch completes before the action returns.
-            for await (const _chunk of (result as any).textStream ?? []) {
-                // Consume; onStepFinish handles persistence.
+            // Drain the stream so onStepFinish callbacks fire and the
+            // underlying fetch completes before the action returns. Poll the
+            // cancel flag every ~50 chunks (cheap internal query) — frequent
+            // enough for sub-second responsiveness in a typical Anthropic
+            // text stream, sparse enough that the polling overhead is
+            // negligible relative to streaming I/O. When tripped, abort the
+            // controller (halts the underlying fetch) and break — the
+            // tombstone written by `abortRun` is the authoritative end-of-run
+            // marker, so we do NOT write another from here.
+            const CANCEL_POLL_INTERVAL = 50;
+            let chunkCount = 0;
+            try {
+                for await (const _chunk of (result as any).textStream ?? []) {
+                    chunkCount += 1;
+                    if (chunkCount % CANCEL_POLL_INTERVAL === 0) {
+                        if (await isCancelledForThisTurn()) {
+                            controller.abort();
+                            break;
+                        }
+                    }
+                }
+                if (!cancelObserved) {
+                    await (result as any).text;
+                }
+            } catch (err) {
+                // `streamText` rejects with an AbortError once `abort()` is
+                // called. Swallow that path silently — it's the expected
+                // outcome of user-initiated stop. Anything else is real.
+                if (cancelObserved || (err as { name?: string })?.name === "AbortError") {
+                    // expected: user clicked stop.
+                } else {
+                    throw err;
+                }
             }
-            await (result as any).text;
         } catch (err) {
-            console.error("[agent.runtime] run failed:", err);
+            // Don't log a user-initiated stop as an error.
+            if (cancelObserved || (err as { name?: string })?.name === "AbortError") {
+                // expected
+            } else {
+                console.error("[agent.runtime] run failed:", err);
+            }
         } finally {
             try {
                 await ctx.runAction(agent.compaction.maybeCompact, { threadId });
