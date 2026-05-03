@@ -114,8 +114,8 @@ describe("get_plaid_health agent tool (CROWDEV-349)", () => {
             "syncing",
             "ready",
         ]);
-        expect(out.preview.items[0].institutionName).toBe("Error Bank");
-        expect(out.preview.items[1].institutionName).toBe("Reauth Bank");
+        expect(out.preview.items[0]!.institutionName).toBe("Error Bank");
+        expect(out.preview.items[1]!.institutionName).toBe("Reauth Bank");
         // Summary should mention each non-healthy bucket.
         expect(out.preview.summary).toMatch(/1 healthy/i);
         expect(out.preview.summary).toMatch(/1 syncing/i);
@@ -133,7 +133,7 @@ describe("get_plaid_health agent tool (CROWDEV-349)", () => {
             { userId },
         )) as { preview: { items: Array<{ institutionName: string; state: string; recommendedAction: string | null }> } };
 
-        const item = out.preview.items[0];
+        const item = out.preview.items[0]!;
         expect(item.institutionName).toBe("Citi");
         expect(item.state).toBe("re-consent-required");
         expect(item.recommendedAction).toBe("reconnect");
@@ -159,7 +159,7 @@ describe("get_plaid_health agent tool (CROWDEV-349)", () => {
             { userId },
         )) as { preview: { items: Array<{ institutionName: string; state: string; recommendedAction: string | null; reasonCode: string }>; summary: string } };
 
-        const item = out.preview.items[0];
+        const item = out.preview.items[0]!;
         expect(item.institutionName).toBe("Bank Of Errors");
         expect(item.state).toBe("error");
         // mapErrorCodeToReason("permanent_unknown") for null errorCode →

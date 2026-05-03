@@ -109,9 +109,9 @@ describe("propose_reminder_create executor", () => {
     });
     expect((result.reversalPayload as any).kind).toBe("reminder_dismiss");
     const [r] = Array.from(ctx.store.values());
-    expect(r.createdByAgent).toBe(true);
-    expect(r.channels).toEqual(["chat"]);
-    expect(r.userId).toBe("user_1");
+    expect(r!.createdByAgent).toBe(true);
+    expect(r!.channels).toEqual(["chat"]);
+    expect(r!.userId).toBe("user_1");
   });
 
   it("reversal dismisses the created reminder", async () => {

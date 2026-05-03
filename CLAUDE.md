@@ -17,6 +17,7 @@ Follow the repository instructions in `AGENTS.md`. The most important rules:
 7. If an issue blocks verification, merge, or deployment of another issue, add the Linear blocker relationship and comment on both issues with the evidence and PR links.
 8. When working a sub-issue, move its parent to In Progress if the parent is still To-do or Backlog, then comment with the active child issue.
 9. **After modifying any file in `packages/backend/convex/`** (schema, queries, mutations, actions, agent tools), push the updated functions to the dev deployment **before claiming the work is complete or asking the user to test it**. Either keep `bun dev:backend` running in a separate terminal, OR run `cd packages/backend && bunx convex dev --once` as a one-shot deploy. Without this step, the Vercel preview's Convex client (which points at `dev:canny-turtle-982`) will reference functions that don't exist in the deployed backend — surfacing as `Could not find public function for ...` errors at runtime even though the client bundle has the new references compiled in.
+10. **After backend changes**, also run `cd apps/app && bun typecheck` to catch type drift between the two tsconfig strictness levels. The backend's tsconfig and `apps/app`'s shared base config both enable `noUncheckedIndexedAccess`, but other strictness drift may surface only on the app side.
 
 ## Session Startup
 
