@@ -466,9 +466,16 @@ export const runAgentTurn = internalAction({
         userId: v.id("users"),
         threadId: v.id("agentThreads"),
         userMessageId: v.id("agentMessages"),
+        // CROWDEV-343: timestamp captured by the caller BEFORE
+        // `scheduler.runAfter`, so the cancel-flag comparison in
+        // `isCancelledForThisTurn` covers the sub-millisecond pre-start window
+        // when a user clicks Stop after the action is scheduled but before its
+        // handler begins. Capturing it here at action-start would race the
+        // mutation that sets `cancelledAtTurn` and silently lose the abort.
+        turnScheduledAt: v.number(),
     },
     returns: v.null(),
-    handler: async (ctx, { userId, threadId, userMessageId }) => {
+    handler: async (ctx, { userId, threadId, userMessageId, turnScheduledAt }) => {
         const thread: { promptVersion?: string } = await ctx.runQuery(agent.threads.getForRun, { threadId });
         const [context, msgs] = await Promise.all([
             ctx.runQuery(agent.context.compose, {
@@ -499,7 +506,16 @@ export const runAgentTurn = internalAction({
         // flag value `>= turnStartedAt` as an abort signal for THIS run.
         // `controller` is wired into `streamText({ abortSignal })` so calling
         // `controller.abort()` halts the underlying fetch immediately.
-        const turnStartedAt = Date.now();
+        //
+        // CROWDEV-343: source the reference epoch from `turnScheduledAt`,
+        // captured by the HTTP action right before
+        // `ctx.scheduler.runAfter(0, runAgentTurn, ...)`. Capturing
+        // `Date.now()` here at action-start would race a Stop click that lands
+        // between schedule and run — a flag set in that window would have a
+        // strictly-earlier timestamp than this side's `Date.now()`, the
+        // comparison `flag >= turnStartedAt` would return false, and the
+        // user's abort would be silently dropped.
+        const turnStartedAt = turnScheduledAt;
         const controller = new AbortController();
         let cancelObserved = false;
 
