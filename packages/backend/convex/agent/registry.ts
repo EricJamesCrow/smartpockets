@@ -176,11 +176,12 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         incrementsReadCount: true,
     },
     get_spend_over_time: {
-        description: "Aggregate spending bucketed by day, week, or month.",
+        description:
+            "Aggregate spending bucketed by day, week, or month. Defaults to the last 90 days bucketed by week when args are omitted.",
         llmInputSchema: z.object({
-            dateFrom: z.string(),
-            dateTo: z.string(),
-            bucket: z.enum(["day", "week", "month"]),
+            dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
+            dateTo: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
+            bucket: z.enum(["day", "week", "month"]).optional(),
         }),
         handler: agent.tools.read.getSpendOverTime.getSpendOverTime,
         handlerType: "query" as const,
