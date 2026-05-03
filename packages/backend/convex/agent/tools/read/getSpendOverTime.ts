@@ -153,9 +153,11 @@ export const getSpendOverTime = agentQuery({
 
         const buckets = Array.from(bucketsByKey.values()).sort((a, b) => a.from.localeCompare(b.from));
         const totalAmount = buckets.reduce((sum, b) => sum + b.amount, 0);
+        const granularityLabel =
+            granularity === "day" ? "Daily" : granularity === "week" ? "Weekly" : "Monthly";
         const summary =
             totalAmount > 0
-                ? `${granularity[0].toUpperCase()}${granularity.slice(1)}ly spend, ${effectiveFrom} to ${effectiveTo}`
+                ? `${granularityLabel} spend, ${effectiveFrom} to ${effectiveTo}`
                 : "No spending in window";
 
         return {
