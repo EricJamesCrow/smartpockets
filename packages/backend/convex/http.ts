@@ -709,10 +709,16 @@ http.route({
       },
     );
 
+    // CROWDEV-343: capture the schedule timestamp BEFORE `runAfter` so the
+    // runtime's cancel-flag comparison (`cancelledAtTurn >= turnStartedAt`)
+    // covers any Stop click that lands between schedule and action-start.
+    // Capturing `Date.now()` inside the action races the abort mutation.
+    const turnScheduledAt = Date.now();
     await ctx.scheduler.runAfter(0, agentApi.runtime.runAgentTurn, {
       userId: viewer._id,
       threadId,
       userMessageId: messageId,
+      turnScheduledAt,
     });
 
     return Response.json({ threadId, messageId }, { headers: cors });
