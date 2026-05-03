@@ -20,6 +20,14 @@ interface MessageListProps {
    * truth — no parallel render block, no flicker).
    */
   optimisticUserMessage?: AgentMessage | null;
+  /**
+   * CROWDEV-343 (FIX 7): a synthesized assistant message with `isStreaming:
+   * true` and empty `text`. Rendered as the bouncing-dots typing indicator
+   * by `MessageBubble` while waiting for the first real assistant token.
+   * Suppressed once a real assistant row lands ordered after the latest
+   * user turn (whether real or optimistic).
+   */
+  optimisticAssistantMessage?: AgentMessage | null;
   onMessagesLoaded?: () => void;
   onRegenerate?: (message: AgentMessage) => Promise<void> | void;
 }
@@ -27,6 +35,7 @@ interface MessageListProps {
 export function MessageList({
   threadId,
   optimisticUserMessage,
+  optimisticAssistantMessage,
   onMessagesLoaded,
   onRegenerate,
 }: MessageListProps) {
@@ -44,14 +53,26 @@ export function MessageList({
     return Boolean(t) && messages.some((m) => m.role === "user" && m.text?.trim() === t);
   }, [messages, optimisticUserMessage]);
 
-  // Merge the optimistic user message into the list when present and not yet
-  // superseded by a matching real row. When the query hasn't returned yet
-  // (first-send window: threadId still null), render the optimistic-only list.
+  // Merge the optimistic user + assistant messages into the list when each is
+  // present and not yet superseded by a matching real row. The user copy is
+  // dedup'd by text-match (`matched`); the assistant copy is dedup'd by the
+  // parent (ChatView) which only emits `optimisticAssistantMessage` while no
+  // real assistant row has landed after the latest user turn — so we just
+  // append it when present.
   const displayMessages = useMemo<AgentMessage[]>(() => {
-    if (!messages) return optimisticUserMessage ? [optimisticUserMessage] : [];
-    if (matched) return messages;
-    return optimisticUserMessage ? [...messages, optimisticUserMessage] : messages;
-  }, [messages, optimisticUserMessage, matched]);
+    if (!messages) {
+      const out: AgentMessage[] = [];
+      if (optimisticUserMessage) out.push(optimisticUserMessage);
+      if (optimisticAssistantMessage) out.push(optimisticAssistantMessage);
+      return out;
+    }
+    const base = matched
+      ? messages
+      : optimisticUserMessage
+        ? [...messages, optimisticUserMessage]
+        : messages;
+    return optimisticAssistantMessage ? [...base, optimisticAssistantMessage] : base;
+  }, [messages, optimisticUserMessage, optimisticAssistantMessage, matched]);
 
   useEffect(() => {
     if (matched) onMessagesLoaded?.();
@@ -64,7 +85,7 @@ export function MessageList({
   // message to show; the spinner is for the thread-fetch loading state where
   // we have nothing to render.
   if (!threadId || messages === undefined) {
-    if (optimisticUserMessage) {
+    if (optimisticUserMessage || optimisticAssistantMessage) {
       return (
         <StickToBottom
           className="relative flex flex-1 flex-col overflow-hidden"
@@ -76,11 +97,20 @@ export function MessageList({
             aria-live="polite"
             className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8"
           >
-            <MessageBubble
-              key={optimisticUserMessage._id}
-              message={optimisticUserMessage}
-              threadId={optimisticUserMessage.agentThreadId}
-            />
+            {optimisticUserMessage && (
+              <MessageBubble
+                key={optimisticUserMessage._id}
+                message={optimisticUserMessage}
+                threadId={optimisticUserMessage.agentThreadId}
+              />
+            )}
+            {optimisticAssistantMessage && (
+              <MessageBubble
+                key={optimisticAssistantMessage._id}
+                message={optimisticAssistantMessage}
+                threadId={optimisticAssistantMessage.agentThreadId}
+              />
+            )}
           </StickToBottom.Content>
           <ScrollToBottomButton />
         </StickToBottom>
