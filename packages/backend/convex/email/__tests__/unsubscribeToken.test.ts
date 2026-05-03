@@ -47,4 +47,21 @@ describe("unsubscribe token", () => {
     expect(verified.ok).toBe(true);
     if (verified.ok) expect(verified.data.expired).toBe(true);
   });
+
+  // Regression: base64url padding logic was wrong for non-multiple-of-4
+  // payload lengths (CROWDEV-360). Real fresh tokens encode to lengths
+  // like 66 chars; verification used to fail with reason "unparseable".
+  it.each([
+    ["short userId (encoded length 66, padCount 2)", "u1", "weekly-digest"],
+    ["medium userId (encoded length matches len%4 === 1)", "user_abcdef", "weekly-digest"],
+    ["longer template (encoded length matches len%4 === 3)", "u1", "monthly-statement-summary"],
+  ])("verifies tokens for various encoded lengths: %s", async (_, userId, templateKey) => {
+    const token = await signUnsubscribeToken({ userId, templateKey }, key);
+    const verified = await verifyUnsubscribeToken(token, key);
+    expect(verified.ok).toBe(true);
+    if (verified.ok) {
+      expect(verified.data.userId).toBe(userId);
+      expect(verified.data.templateKey).toBe(templateKey);
+    }
+  });
 });
