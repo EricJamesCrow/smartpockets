@@ -160,10 +160,11 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         incrementsReadCount: true,
     },
     get_spend_by_category: {
-        description: "Aggregate spending by category over a date range.",
+        description:
+            "Aggregate spending by category over a date range. Defaults to the last 30 days when dateFrom/dateTo are omitted.",
         llmInputSchema: z.object({
-            dateFrom: z.string(),
-            dateTo: z.string(),
+            dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
+            dateTo: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
             granularity: z.enum(["primary", "detailed"]).optional(),
         }),
         handler: agent.tools.read.getSpendByCategory.getSpendByCategory,
