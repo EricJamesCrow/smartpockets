@@ -236,7 +236,8 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         incrementsReadCount: true,
     },
     get_plaid_health: {
-        description: "Health summary for the user's Plaid items (stub until W4 publishes).",
+        description:
+            "Health summary for the user's linked bank connections. Surfaces per-item state (error, re-consent-required, syncing, ready), recommended action, and days since last sync.",
         llmInputSchema: z.object({}),
         handler: agent.tools.read.getPlaidHealth.getPlaidHealth,
         handlerType: "query" as const,
