@@ -81,6 +81,31 @@ function buildOptimisticUserMessage(
   } as AgentMessage;
 }
 
+/**
+ * Build a synthesized assistant-role row that renders as the typing
+ * indicator. `MessageBubble` keys on `isStreaming && (!text || text === "")`
+ * to swap into the bouncing-dots affordance, so we set both. The id is
+ * suffixed `_assistant` to keep React keys distinct from the user
+ * counterpart. CROWDEV-343: this restores the parallel "user bubble +
+ * thinking dots" UX that was dropped when PR #156 unified the optimistic
+ * render path. Dedup logic in MessageList drops this row once a real
+ * assistant message arrives ordered after the latest user turn.
+ */
+function buildOptimisticAssistantMessage(
+  threadId: Id<"agentThreads"> | null,
+): AgentMessage {
+  const now = Date.now();
+  return {
+    _id: `optimistic_assistant_${now}` as Id<"agentMessages">,
+    _creationTime: now,
+    agentThreadId: (threadId ?? "optimistic_thread") as Id<"agentThreads">,
+    role: "assistant",
+    text: "",
+    createdAt: now,
+    isStreaming: true,
+  } as AgentMessage;
+}
+
 function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
   const { sendMessage } = useChatInteraction();
   const [isLoading, setIsLoading] = useState(false);
@@ -141,6 +166,30 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     return buildOptimisticUserMessage(pendingPrompt, threadId);
   }, [pendingPrompt, threadId]);
 
+  // CROWDEV-343 (FIX 7): when a turn is in flight and no assistant row has
+  // landed yet, surface a synthesized "thinking" assistant row so the bubble
+  // renders bouncing dots immediately on send. Three predicates must hold:
+  //   1. We have a pending prompt (the user just sent something).
+  //   2. EITHER no thread query yet (first send: threadId still null)
+  //      OR no assistant row ordered after the latest user row in the
+  //      current messages list.
+  // The MessageList dedupe + MessageBubble's isStreaming-without-text
+  // rendering close the loop visually.
+  const optimisticAssistantMessage = useMemo<AgentMessage | null>(() => {
+    if (!pendingPrompt) return null;
+    if (!messages) return buildOptimisticAssistantMessage(threadId);
+    // Find latest user row; if no assistant row creation-time-after it, we're still waiting.
+    const latestUser = [...messages]
+      .reverse()
+      .find((m) => m.role === "user");
+    const latestUserCreated = latestUser?._creationTime ?? 0;
+    const hasAssistantAfter = messages.some(
+      (m) => m.role === "assistant" && (m._creationTime ?? 0) > latestUserCreated,
+    );
+    if (hasAssistantAfter) return null;
+    return buildOptimisticAssistantMessage(threadId);
+  }, [pendingPrompt, messages, threadId]);
+
   const routeError = (err: unknown) => {
     const typed = translateError(err);
     if (!typed) {
@@ -193,6 +242,7 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
         <MessageList
           threadId={threadId}
           optimisticUserMessage={optimisticUserMessage}
+          optimisticAssistantMessage={optimisticAssistantMessage}
           onMessagesLoaded={handleMessagesLoaded}
         />
       )}
