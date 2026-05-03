@@ -6,7 +6,6 @@
   "type": "module",
   "scripts": {
     "clean": "rm -rf .turbo node_modules",
-    "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "exports": {

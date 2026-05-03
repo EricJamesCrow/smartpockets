@@ -26,7 +26,6 @@
     "clean": "rm -rf dist *.tsbuildinfo",
     "build": "tsc --project ./tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
     "test": "vitest run --typecheck",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest --typecheck --clearScreen false",
