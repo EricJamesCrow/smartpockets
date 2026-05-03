@@ -5,7 +5,7 @@
 // source for layout patterns; we don't import the library (architectural
 // mismatch with our React Aria-based UntitledUI Pro shell).
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import {
   AlertCircle,
@@ -84,7 +84,13 @@ export function ToolCallDisplay({
   const isPending = !isComplete && !hasError && !isAwaitingApproval;
 
   const Icon = icon ?? Settings01;
-  const contentId = `tool-${toolName}-content`;
+  // CROWDEV-343 (PR #160 codex P2): useId() guarantees a unique-per-instance
+  // suffix so `aria-controls` and the panel `id` stay 1:1 when the same tool
+  // runs multiple times in a single thread. The previous
+  // `tool-${toolName}-content` template collided across instances and broke
+  // assistive-tech disclosure semantics.
+  const reactId = useId();
+  const contentId = `tool-${toolName}-${reactId}`;
   const headerSummary = isAwaitingApproval ? "awaiting your approval" : summary;
 
   return (
