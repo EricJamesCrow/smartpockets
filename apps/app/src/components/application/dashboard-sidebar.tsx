@@ -77,8 +77,11 @@ const commandRoutes: Record<string, string> = {
 export function DashboardSidebar() {
     const [isSlim, setIsSlim] = useState(false);
     const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
-    // Shared kebab-menu state — only one ChatHistoryItem menu can be open at a time.
-    const [openMenuThreadId, setOpenMenuThreadId] = useState<string | null>(null);
+    // NOTE: kebab-menu open state lives inside each ChatHistoryItem instance,
+    // not lifted to here. This component renders two ChatHistoryItem trees
+    // per thread (desktop + mobile, gated by responsive `hidden`/`lg:hidden`),
+    // and React Aria portals the popover to body — a single shared open flag
+    // would render two visible popovers (CROWDEV-352).
 
     useEffect(() => {
         const saved = localStorage.getItem("sidebar-slim");
@@ -201,10 +204,6 @@ export function DashboardSidebar() {
                                                         title={thread.title ?? "Untitled"}
                                                         summary={thread.summary}
                                                         isActive={thread.threadId === activeThreadId}
-                                                        isMenuOpen={openMenuThreadId === thread.threadId}
-                                                        onMenuOpenChange={(open) =>
-                                                            setOpenMenuThreadId(open ? thread.threadId : null)
-                                                        }
                                                     />
                                                 ))}
                                             </ChatHistoryGroup>
@@ -262,10 +261,6 @@ export function DashboardSidebar() {
                                                 title={thread.title ?? "Untitled"}
                                                 summary={thread.summary}
                                                 isActive={thread.threadId === activeThreadId}
-                                                isMenuOpen={openMenuThreadId === thread.threadId}
-                                                onMenuOpenChange={(open) =>
-                                                    setOpenMenuThreadId(open ? thread.threadId : null)
-                                                }
                                             />
                                         ))}
                                     </ChatHistoryGroup>

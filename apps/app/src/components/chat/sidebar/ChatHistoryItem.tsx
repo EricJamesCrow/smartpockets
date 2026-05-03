@@ -18,8 +18,6 @@ interface ChatHistoryItemProps {
     title: string;
     isActive: boolean;
     summary?: string;
-    isMenuOpen: boolean;
-    onMenuOpenChange: (open: boolean) => void;
 }
 
 /**
@@ -31,19 +29,26 @@ interface ChatHistoryItemProps {
  * thread is deleted, navigates back to "/" so the deleted thread does not
  * stay loaded in the chat pane.
  *
- * The parent (DashboardSidebar) holds shared `openMenuId` state so only one
- * kebab menu is open at a time.
+ * The dropdown's open state is owned locally per-instance — NOT lifted to the
+ * parent. The parent renders this component twice per thread (once in the
+ * desktop sidebar and once in the mobile sidebar, gated by responsive
+ * `hidden`/`lg:hidden` classes). A single shared `openMenuId` would flip
+ * BOTH instances open simultaneously, and because React Aria's `Popover`
+ * portals into `document.body`, the mobile-instance popover renders fully
+ * visible on desktop even though its `lg:hidden` parent isn't — that
+ * produced the "two dropdowns" bug (CROWDEV-352). React Aria's
+ * `MenuTrigger` auto-closes a menu on outside click, so the
+ * "only one open at a time" UX still holds without lifted state.
  */
 export function ChatHistoryItem({
     threadId,
     title,
     isActive,
     summary,
-    isMenuOpen,
-    onMenuOpenChange,
 }: ChatHistoryItemProps) {
     const [isRenaming, setIsRenaming] = useState(false);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const renameThread = useMutation(api.agent.threads.renameThread);
     const deleteThread = useMutation(api.agent.threads.deleteThread);
@@ -61,7 +66,7 @@ export function ChatHistoryItem({
     };
 
     const handleMenuAction = (key: React.Key) => {
-        onMenuOpenChange(false);
+        setIsMenuOpen(false);
         if (key === "rename") {
             setIsRenaming(true);
         } else if (key === "delete") {
@@ -104,7 +109,7 @@ export function ChatHistoryItem({
                         : "opacity-0 group-hover/item:opacity-100 focus-within:opacity-100",
                 )}
             >
-                <Dropdown.Root isOpen={isMenuOpen} onOpenChange={onMenuOpenChange}>
+                <Dropdown.Root isOpen={isMenuOpen} onOpenChange={setIsMenuOpen}>
                     <Dropdown.DotsButton
                         className="size-7 p-1"
                         aria-label={`Actions for ${title}`}
