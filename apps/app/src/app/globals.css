@@ -13,7 +13,15 @@
  * override is present.
  */
 
-@source './node_modules/streamdown/dist';
+/*
+ * Bare specifier resolves through Node-style module lookup (walks up
+ * `node_modules`), so this works in the monorepo regardless of which
+ * workspace hoists the streamdown dependency. The previous relative path
+ * `./node_modules/streamdown/dist` resolved relative to apps/app/src/app/
+ * — wrong path, only worked by Tailwind v4 fuzz-matching to whatever it
+ * could find, and silently broke if the dep got hoisted.
+ */
+@source "streamdown/dist";
 
 /*
  * Streamdown / shadcn-compat utility resolution (CROWDEV-329 PR 5).
