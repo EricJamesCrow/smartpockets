@@ -12,6 +12,8 @@ import { CreditCardStatementCard } from "./credit-cards/CreditCardStatementCard"
 import { CreditCardStatementCardSkeleton } from "./credit-cards/CreditCardStatementCardSkeleton";
 import { MerchantsList } from "./merchants/MerchantsList";
 import { MerchantsListSkeleton } from "./merchants/MerchantsListSkeleton";
+import { PlaidHealthSummary } from "./plaid-health/PlaidHealthSummary";
+import { PlaidHealthSummarySkeleton } from "./plaid-health/PlaidHealthSummarySkeleton";
 import { DeferredInterestTimeline } from "./promos/DeferredInterestTimeline";
 import { DeferredInterestTimelineSkeleton } from "./promos/DeferredInterestTimelineSkeleton";
 import { InstallmentPlansList } from "./promos/InstallmentPlansList";
@@ -60,7 +62,7 @@ export const toolResultRegistry: Record<ReadToolName, RegistryEntry> = {
     get_upcoming_statements: { Component: CreditCardStatementCard as AnyEntry["Component"], Skeleton: CreditCardStatementCardSkeleton },
     list_reminders: { Component: RemindersList as AnyEntry["Component"], Skeleton: RemindersListSkeleton },
     search_merchants: { Component: MerchantsList as AnyEntry["Component"], Skeleton: MerchantsListSkeleton },
-    get_plaid_health: { Component: FallbackToRaw },
+    get_plaid_health: { Component: PlaidHealthSummary as AnyEntry["Component"], Skeleton: PlaidHealthSummarySkeleton },
     get_proposal: {
         Component: function GetProposalRenderer(props: ToolResultComponentProps) {
             const output = props.output as ProposalToolOutput | null;
