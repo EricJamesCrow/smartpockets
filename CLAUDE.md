@@ -138,7 +138,7 @@ When given a task with multiple logical changes:
 
 ### PR Links
 
-When creating, submitting, or summarizing PRs, display the **Graphite PR link** as the primary link. Do not present GitHub PR links as the main link unless Graphite is unavailable or the user explicitly asks for GitHub.
+When referring to a PR in any user-facing output — chat responses, table rows, summaries, Linear comments, status updates — **always** use the Graphite link. **Never include `github.com/.../pull/<N>` URLs** unless the user explicitly asks for the GitHub link.
 
 For this repo, Graphite PR links use:
 
@@ -146,7 +146,7 @@ For this repo, Graphite PR links use:
 https://app.graphite.com/github/pr/EricJamesCrow/smartpockets/<PR_NUMBER>
 ```
 
-After `gt submit`, use the Graphite URL printed by Graphite in the final response. If a command only returns a GitHub PR number or URL, convert it to the Graphite URL format above before showing it to the user. GitHub links may be included only as a secondary fallback.
+After `gt submit`, use the Graphite URL printed by Graphite in the final response. If a command (`gh pr view`, `gh pr checks`, `gh pr list`, etc.) returns only a GitHub PR number or URL, **convert it to the Graphite URL format above before showing it**. Do not present both — Graphite is the canonical user-facing link, GitHub URLs are for tooling use only (`gh pr` commands consume them but they don't appear in your messages to me).
 
 After opening or updating a PR, comment on the linked Linear issue with the Graphite PR link, summary, verification, known risks, and follow-up work.
 
