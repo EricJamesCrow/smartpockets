@@ -24,6 +24,35 @@
 @source "streamdown/dist";
 
 /*
+ * CROWDEV-343 (FIX 6 partial mitigation): Streamdown's table toolbar
+ * renders the copy/download dropdowns as `position: absolute; top-full;
+ * z-20` siblings of the table's `overflow-x-auto overflow-y-auto`
+ * scroll container, NOT portaled to body. When a table sits near the
+ * bottom of the chat scroll viewport the dropdown can be clipped by the
+ * chat-route ancestors (`overflow-hidden` on ChatContainer, `overflow-y-
+ * auto` on MessageList). The proper fix is upstream: portal the
+ * dropdown to body. As a defense-in-depth hardening here, we (a) bump
+ * the dropdown z-index above neighboring chat surfaces and (b) widen
+ * the table-wrapper to its content so the dropdown's `right-0` anchor
+ * sits flush with the visible bubble edge instead of overflowing the
+ * `max-w-[80%]` bubble. See PR #163 follow-up note.
+ */
+[data-streamdown="table-wrapper"] {
+    position: relative;
+    isolation: isolate;
+    /* Avoid an extra clip when the bubble's container has overflow: hidden
+       elsewhere — let the dropdown escape the wrapper's own bg/border. */
+    overflow: visible;
+}
+[data-streamdown="table-wrapper"] > div:not([data-streamdown]) {
+    /* The toolbar div is the wrapper's first child without a data-streamdown
+       attribute. Lift the toolbar (and any open dropdown inside it) above
+       neighboring content within the same scroll container. */
+    position: relative;
+    z-index: 30;
+}
+
+/*
  * Streamdown / shadcn-compat utility resolution (CROWDEV-329 PR 5).
  *
  * Streamdown's bundled components emit shadcn-style utility classes
