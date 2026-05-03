@@ -16,6 +16,7 @@ const COMPONENTS = [
     "list_deferred_interest_promos",
     "list_installment_plans",
     "list_reminders",
+    "search_merchants",
     "propose_transaction_update",
     "propose_bulk_transaction_update",
     "propose_credit_card_metadata_update",
