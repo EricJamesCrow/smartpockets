@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Check, XClose } from "@untitledui/icons";
+import { ButtonUtility } from "@repo/ui/untitledui/base/buttons/button-utility";
+import { InputBase, TextField } from "@repo/ui/untitledui/base/input/input";
 
 interface RenameThreadDialogProps {
     currentTitle: string;
@@ -13,6 +15,12 @@ interface RenameThreadDialogProps {
  * Inline-edit form that replaces the chat history Link while editing.
  * Renders inside the same <li> as a normal ChatHistoryItem so the layout
  * stays steady. Submit on Enter / save button; cancel on Escape / X button.
+ *
+ * CROWDEV-343 (PR #162 codex P1): primitives are UntitledUI Pro
+ * (`InputBase`/`TextField` + `ButtonUtility`) so the form stays consistent
+ * with the rest of the app's input/button styling, focus rings, and dark-
+ * mode treatment. The inline pattern (icon-only save + cancel beside the
+ * input) mirrors what's used in settings and the appearance picker.
  */
 export function RenameThreadDialog({ currentTitle, onConfirm, onCancel }: RenameThreadDialogProps) {
     const [value, setValue] = useState(currentTitle);
@@ -35,39 +43,40 @@ export function RenameThreadDialog({ currentTitle, onConfirm, onCancel }: Rename
 
     return (
         <form onSubmit={handleSubmit} className="flex items-center gap-1 rounded-md px-1 py-0.5">
-            <input
-                type="text"
+            <TextField
                 aria-label="Rename conversation"
-                autoFocus
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={setValue}
+                isDisabled={submitting}
+                maxLength={120}
+                autoFocus
                 onKeyDown={(e) => {
                     if (e.key === "Escape") {
                         e.preventDefault();
                         onCancel();
                     }
                 }}
-                className="flex-1 min-w-0 rounded border border-secondary bg-primary px-2 py-1 text-sm text-primary outline-none focus:border-[var(--sp-moss-mint)]/50"
-                disabled={submitting}
-                maxLength={120}
-            />
-            <button
+                className="flex-1 min-w-0"
+            >
+                <InputBase size="sm" />
+            </TextField>
+            <ButtonUtility
                 type="submit"
-                aria-label="Save"
-                disabled={submitting}
-                className="shrink-0 rounded p-1 text-[var(--sp-moss-mint)] hover:bg-secondary disabled:opacity-50"
-            >
-                <Check className="size-4" />
-            </button>
-            <button
+                tooltip="Save"
+                isDisabled={submitting}
+                icon={Check}
+                color="secondary"
+                size="xs"
+            />
+            <ButtonUtility
                 type="button"
-                aria-label="Cancel"
+                tooltip="Cancel"
                 onClick={onCancel}
-                disabled={submitting}
-                className="shrink-0 rounded p-1 text-tertiary hover:bg-secondary disabled:opacity-50"
-            >
-                <XClose className="size-4" />
-            </button>
+                isDisabled={submitting}
+                icon={XClose}
+                color="tertiary"
+                size="xs"
+            />
         </form>
     );
 }
