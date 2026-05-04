@@ -51,7 +51,6 @@ export function ToolResultRenderer(props: ToolResultComponentProps) {
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
