@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { components } from "../../../_generated/api";
 import { agentQuery } from "../../functions";
+import { transactionToAgentRow, type AgentTransactionRow } from "./listTransactions";
 
 // Default window when the model omits dateFrom/dateTo. Searches need a
 // reasonable backlog ("recent Amazon charges") but not an unbounded scan.
@@ -10,6 +11,12 @@ const MAX_LIMIT = 50;
 // Number of transaction IDs to surface per merchant for live drill-down.
 // Cap to keep the payload small; the count is the source of truth.
 const SAMPLE_TRANSACTIONS_PER_MERCHANT = 5;
+// Cap on the per-row snapshot embedded for the agent. Sized so the model
+// can answer "give me details for the eBay row" without another tool
+// round-trip; sized small enough to stay near the runtime's 25-item array
+// reduction tier. `ids` and `preview.merchants[].count` still reflect the
+// full match set so the agent knows what was elided.
+const MAX_AGENT_ROWS = 50;
 
 type TransactionOverlayLike = {
     plaidTransactionId: string;
@@ -30,6 +37,11 @@ type RawTransaction = {
     categoryPrimary?: string;
     categoryDetailed?: string;
     pending: boolean;
+};
+
+type RawAccount = {
+    accountId: string;
+    mask?: string;
 };
 
 function isoDaysAgo(days: number): string {
@@ -63,6 +75,7 @@ export const searchMerchants = agentQuery({
         if (trimmedQuery.length === 0) {
             return {
                 ids: [],
+                rows: [],
                 preview: {
                     merchants: [],
                     summary: "Empty query",
@@ -76,12 +89,14 @@ export const searchMerchants = agentQuery({
         // Auth boundary: enumerate the viewer's accounts.
         const viewerAccounts = (await ctx.runQuery(components.plaid.public.getAccountsByUser, {
             userId: viewer.externalId,
-        })) as Array<{ accountId: string }>;
+        })) as RawAccount[];
         const viewerAccountIds = new Set(viewerAccounts.map((a) => a.accountId));
+        const accountMaskById = new Map(viewerAccounts.map((a) => [a.accountId, a.mask]));
 
         if (viewerAccountIds.size === 0) {
             return {
                 ids: [],
+                rows: [],
                 preview: {
                     merchants: [],
                     summary: "No accounts linked yet",
@@ -126,6 +141,9 @@ export const searchMerchants = agentQuery({
         };
         const merchants = new Map<string, MerchantBucket>();
         const allMatchedIds: string[] = [];
+        // Buffer matched transactions in encounter order so we can later
+        // emit per-row snapshots for the agent (newest first, capped).
+        const matchedTransactions: RawTransaction[] = [];
 
         for (const tx of visible) {
             const overlay = overlayByTxId.get(tx.transactionId);
@@ -135,6 +153,7 @@ export const searchMerchants = agentQuery({
             const effectiveDate = overlay?.userDate ?? tx.date;
             const dollars = tx.amount / 1000;
             allMatchedIds.push(tx.transactionId);
+            matchedTransactions.push(tx);
 
             const key = effectiveName;
             const bucket = merchants.get(key);
@@ -173,11 +192,28 @@ export const searchMerchants = agentQuery({
                     ? `1 merchant matching "${trimmedQuery}"`
                     : `${totalMerchants} merchants matching "${trimmedQuery}"`;
 
+        // Embed compact per-row snapshots for matched transactions so the
+        // agent can answer follow-up questions without another tool call.
+        // Newest-first so the most relevant rows survive the cap. Capped at
+        // MAX_AGENT_ROWS for token discipline; `ids` and merchant counts
+        // still reflect the full match set so the agent knows what was
+        // elided.
+        const rows: AgentTransactionRow[] = matchedTransactions
+            .slice()
+            .sort((a, b) => {
+                const aDate = overlayByTxId.get(a.transactionId)?.userDate ?? a.date;
+                const bDate = overlayByTxId.get(b.transactionId)?.userDate ?? b.date;
+                return aDate < bDate ? 1 : aDate > bDate ? -1 : 0;
+            })
+            .slice(0, MAX_AGENT_ROWS)
+            .map((tx) => transactionToAgentRow(tx, overlayByTxId.get(tx.transactionId), accountMaskById));
+
         return {
             // Surface every matched transaction ID so future drill-down
             // tools (and `deriveSummary`'s `${n} results` count) reflect
             // actual matches rather than just the bucketed merchants.
             ids: allMatchedIds,
+            rows,
             preview: {
                 merchants: truncated,
                 summary,

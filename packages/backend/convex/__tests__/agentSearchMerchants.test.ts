@@ -10,6 +10,11 @@
  *     - exclude hidden transactions
  *     - reject cross-user account spoofing
  *     - honor optional date window and limit cap
+ *
+ * Also covers CROWDEV-365 (this issue):
+ *   The tool must embed compact per-row snapshots in `rows` so the agent can
+ *   answer follow-ups like "give me details for the eBay row" without an
+ *   extra `get_transaction_detail` round-trip per ID.
  */
 
 import { describe, expect, it } from "vitest";
@@ -288,5 +293,100 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
             { userId: bId, query: "amazon" },
         )) as { ids: string[]; preview: { merchants: Array<{ name: string }> } };
         expect(owner.ids).toEqual(["tx_secret"]);
+    });
+
+    // ===== CROWDEV-365: agent rows snapshot =====
+
+    it("embeds compact per-row snapshots so the agent can answer 'give me details for the eBay row' without another tool call", async () => {
+        const t = setup();
+        const userId = await seedUser(t, "user_sm_j");
+        const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_sm_j");
+        // amount in milliunits → $42.99 outflow
+        await seedTransactions(t, "user_sm_j", plaidItemId, [
+            { transactionId: "tx_ebay_a", accountId, date: TODAY, name: "EBAY *ABC123", merchantName: "eBay", amount: 42_990 },
+        ]);
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.searchMerchants.searchMerchants,
+            { userId, query: "ebay" },
+        )) as {
+            ids: string[];
+            rows: Array<{
+                transactionId: string;
+                merchantName: string;
+                amount: number;
+                date: string;
+                pending: boolean;
+                accountMask?: string;
+            }>;
+        };
+
+        expect(out.ids).toEqual(["tx_ebay_a"]);
+        expect(out.rows).toHaveLength(1);
+        expect(out.rows[0]).toMatchObject({
+            transactionId: "tx_ebay_a",
+            merchantName: "eBay",
+            amount: 42.99,
+            date: TODAY,
+            pending: false,
+            accountMask: "1234",
+        });
+    });
+
+    it("rows are sorted newest-first and capped at 50 even when ids exceed the cap", async () => {
+        const t = setup();
+        const userId = await seedUser(t, "user_sm_k");
+        const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_sm_k");
+        // 60 Amazon transactions over 60 distinct days within the default
+        // 90-day search window. ids should be 60; rows should cap at 50
+        // and start with the newest.
+        const txns = Array.from({ length: 60 }, (_, i) => ({
+            transactionId: `tx_amzn_${i.toString().padStart(2, "0")}`,
+            accountId,
+            // i=0 → 59 days ago, i=59 → today
+            date: (() => {
+                const d = new Date();
+                d.setUTCDate(d.getUTCDate() - (59 - i));
+                return d.toISOString().slice(0, 10);
+            })(),
+            name: `Amazon ${i}`,
+            merchantName: "Amazon",
+            amount: 1_000 + i,
+        }));
+        await seedTransactions(t, "user_sm_k", plaidItemId, txns);
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.searchMerchants.searchMerchants,
+            { userId, query: "amazon" },
+        )) as {
+            ids: string[];
+            rows: Array<{ transactionId: string; date: string }>;
+            preview: { merchants: Array<{ count: number }> };
+        };
+
+        // All 60 matched ids are surfaced (count is the source of truth).
+        expect(out.ids).toHaveLength(60);
+        expect(out.preview.merchants[0]!.count).toBe(60);
+        // Rows are capped to keep the agent payload small.
+        expect(out.rows).toHaveLength(50);
+        // Newest first: row[0] should be the most recent (i=59 → today).
+        expect(out.rows[0]!.transactionId).toBe("tx_amzn_59");
+    });
+
+    it("returns an empty rows array on a zero-match query", async () => {
+        const t = setup();
+        const userId = await seedUser(t, "user_sm_l");
+        const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_sm_l");
+        await seedTransactions(t, "user_sm_l", plaidItemId, [
+            { transactionId: "tx_sb", accountId, date: TODAY, name: "Starbucks", merchantName: "Starbucks", amount: 5_000 },
+        ]);
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.searchMerchants.searchMerchants,
+            { userId, query: "ebay" },
+        )) as { ids: string[]; rows: unknown[] };
+
+        expect(out.ids).toEqual([]);
+        expect(out.rows).toEqual([]);
     });
 });
