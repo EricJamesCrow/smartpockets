@@ -12,7 +12,7 @@ Follow the repository instructions in `AGENTS.md`. The most important rules:
 2. Put the Linear issue ID in the branch name, PR title, and PR description.
 3. Use `Fixes <ISSUE-ID>` only when the PR fully completes the issue. Use `Refs <ISSUE-ID>` when partial, exploratory, documentation-only, or related.
 4. Post a Linear comment when starting work, when blocked, and when opening a PR.
-5. Never manually mark Linear issues as Done. PR automation handles that.
+5. Keep Linear state in sync with reality. The default path is `Fixes <ISSUE-ID>` in the PR body so the GitHub-Linear automation moves the issue to Done on merge — prefer that over manual updates. But when automation didn't fire (a `Refs` magic word was used, an issue bundled multiple PRs, the integration was offline, etc.) and the work is verifiably in `main`, it's fine — and expected — to manually move the issue to Done with a closing comment that cites the merged commit SHA + PR link. Don't mark Done speculatively ("should be done soon") or for partial work; only when the shipped state on `main` matches the issue's acceptance criteria.
 6. Do not merge PRs unless explicitly instructed.
 7. If an issue blocks verification, merge, or deployment of another issue, add the Linear blocker relationship and comment on both issues with the evidence and PR links.
 8. When working a sub-issue, move its parent to In Progress if the parent is still To-do or Backlog, then comment with the active child issue.
