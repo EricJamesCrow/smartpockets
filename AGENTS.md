@@ -140,9 +140,23 @@ When finishing, summarize the Linear issue used or created, branch name, Graphit
 
 | Command | Purpose |
 |---------|---------|
-| `cd packages/backend && npx convex dev` | Start Convex dev (if not using bun dev:backend) |
-| `cd packages/backend && npx convex deploy` | Deploy to production |
+| `cd packages/backend && bunx convex dev` | Keep dev deployment in sync continuously (auto-pushes on save) |
+| `cd packages/backend && bunx convex dev --once` | **One-shot push of backend functions to dev deployment** — run this after editing any file in `packages/backend/convex/` if you don't have `bun dev:backend` running |
+| `cd packages/backend && bunx convex deploy` | Deploy to production (use judgment — typically only via merge to main) |
 | `cd packages/convex-plaid && bun run build` | Rebuild local Plaid component after changes |
+
+### Backend changes must be deployed before testing
+
+Any edit under `packages/backend/convex/` (schema, queries, mutations, actions, agent tools, http actions) is **not visible to the running app or Vercel previews until the function bundle is pushed to the dev deployment**. The Vercel preview's `NEXT_PUBLIC_CONVEX_URL` points at `dev:canny-turtle-982`, so the new functions must be deployed there before the preview can use them.
+
+Symptoms of forgetting this step:
+- `Could not find public function for '<module>:<name>'. Did you forget to run \`npx convex dev\`?` errors in the browser console.
+- Tools, mutations, or queries returning stale results because the old version is still serving.
+- Schema fields referenced by new code being missing at runtime (`undefined` reads, `validator failed` errors, etc.).
+
+**The workflow:** finish editing → run `cd packages/backend && bunx convex dev --once` → THEN test in the preview / report to the user. Or keep `bun dev:backend` (which runs `bunx convex dev` in watch mode) running in a separate terminal so deploys happen automatically on save.
+
+For sub-agents implementing backend work: this is part of the verification step, not optional. A "DONE" report on backend work that hasn't been deployed is a false positive — the user will hit `Could not find public function` errors as soon as they test.
 
 ## Path Aliases
 
