@@ -127,14 +127,42 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
             { userId, query: "amazon" },
         )) as {
             ids: string[];
-            preview: { merchants: Array<{ name: string; count: number; totalAmount: number }>; summary: string };
+            preview: { merchants: Array<{ name: string; count: number; totalAmount: number; displayTotalAmount: number }>; summary: string };
         };
 
         expect(out.preview.merchants).toEqual([
-            expect.objectContaining({ name: "Amazon", count: 2, totalAmount: 60 }),
+            // Amazon: 2 outflows totaling $60 in Plaid convention.
+            // Display convention flips → displayTotalAmount: -60 (net money out).
+            expect.objectContaining({ name: "Amazon", count: 2, totalAmount: 60, displayTotalAmount: -60 }),
         ]);
         expect([...out.ids].sort()).toEqual(["tx_a1", "tx_a2"]);
         expect(out.preview.summary).toMatch(/1 merchant matching "amazon"/i);
+    });
+
+    it("inflow-dominant merchants get positive displayTotalAmount (CROWDEV-368)", async () => {
+        // Plaid stores inflows as negative amounts. Without a flipped
+        // `displayTotalAmount`, the model would echo "Zelle: 1 transaction
+        // totaling -$440" — confusing to the user (they received money,
+        // not spent negative money). The flipped field gives the model an
+        // unambiguous human-convention number to quote.
+        const t = setup();
+        const userId = await seedUser(t, "user_sm_inflow");
+        const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_sm_inflow");
+        await seedTransactions(t, "user_sm_inflow", plaidItemId, [
+            { transactionId: "tx_zelle", accountId, date: TODAY, name: "ZELLE FROM JV", merchantName: "Zelle from JV", amount: -440_000 },
+        ]);
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.searchMerchants.searchMerchants,
+            { userId, query: "zelle" },
+        )) as {
+            ids: string[];
+            preview: { merchants: Array<{ name: string; totalAmount: number; displayTotalAmount: number }> };
+        };
+
+        expect(out.ids).toEqual(["tx_zelle"]);
+        expect(out.preview.merchants[0]?.totalAmount).toBe(-440); // Plaid: net inflow → negative
+        expect(out.preview.merchants[0]?.displayTotalAmount).toBe(440); // Human: net money in → positive
     });
 
     it("falls back to `name` when `merchantName` is absent", async () => {
