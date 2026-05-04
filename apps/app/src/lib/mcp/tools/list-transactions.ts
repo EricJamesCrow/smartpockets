@@ -29,22 +29,34 @@ export async function listTransactions(token: string, cardId: string, startDate?
     // Fetch transactions for this account using the correct query name
     const transactions = await fetchQuery(api.transactions.queries.getTransactionsByAccountId, { accountId: card.accountId }, { token });
 
-    // Filter by date range and map to MCP format
+    // Filter by date range and map to MCP format. Each transaction carries
+    // both Plaid-convention (`amount`) and human-convention (`displayAmount`)
+    // fields so external MCP clients can echo human-convention amounts to
+    // their end users without having to know Plaid's inverted sign rule. See
+    // MCPTransaction docstring in `../types.ts`.
     const mappedTransactions: MCPTransaction[] = transactions
         .filter((tx) => {
             const txDate = parseLocalDate(tx.date);
             return txDate >= start && txDate <= end;
         })
-        .map((tx) => ({
-            id: tx._id,
-            date: tx.date,
-            merchant: tx.merchantName ?? tx.name ?? "Unknown",
-            amount: milliunitsToDollars(tx.amount),
-            category: tx.categoryPrimary ?? null,
-            pending: tx.pending ?? false,
-        }));
+        .map((tx) => {
+            const amount = milliunitsToDollars(tx.amount);
+            return {
+                id: tx._id,
+                date: tx.date,
+                merchant: tx.merchantName ?? tx.name ?? "Unknown",
+                amount,
+                displayAmount: -amount,
+                category: tx.categoryPrimary ?? null,
+                pending: tx.pending ?? false,
+            };
+        });
 
-    // Generate summary
+    // Generate summary. We sum on the Plaid-convention `amount` so filters
+    // line up with the in-app aggregation tools' "spend = positive Plaid"
+    // contract; the visible labels translate to user-facing language
+    // ("Total spent" / "Credits/refunds") so the summary itself doesn't
+    // expose the sign convention to end users.
     const totalSpent = mappedTransactions.filter((tx) => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
     const totalCredits = mappedTransactions.filter((tx) => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
