@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMoneyFromDollars } from "@/utils/money";
+import { formatTransactionAmountDollars } from "@/utils/transaction-helpers";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useToolHintSend } from "../shared/useToolHintSend";
 import type { ToolOutput, ToolResultComponentProps } from "../types";
@@ -9,7 +9,11 @@ import { MerchantsListSkeleton } from "./MerchantsListSkeleton";
 type MerchantBucket = {
     name: string;
     count: number;
-    /** Sum of `tx.amount / 1000` from the searchMerchants handler - dollars. */
+    /**
+     * Sum of `tx.amount / 1000` from the searchMerchants handler. Dollars in
+     * Plaid sign convention (positive = spend, negative = net incoming).
+     * The display layer flips the sign for human convention.
+     */
     totalAmount: number;
     lastDate: string;
     sampleTransactionIds: string[];
@@ -33,10 +37,6 @@ function formatDate(dateString: string): string {
 function formatWindow(window?: { from: string; to: string; granularity?: string }): string | undefined {
     if (!window) return undefined;
     return `${formatDate(window.from)} to ${formatDate(window.to)}`;
-}
-
-function formatAmount(dollars: number): string {
-    return formatMoneyFromDollars(dollars);
 }
 
 function formatCount(count: number): string {
@@ -81,6 +81,7 @@ export function MerchantsList(props: ToolResultComponentProps<unknown, ToolOutpu
                     {visible.map((merchant) => {
                         const sampleId = merchant.sampleTransactionIds[0];
                         const isClickable = Boolean(sampleId);
+                        const { text: amountText, colorClass: amountColor } = formatTransactionAmountDollars(merchant.totalAmount);
                         return (
                             <tr
                                 key={merchant.name}
@@ -101,8 +102,8 @@ export function MerchantsList(props: ToolResultComponentProps<unknown, ToolOutpu
                                 <td className="text-secondary py-2 pr-2 text-right tabular-nums">
                                     {formatCount(merchant.count)}
                                 </td>
-                                <td className="text-primary py-2 pr-2 text-right tabular-nums">
-                                    {formatAmount(merchant.totalAmount)}
+                                <td className={`py-2 pr-2 text-right tabular-nums ${amountColor}`}>
+                                    {amountText}
                                 </td>
                                 <td className="text-secondary py-2 pr-2 text-right tabular-nums">
                                     {formatDate(merchant.lastDate)}
