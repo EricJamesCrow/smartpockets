@@ -484,19 +484,19 @@ Things AI agents frequently get wrong in this codebase.
 | `git add -A` or `git add .` | Stage specific files by name |
 | Branch without Linear issue ID | Search/create Linear issue first, then use the issue ID in the branch name |
 | Push to main without PR | Create a Linear-linked feature branch, open PR via Graphite |
-| Showing GitHub PR links as the primary link | Show the Graphite PR link first |
+| Showing `github.com/.../pull/<N>` URLs in user-facing output | Always use the Graphite URL — never show GitHub PR links unless the user explicitly asks |
 
 ### Graphite PR Links
 
-SmartPockets uses Graphite as the primary review surface. When creating, submitting, or summarizing PRs, display Graphite links instead of GitHub links unless the user explicitly asks for GitHub or Graphite is unavailable.
+SmartPockets uses Graphite as the primary review surface. When referring to a PR in any user-facing output — chat responses, summaries, status updates, Linear comments, tables — **always** use the Graphite link. **Never include `github.com/.../pull/<N>` URLs** unless the user explicitly asks for the GitHub link.
 
-Use the Graphite URL printed by `gt submit`. If only a GitHub PR number or URL is available, convert it to this repo's Graphite format:
+Use the Graphite URL printed by `gt submit`. If a command (e.g., `gh pr view`, `gh pr checks`, `gh pr list`) returns only a GitHub PR number or URL, convert it to this repo's Graphite format before showing it:
 
 ```
 https://app.graphite.com/github/pr/EricJamesCrow/smartpockets/<PR_NUMBER>
 ```
 
-GitHub links may be included as secondary fallback context, but the user-facing PR link should point to Graphite.
+Do not present Graphite and GitHub links side by side. Graphite is the canonical user-facing link; GitHub URLs are for tooling use only (`gh pr` commands consume them, but they should not appear in messages, summaries, or Linear comments).
 
 ### Graphite PR Preview Verification
 
