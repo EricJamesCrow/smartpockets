@@ -38,7 +38,6 @@ export function MessageActionMinimal({
     }
   };
 
-  // D3: autofocus on mount.
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
@@ -47,19 +46,16 @@ export function MessageActionMinimal({
     // IME composition guard: ignore events fired mid-composition (Japanese, Chinese, Korean).
     if (event.nativeEvent.isComposing) return;
 
-    // D1: Cmd/Ctrl+Enter as alt submit.
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       submit();
       return;
     }
-    // Existing: Enter (no shift) submits.
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       submit();
       return;
     }
-    // D2: Esc clears non-empty, blurs empty.
     if (event.key === "Escape") {
       event.preventDefault();
       if (value.trim()) {
@@ -68,6 +64,7 @@ export function MessageActionMinimal({
       } else {
         textareaRef.current?.blur();
       }
+      return;
     }
   };
 
