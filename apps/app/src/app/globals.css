@@ -337,6 +337,11 @@
     animation: sp-skeleton-shimmer 1.6s ease-in-out infinite;
 }
 
+@keyframes sp-cursor-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 0.15; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .sp-aurora,
     .sp-shimmer-text,
