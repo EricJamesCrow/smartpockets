@@ -114,16 +114,44 @@ export const persistStep = internalMutation({
   },
 });
 
+// Reduces persisted `agentMessages` rows down to a valid Vercel AI SDK
+// `ModelMessage[]` for the next turn's `streamText` call. We must:
+//   - Drop `tool` rows. The AI SDK's `ToolModelMessage` schema requires
+//     `content: Array<ToolResultPart | ToolApprovalResponse>`; we don't
+//     persist `toolCallId` or the structured parts needed to reconstruct
+//     them, so emitting `{role: "tool", content: ""}` (the prior behaviour)
+//     fails Zod validation in `standardizePrompt` and `streamText` throws
+//     `InvalidPromptError` synchronously. The error is swallowed by
+//     `runAgentTurn`'s try/catch, no assistant row is persisted, and the
+//     user-marker `isStreaming` flag stays true forever — so the UI never
+//     receives a reply on turn 2+ after any tool-using turn (CROWDEV-355).
+//   - Drop `assistant` rows with empty/undefined text. These are tool-call
+//     carrier steps from `onStepFinish`; the model's natural-language
+//     summary follows in a later assistant step that already encodes the
+//     tool result for the user. Anthropic also rejects empty text blocks.
+//   - Drop `system` tombstones (e.g. "Run stopped by user."). The system
+//     prompt is rendered fresh per turn from `renderSystemPrompt`; these
+//     persisted system rows are a UI artifact, not model input.
+//   - Drop `user` rows with empty/undefined text — defensive only.
+//
+// Future improvement (separate ticket): persist `toolCallId` on tool result
+// rows and reconstruct full `ToolCallPart` / `ToolResultPart` content
+// arrays so the model sees its raw tool I/O. The natural-language summary
+// preserves enough context for follow-ups today.
 export const loadForStream = internalQuery({
   args: { threadId: v.id("agentThreads") },
   returns: v.array(v.any()),
   handler: async (ctx, { threadId }) => {
     const thread = await ctx.table("agentThreads").getX(threadId);
     const messages = await thread.edge("agentMessages").order("asc");
-    return messages.map((m: { role: string; text?: string }) => ({
-      role: m.role,
-      content: m.text ?? "",
-    }));
+    const out: Array<{ role: "user" | "assistant"; content: string }> = [];
+    for (const m of messages as Array<{ role: string; text?: string }>) {
+      if (m.role !== "user" && m.role !== "assistant") continue;
+      const text = m.text;
+      if (typeof text !== "string" || text.length === 0) continue;
+      out.push({ role: m.role, content: text });
+    }
+    return out;
   },
 });
 
