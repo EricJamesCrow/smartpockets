@@ -65,10 +65,18 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
                         return (
                             <tr
                                 key={tx._id}
+                                tabIndex={0}
+                                role="button"
                                 onClick={() => {
                                     void hint.openTransaction(tx._id);
                                 }}
-                                className="border-secondary hover:bg-secondary/40 cursor-pointer border-t"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        void hint.openTransaction(tx._id);
+                                    }
+                                }}
+                                className="border-secondary hover:bg-secondary/40 focus:bg-secondary/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sp-moss-mint)]/50 cursor-pointer border-t"
                             >
                                 <td className="text-secondary py-2 pr-2 tabular-nums">{formatDate(tx.date)}</td>
                                 <td className="text-primary py-2 pr-2">{tx.merchantName ?? tx.name}</td>

@@ -78,6 +78,10 @@ export function MessageList({
     if (matched) onMessagesLoaded?.();
   }, [matched, onMessagesLoaded]);
 
+  const isStreaming =
+    optimisticAssistantMessage?.isStreaming === true ||
+    (messages ?? []).some((m) => m.role === "assistant" && m.isStreaming === true);
+
   // First-send window: threadId is still null (or arrived but query not yet
   // returned) AND we have an optimistic bubble to show. Mount StickToBottom
   // with the optimistic-only list so the layout doesn't shift when threadId
@@ -95,6 +99,7 @@ export function MessageList({
           <StickToBottom.Content
             role="log"
             aria-live="polite"
+            aria-busy={isStreaming}
             className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8"
           >
             {optimisticUserMessage && (
@@ -133,6 +138,7 @@ export function MessageList({
       <StickToBottom.Content
         role="log"
         aria-live="polite"
+        aria-busy={isStreaming}
         className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8"
       >
         {displayMessages.map((message) => (
