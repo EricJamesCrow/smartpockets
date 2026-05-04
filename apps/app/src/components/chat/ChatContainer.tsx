@@ -8,7 +8,7 @@ interface ChatContainerProps {
 
 export function ChatContainer({ children }: ChatContainerProps) {
   return (
-    <div className="flex h-screen flex-col bg-primary">
+    <div className="flex h-[100dvh] flex-col bg-primary">
       <div className="relative flex flex-1 flex-col overflow-hidden">{children}</div>
     </div>
   );

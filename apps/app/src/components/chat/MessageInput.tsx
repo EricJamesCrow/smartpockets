@@ -18,7 +18,7 @@ export function MessageInput({
   disabled,
 }: MessageInputProps) {
   return (
-    <div className="bg-primary px-4 pb-6 pt-2 md:px-8">
+    <div className="bg-primary px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 md:px-8">
       <div className="mx-auto max-w-4xl">
         <MessageActionMinimal
           onSubmit={onSend}

@@ -53,7 +53,7 @@ export function ChatBanner({ state, onDismiss }: ChatBannerProps) {
         type="button"
         onClick={onDismiss}
         aria-label="Dismiss"
-        className="ml-auto rounded p-1 hover:bg-warning-secondary"
+        className="ml-auto rounded p-1 hover:bg-warning-primary/10 dark:hover:bg-warning-primary/20"
       >
         <XClose className="size-4" />
       </button>
