@@ -1,50 +1,92 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "convex-helpers/react/cache/hooks";
+import { StickToBottom } from "use-stick-to-bottom";
 import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { MessageBubble } from "@/components/chat/MessageBubble";
+import { ScrollToBottomButton } from "@/components/chat/ScrollToBottomButton";
 
 type AgentMessage = Doc<"agentMessages">;
 
 interface MessageListProps {
   threadId: Id<"agentThreads"> | null;
-  optimisticPrompt?: string | null;
+  /**
+   * A synthesized user message rendered in-line with the real query rows so the
+   * UI reflects the just-typed prompt during the 100–400ms before the real
+   * `agentMessages` row arrives. The list dedupes against the query: once a
+   * matching real row appears, the optimistic copy disappears (single source of
+   * truth — no parallel render block, no flicker).
+   */
+  optimisticUserMessage?: AgentMessage | null;
   onMessagesLoaded?: () => void;
   onRegenerate?: (message: AgentMessage) => Promise<void> | void;
 }
 
 export function MessageList({
   threadId,
-  optimisticPrompt,
+  optimisticUserMessage,
   onMessagesLoaded,
   onRegenerate,
 }: MessageListProps) {
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const messages = useQuery(
+    api.agent.threads.listMessages,
+    threadId ? { threadId } : "skip",
+  ) as AgentMessage[] | undefined;
 
-  const messages = useQuery(api.agent.threads.listMessages, threadId ? { threadId } : "skip") as
-    | AgentMessage[]
-    | undefined;
+  // The real query row has caught up to the optimistic prompt — used both to
+  // suppress the optimistic copy in `displayMessages` and to fire
+  // `onMessagesLoaded` exactly once on the transition.
+  const matched = useMemo(() => {
+    if (!messages || !optimisticUserMessage) return false;
+    const t = optimisticUserMessage.text?.trim();
+    return Boolean(t) && messages.some((m) => m.role === "user" && m.text?.trim() === t);
+  }, [messages, optimisticUserMessage]);
 
-  const normalized = optimisticPrompt?.trim();
-  const matched =
-    normalized && messages
-      ? messages.some((m) => m.role === "user" && m.text?.trim() === normalized)
-      : false;
-  const showOptimistic = Boolean(normalized && !matched);
+  // Merge the optimistic user message into the list when present and not yet
+  // superseded by a matching real row. When the query hasn't returned yet
+  // (first-send window: threadId still null), render the optimistic-only list.
+  const displayMessages = useMemo<AgentMessage[]>(() => {
+    if (!messages) return optimisticUserMessage ? [optimisticUserMessage] : [];
+    if (matched) return messages;
+    return optimisticUserMessage ? [...messages, optimisticUserMessage] : messages;
+  }, [messages, optimisticUserMessage, matched]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages?.length, showOptimistic]);
-
-  useEffect(() => {
-    if (matched && onMessagesLoaded) onMessagesLoaded();
+    if (matched) onMessagesLoaded?.();
   }, [matched, onMessagesLoaded]);
 
-  if (!threadId && !optimisticPrompt) return null;
-
-  if (messages === undefined && !optimisticPrompt) {
+  // First-send window: threadId is still null (or arrived but query not yet
+  // returned) AND we have an optimistic bubble to show. Mount StickToBottom
+  // with the optimistic-only list so the layout doesn't shift when threadId
+  // arrives or when the real row lands. Skip the spinner — we have a real
+  // message to show; the spinner is for the thread-fetch loading state where
+  // we have nothing to render.
+  if (!threadId || messages === undefined) {
+    if (optimisticUserMessage) {
+      return (
+        <StickToBottom
+          className="relative flex flex-1 flex-col overflow-hidden"
+          resize="smooth"
+          initial="instant"
+        >
+          <StickToBottom.Content
+            role="log"
+            aria-live="polite"
+            className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8"
+          >
+            <MessageBubble
+              key={optimisticUserMessage._id}
+              message={optimisticUserMessage}
+              threadId={optimisticUserMessage.agentThreadId}
+            />
+          </StickToBottom.Content>
+          <ScrollToBottomButton />
+        </StickToBottom>
+      );
+    }
+    if (!threadId) return null;
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="size-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
@@ -53,56 +95,30 @@ export function MessageList({
   }
 
   return (
-    <div
-      role="log"
-      aria-live="polite"
-      className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8"
+    <StickToBottom
+      className="relative flex flex-1 flex-col overflow-hidden"
+      resize="smooth"
+      initial="instant"
     >
-      {messages?.map((message) => (
-        <MessageBubble
-          key={message._id}
-          message={message}
-          threadId={threadId!}
-          onRegenerate={
-            onRegenerate && message.role === "assistant"
-              ? () => onRegenerate(message)
-              : undefined
-          }
-        />
-      ))}
-      {showOptimistic && normalized && (
-        <>
-          <div className="group/msg flex flex-row-reverse gap-4">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-solid text-xs font-semibold text-white">
-              You
-            </div>
-            <div className="flex max-w-[80%] flex-col items-end gap-1">
-              <div className="rounded-2xl rounded-tr-none bg-brand-solid px-5 py-3 text-sm text-white">
-                <p className="whitespace-pre-wrap leading-relaxed">{normalized}</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-primary">
-              SP
-            </div>
-            <div className="min-h-[42px] rounded-2xl rounded-tl-none bg-secondary px-5 py-3 text-sm text-primary">
-              <div className="flex gap-1">
-                <span className="size-2 animate-bounce rounded-full bg-tertiary" />
-                <span
-                  className="size-2 animate-bounce rounded-full bg-tertiary"
-                  style={{ animationDelay: "0.15s" }}
-                />
-                <span
-                  className="size-2 animate-bounce rounded-full bg-tertiary"
-                  style={{ animationDelay: "0.3s" }}
-                />
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-      <div ref={endRef} />
-    </div>
+      <StickToBottom.Content
+        role="log"
+        aria-live="polite"
+        className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8"
+      >
+        {displayMessages.map((message) => (
+          <MessageBubble
+            key={message._id}
+            message={message}
+            threadId={threadId}
+            onRegenerate={
+              onRegenerate && message.role === "assistant"
+                ? () => onRegenerate(message)
+                : undefined
+            }
+          />
+        ))}
+      </StickToBottom.Content>
+      <ScrollToBottomButton />
+    </StickToBottom>
   );
 }
