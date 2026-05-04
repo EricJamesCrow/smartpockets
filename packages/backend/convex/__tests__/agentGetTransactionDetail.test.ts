@@ -121,6 +121,7 @@ describe("get_transaction_detail agent tool (CROWDEV-365)", () => {
                 transactionId: string;
                 merchantName: string;
                 amount: number;
+                displayAmount: number;
                 date: string;
                 pending: boolean;
                 accountMask?: string;
@@ -133,7 +134,8 @@ describe("get_transaction_detail agent tool (CROWDEV-365)", () => {
         expect(out.row).toMatchObject({
             transactionId: "tx_ebay",
             merchantName: "eBay",
-            amount: 42.99,
+            amount: 42.99, // Plaid convention: positive = outflow
+            displayAmount: -42.99, // Human convention: negative = money out
             date: "2026-04-19",
             pending: false,
             accountMask: "1234",

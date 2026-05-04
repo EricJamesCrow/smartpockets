@@ -315,6 +315,7 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
                 transactionId: string;
                 merchantName: string;
                 amount: number;
+                displayAmount: number;
                 date: string;
                 pending: boolean;
                 accountMask?: string;
@@ -326,7 +327,8 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
         expect(out.rows[0]).toMatchObject({
             transactionId: "tx_ebay_a",
             merchantName: "eBay",
-            amount: 42.99,
+            amount: 42.99, // Plaid convention: positive = outflow
+            displayAmount: -42.99, // Human convention: negative = money out
             date: TODAY,
             pending: false,
             accountMask: "1234",

@@ -280,6 +280,7 @@ describe("list_transactions agent tool (CROWDEV-344)", () => {
                 date: string;
                 merchantName: string;
                 amount: number;
+                displayAmount: number;
                 pending: boolean;
                 accountMask?: string;
             }>;
@@ -291,10 +292,35 @@ describe("list_transactions agent tool (CROWDEV-344)", () => {
             transactionId: "tx_ebay",
             date: "2026-04-19",
             merchantName: "eBay",
-            amount: 12.5, // milliunits → dollars
+            amount: 12.5, // Plaid convention: positive = outflow
+            displayAmount: -12.5, // Human convention: negative = money out
             pending: false,
             accountMask: "1234", // from seedPlaidItemAndAccount mask
         });
+    });
+
+    it("inflows produce positive displayAmount even though Plaid stores them as negative", async () => {
+        // Plaid convention: negative amount = inflow (refund / income / deposit).
+        // The model must emit positive +$X.XX for inflows in user-facing text,
+        // matching what the user sees in TransactionsTable. Without this
+        // sign-flipped `displayAmount`, an eBay refund of -$550.47 (Plaid)
+        // gets echoed as "-$550.47" by the model and the user thinks money
+        // went OUT instead of IN.
+        const t = setup();
+        const userId = await seedUser(t, "user_lt_inflow");
+        const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_lt_inflow");
+        await seedTransactions(t, "user_lt_inflow", plaidItemId, [
+            { transactionId: "tx_refund", accountId, date: "2026-05-03", name: "EBAY*REFUND", merchantName: "eBay", amount: -550_470 },
+        ]);
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.listTransactions.listTransactions,
+            { userId },
+        )) as { rows: Array<{ amount: number; displayAmount: number }> };
+
+        expect(out.rows).toHaveLength(1);
+        expect(out.rows[0]?.amount).toBe(-550.47); // Plaid: negative = inflow
+        expect(out.rows[0]?.displayAmount).toBe(550.47); // Human: positive = money in
     });
 
     it("rows mirror overlay-corrected merchant name, date, and category", async () => {
