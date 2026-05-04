@@ -487,6 +487,10 @@ export const runAgentTurn = internalAction({
             }) as Promise<Array<{ _id: string; role: string; text?: string; toolCallsJson?: string }>>,
         ]);
         const latestUserMessage = msgs.find((m) => m._id === (userMessageId as unknown as string));
+        // CROWDEV-351: capture first-turn marker so we can schedule auto-titling
+        // after the run completes. Pre-turn snapshot has exactly 1 message
+        // (the user prompt just appended) on the first turn.
+        const isFirstTurn = msgs.length === 1;
         const tools = buildToolsForAgent({
             ctx,
             userId,
@@ -660,6 +664,11 @@ export const runAgentTurn = internalAction({
                 await ctx.runAction(agent.compaction.maybeCompact, { threadId });
             } catch (err) {
                 console.warn("[agent.runtime] compaction skipped:", err);
+            }
+            // CROWDEV-351: auto-title the thread after the first turn. Action
+            // is best-effort and re-checks skip-if-set, so a no-op on aborts.
+            if (isFirstTurn) {
+                await ctx.scheduler.runAfter(0, agent.titling.generateThreadTitle, { threadId });
             }
         }
         return null;

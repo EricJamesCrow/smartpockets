@@ -22,6 +22,7 @@ import type * as agent_registry from "../agent/registry.js";
 import type * as agent_runtime from "../agent/runtime.js";
 import type * as agent_system from "../agent/system.js";
 import type * as agent_threads from "../agent/threads.js";
+import type * as agent_titling from "../agent/titling.js";
 import type * as agent_tools_execute_cancelProposal from "../agent/tools/execute/cancelProposal.js";
 import type * as agent_tools_execute_executeConfirmedProposal from "../agent/tools/execute/executeConfirmedProposal.js";
 import type * as agent_tools_execute_triggerPlaidResync from "../agent/tools/execute/triggerPlaidResync.js";
@@ -150,6 +151,7 @@ declare const fullApi: ApiFromModules<{
   "agent/runtime": typeof agent_runtime;
   "agent/system": typeof agent_system;
   "agent/threads": typeof agent_threads;
+  "agent/titling": typeof agent_titling;
   "agent/tools/execute/cancelProposal": typeof agent_tools_execute_cancelProposal;
   "agent/tools/execute/executeConfirmedProposal": typeof agent_tools_execute_executeConfirmedProposal;
   "agent/tools/execute/triggerPlaidResync": typeof agent_tools_execute_triggerPlaidResync;
