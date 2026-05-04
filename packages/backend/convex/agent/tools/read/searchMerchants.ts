@@ -132,10 +132,21 @@ export const searchMerchants = agentQuery({
         // user's overlay so a transaction the user renamed to "Amazon"
         // shows up when they search "amazon" even if Plaid called it
         // "AMZN MKTP US*A12B3CD".
+        // CROWDEV-368: each merchant bucket exposes both `totalAmount` (Plaid
+        // convention: net signed sum, positive = net outflow) and
+        // `displayTotalAmount` (human convention: positive = net money in).
+        // Inflow-dominant merchants like "Zelle from family" have negative
+        // `totalAmount` in Plaid convention; without `displayTotalAmount`,
+        // the model would echo back "totaling -$440" which reads as if the
+        // user spent negative money. The model is instructed (system prompt
+        // rule #10) to use `displayTotalAmount` when echoing merchant totals.
         type MerchantBucket = {
             name: string;
             count: number;
-            totalAmount: number; // dollars
+            /** Plaid convention: positive = net outflow (dollars). */
+            totalAmount: number;
+            /** Human convention: positive = net money in (dollars). Use this in user-facing text. */
+            displayTotalAmount: number;
             lastDate: string;
             sampleTransactionIds: string[];
         };
@@ -160,6 +171,7 @@ export const searchMerchants = agentQuery({
             if (bucket) {
                 bucket.count += 1;
                 bucket.totalAmount += dollars;
+                bucket.displayTotalAmount = -bucket.totalAmount;
                 if (effectiveDate > bucket.lastDate) bucket.lastDate = effectiveDate;
                 if (bucket.sampleTransactionIds.length < SAMPLE_TRANSACTIONS_PER_MERCHANT) {
                     bucket.sampleTransactionIds.push(tx.transactionId);
@@ -169,6 +181,7 @@ export const searchMerchants = agentQuery({
                     name: effectiveName,
                     count: 1,
                     totalAmount: dollars,
+                    displayTotalAmount: -dollars,
                     lastDate: effectiveDate,
                     sampleTransactionIds: [tx.transactionId],
                 });
