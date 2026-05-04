@@ -660,6 +660,20 @@ export const runAgentTurn = internalAction({
                 console.error("[agent.runtime] run failed:", err);
             }
         } finally {
+            // CROWDEV-367: defensive cleanup — if `streamText` errored before
+            // any assistant row landed (provider 5xx, network failure, Zod
+            // validation in `loadForStream` → `standardizePrompt`, invalid
+            // model id), the user-marker `isStreaming` flag would otherwise
+            // stay true forever, sticking the typing indicator + stop button
+            // in the chat UI on the next page-load (and on the next user send,
+            // since `appendUserTurn` only clears `cancelledAtTurn`). This is
+            // a no-op on the success path (assistant row landed) and on the
+            // user-abort path (`abortRun` already flipped the flag).
+            try {
+                await ctx.runMutation(agent.threads.finalizeUserTurnIfStranded, { threadId });
+            } catch (err) {
+                console.warn("[agent.runtime] finalizeUserTurnIfStranded failed:", err);
+            }
             try {
                 await ctx.runAction(agent.compaction.maybeCompact, { threadId });
             } catch (err) {
