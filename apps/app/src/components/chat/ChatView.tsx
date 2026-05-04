@@ -84,19 +84,24 @@ function buildOptimisticUserMessage(
 /**
  * Build a synthesized assistant-role row that renders as the typing
  * indicator. `MessageBubble` keys on `isStreaming && (!text || text === "")`
- * to swap into the bouncing-dots affordance, so we set both. The id is
- * suffixed `_assistant` to keep React keys distinct from the user
- * counterpart. CROWDEV-343: this restores the parallel "user bubble +
- * thinking dots" UX that was dropped when PR #156 unified the optimistic
- * render path. Dedup logic in MessageList drops this row once a real
- * assistant message arrives ordered after the latest user turn.
+ * to swap into the bouncing-dots affordance, so we set both. CROWDEV-343:
+ * this restores the parallel "user bubble + thinking dots" UX that was
+ * dropped when PR #156 unified the optimistic render path. Dedup logic in
+ * MessageList drops this row once a real assistant message arrives ordered
+ * after the latest user turn.
+ *
+ * `idSuffix` makes the React key stable across renders while a single
+ * indicator session is active. Without that stability React would unmount
+ * and remount the bubble each time `messages` changes (CROWDEV-363). See
+ * `indicatorSuffix` in `ChatViewBody` for the derivation.
  */
 function buildOptimisticAssistantMessage(
   threadId: Id<"agentThreads"> | null,
+  idSuffix: string,
 ): AgentMessage {
   const now = Date.now();
   return {
-    _id: `optimistic_assistant_${now}` as Id<"agentMessages">,
+    _id: `optimistic_assistant_${idSuffix}` as Id<"agentMessages">,
     _creationTime: now,
     agentThreadId: (threadId ?? "optimistic_thread") as Id<"agentThreads">,
     role: "assistant",
@@ -166,29 +171,59 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     return buildOptimisticUserMessage(pendingPrompt, threadId);
   }, [pendingPrompt, threadId]);
 
-  // CROWDEV-343 (FIX 7): when a turn is in flight and no assistant row has
-  // landed yet, surface a synthesized "thinking" assistant row so the bubble
-  // renders bouncing dots immediately on send. Three predicates must hold:
-  //   1. We have a pending prompt (the user just sent something).
-  //   2. EITHER no thread query yet (first send: threadId still null)
-  //      OR no assistant row ordered after the latest user row in the
-  //      current messages list.
-  // The MessageList dedupe + MessageBubble's isStreaming-without-text
-  // rendering close the loop visually.
+  // CROWDEV-363: the typing indicator must show on EVERY turn — not only the
+  // first send. PR #168's original derivation was gated solely on
+  // `pendingPrompt`, which `MessageList` clears via `onMessagesLoaded` the
+  // moment the real user row matches by text. On the first send the thread
+  // doesn't exist yet, so the gap between pendingPrompt-clear and the real
+  // assistant streaming row is masked by the URL change + remount. On
+  // follow-ups the user row lands almost immediately, `pendingPrompt`
+  // clears, and the dots vanish for the multi-second window before the
+  // assistant starts streaming.
+  //
+  // Fix: show the indicator when ANY of these hold:
+  //   1. We have a pending prompt and the real user row hasn't yet caught
+  //      up — covers both the first-send window (no `messages` yet) and the
+  //      brief follow-up window between fetch and query refresh.
+  //   2. The same `isStreaming` signal the stop button uses
+  //      (lastUser.isStreaming === true && no assistant ordered after it).
+  //      This is the steady-state condition that bridges from the moment
+  //      the new user row lands to the moment the first assistant token
+  //      starts streaming.
+  //
+  // Once a real streaming assistant row lands creation-time-after the user
+  // row, both conditions flip false and the synthesized bubble disappears.
+  // The real streaming row continues to render bouncing dots in
+  // `MessageBubble` (it uses `isStreaming && !text` per-bubble), so the
+  // visual transitions seamlessly.
+  const pendingPromptInFlight = useMemo(() => {
+    if (!pendingPrompt) return false;
+    if (!messages) return true;
+    const trimmed = pendingPrompt.trim();
+    if (!trimmed) return false;
+    return !messages.some((m) => m.role === "user" && m.text?.trim() === trimmed);
+  }, [pendingPrompt, messages]);
+
+  const showAssistantTypingIndicator = pendingPromptInFlight || isStreaming;
+
+  // Stable React key for the synthesized bubble across an indicator session.
+  // The synthesized bubble's key must NOT change between renders of the same
+  // turn — `MessageList` updates whenever the `messages` query refreshes (any
+  // field on any row), and a key change would unmount/remount the bubble,
+  // killing the bounce animation and producing a visible flicker. The
+  // indicator naturally appears + disappears around each turn boundary
+  // (between turns `showAssistantTypingIndicator` is false, so the bubble
+  // unmounts), so a per-thread-stable id is sufficient — the same key is
+  // safely reused across turns because there's always a render gap of "no
+  // bubble" in between. For the very first send (no threadId yet), key on
+  // a per-prompt placeholder so we don't collide with neighbouring threads
+  // in the same React tree.
+  const indicatorSuffix = threadId ?? `new_${pendingPrompt ?? "idle"}`;
+
   const optimisticAssistantMessage = useMemo<AgentMessage | null>(() => {
-    if (!pendingPrompt) return null;
-    if (!messages) return buildOptimisticAssistantMessage(threadId);
-    // Find latest user row; if no assistant row creation-time-after it, we're still waiting.
-    const latestUser = [...messages]
-      .reverse()
-      .find((m) => m.role === "user");
-    const latestUserCreated = latestUser?._creationTime ?? 0;
-    const hasAssistantAfter = messages.some(
-      (m) => m.role === "assistant" && (m._creationTime ?? 0) > latestUserCreated,
-    );
-    if (hasAssistantAfter) return null;
-    return buildOptimisticAssistantMessage(threadId);
-  }, [pendingPrompt, messages, threadId]);
+    if (!showAssistantTypingIndicator) return null;
+    return buildOptimisticAssistantMessage(threadId, indicatorSuffix);
+  }, [showAssistantTypingIndicator, threadId, indicatorSuffix]);
 
   const routeError = (err: unknown) => {
     const typed = translateError(err);
