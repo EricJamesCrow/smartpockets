@@ -9,7 +9,7 @@ import { ButtonUtility } from "@repo/ui/untitledui/base/buttons/button-utility";
 import { Select } from "@repo/ui/untitledui/base/select/select";
 import { DatePicker } from "@repo/ui/untitledui/application/date-picker/date-picker";
 import { TextArea } from "@repo/ui/untitledui/base/textarea/textarea";
-import { Copy01, ScissorsCut01 } from "@untitledui/icons";
+import { Check, Copy01, ScissorsCut01 } from "@untitledui/icons";
 import { InlineEditableField } from "@/components/credit-cards/details/InlineEditableField";
 import {
   TRANSACTION_CATEGORIES,
@@ -161,16 +161,18 @@ export function TransactionDetailFields({
           <span className="flex-1 truncate text-sm text-secondary">
             {transaction.name}
           </span>
+          {/*
+            CROWDEV-364: Swap copy icon → checkmark on success instead of
+            showing a "Copied" text label. Tooltip flips to "Copied" so
+            assistive tech and hover users still see the success state.
+          */}
           <ButtonUtility
-            icon={Copy01}
+            icon={copied ? Check : Copy01}
             size="xs"
             color="tertiary"
-            tooltip="Copy original statement"
+            tooltip={copied ? "Copied" : "Copy original statement"}
             onClick={handleCopy}
           />
-          {copied && (
-            <span className="text-xs text-utility-success-600">Copied</span>
-          )}
         </div>
       </div>
 
