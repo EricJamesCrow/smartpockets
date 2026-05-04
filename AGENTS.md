@@ -508,6 +508,8 @@ Things AI agents frequently get wrong in this codebase.
 | Assuming sub-agents inherit `.env.local` and `node_modules` from the parent | Brief them to bootstrap: `cp <parent-worktree>/apps/app/.env.local apps/app/.env.local && bun install` before any backend deploy or app build |
 | One sub-agent running `git branch -f` or `git symbolic-ref HEAD ...` to "recover" | That's a sign two agents collided in one worktree — abort and re-dispatch with isolation instead of patching corruption |
 | Letting parallel sub-agents stack PRs off the same parent without telling them which parent commit | Name the explicit parent SHA / Graphite branch in each prompt so their stacks don't overlap |
+| Asking a sub-agent to "audit X" without naming surfaces | Specify every surface to check by name. "Audit amount-bearing fields" missed model-emitted markdown and the external MCP path; "Audit React tool-result components + agent-emitted markdown/prose + external MCP outputs + email templates + spend chart axes" doesn't. |
+| Trusting a sub-agent's "audit done" report without verification | Read the actual files. Spec compliance reviewer subagents exist for exactly this — dispatch one, or do the spot-check yourself before declaring done. |
 
 When you need to fan out to two or more sub-agents at the same time, **always** pass `isolation: "worktree"` on every parallel `Agent` tool call. Sharing one worktree across parallel agents is unsafe: they will race on `git checkout`, force-move branches with `git branch -f`, stash files into `/tmp`, and overwrite each other's edits. We have already spent multiple sessions recovering from this with `git symbolic-ref HEAD ...` — the recovery is not worth the avoidable risk.
 
@@ -525,6 +527,21 @@ bun install
 The cached `node_modules` from the parent worktree is NOT shared — each worktree gets its own. Skipping `bun install` will surface as missing-module errors at typecheck or build time.
 
 When you want all the parallel sub-agents to land on the same eventual stack, give each one an explicit `parent commit SHA` or `Graphite branch name` to branch from. Don't leave them to guess; otherwise they'll each fork off `main` and their stacks will collide at consolidation time.
+
+#### Audit scope discipline
+
+When you ask a sub-agent (or yourself) to "audit X for issue Y", **enumerate every surface in scope by name** before any code reads happen. Vague audits miss surfaces.
+
+Pattern that has failed twice in this codebase:
+
+1. CROWDEV-348/CROWDEV-349 (search merchants / get plaid health raw-text dumps): the original fix patched only `searchMerchants` because the audit was scoped to "tool-result components", and `getPlaidHealth` was overlooked despite having the same JSON-dump bug.
+2. CROWDEV-366/CROWDEV-368/CROWDEV-369 (Plaid sign convention): the original fix patched only React tool-result components because the audit was scoped to "where amounts are displayed in the UI". It missed (a) model-emitted markdown tables, (b) model-emitted prose, (c) merchant aggregation totals in `searchMerchants`, (d) the external MCP `MCPTransaction` payload. Each gap took its own follow-up PR.
+
+Pattern that works:
+
+> "Audit every surface where the user (or an external client) might see a `<value>`. The surfaces are: React components rendering it, system prompt rules guiding the model's text output, tool output schemas the model echoes verbatim, external MCP tool payloads, email templates, raw `convex/_generated` action returns. For each surface, document whether it's correct, needs a fix, or is intentionally out-of-scope (with reasoning)."
+
+The reviewer (you, or a `spec-reviewer` subagent) should not accept "audit done" without a per-surface enumeration in the audit report.
 
 ### Graphite PR Links
 
@@ -605,6 +622,41 @@ The browser error `Clerk: Production Keys are only allowed for domain "smartpock
 Only share production Clerk settings/data with a preview if the preview is intentionally hosted on an approved `smartpockets.com` subdomain. The default Graphite/Vercel preview workflow should use Clerk development keys and non-production Convex data.
 
 Preview auth should use the shared `https://preview.smartpockets.com` auth host and force post-login redirects to the configured stable app origin. Do not build custom app-side `redirect_url` values from generated or shared preview URLs, do not add Clerk satellite props unless the Clerk instance is explicitly configured and smoke-tested for those domains, and do not use generated `smartpockets-app-*.vercel.app` URLs as post-login destinations.
+
+## Agent Tool Output Patterns
+
+Tool outputs are read by both the React frontend (rendering the structured tool result) and the LLM (which often quotes values from those outputs verbatim in markdown tables, prose summaries, and follow-up reasoning). The model is not great at arithmetic and worse at remembering convention overrides under semantic priors. Design tool outputs so the model can copy values verbatim, never compute or reason about them.
+
+### Pre-format every value the model echoes
+
+If the model is going to render a tool-output value into user-facing text, **the tool's output payload should already contain the exact string that should appear in the user's message**. Don't ask the model to format, sign-flip, currency-convert, or otherwise massage a number it sees in a row.
+
+The CROWDEV-329 polish round demonstrated this the hard way. We added `displayAmount: number` (Plaid sign flipped) to `AgentTransactionRow` and updated system prompt rule #10 to instruct the model to use it instead of `amount`. Haiku correctly used `displayAmount` for 9 of 10 rows in a typical query — but for the row with the strongest "purchase" semantic prior (eBay refund, `merchantName: "eBay"` + `category: "GENERAL_MERCHANDISE_ONLINE_MARKETPLACES"`), the model overrode the explicit field and rendered the Plaid sign anyway, calling a refund a "purchase" in the prose summary.
+
+The fix that actually held was to give the model a pre-formatted string field (`amountFormatted: "+$550.47"`) that it copies verbatim, plus a `direction: "inflow" | "outflow"` field for verb selection. The model can't get the formatting wrong because there's no formatting step. See `packages/backend/convex/agent/tools/read/listTransactions.ts` `AgentTransactionRow` for the canonical shape.
+
+### Convention checklist when designing a new tool output
+
+When a new tool returns values the model will echo back to the user, include all of:
+
+- **`<value>`** — the canonical value (e.g., raw number in canonical units; raw enum). Used by the frontend, by aggregation arithmetic, by other tools.
+- **`<value>Formatted: string`** — the pre-formatted user-facing string, ready to copy verbatim. The system prompt rule for that tool should say "copy verbatim, never compute".
+- **`<value>Direction` / `<value>Label`** — when the value's interpretation is ambiguous (sign, status, severity), provide an explicit categorical label so the model picks the right verb / phrasing without inferring from the value itself.
+- **JSDoc on the row schema** spelling out which field is for which audience (frontend / model verbatim / model arithmetic).
+
+### What this means for system prompt rules
+
+The system prompt should state the verbatim-copy rule explicitly with hard examples and anti-examples. Soft hints ("prefer `<field>` when displaying") get overridden by semantic priors under sufficient confusion. Hard rules ("**copy `amountFormatted` VERBATIM. Do not compute it. Do not adjust based on merchant name, category, or prior beliefs about whether it 'looks like' a purchase**") survive.
+
+When the convention applies to multiple tools (`amount` semantics across listTransactions / getTransactionDetail / searchMerchants), document the rule once in the system prompt and reference it from each tool's registry description so the model sees the convention at tool-discovery time too.
+
+### When NOT to pre-format
+
+- **Pure aggregation tools** where the output value's only role is feeding another computation (no user-facing display). Keep these in canonical units.
+- **High-cardinality fields** where every distinct value needs its own format (e.g., currency-localised dates) — pre-formatting balloons payload size. Use a system prompt directive instead.
+- **Trivial cases the model never gets wrong** (booleans, simple counts). Don't add ceremony unless real failures show up.
+
+The tipping point is: did the model ever, in real testing, render this value wrong? If yes, pre-format. If no, leave it.
 
 ## Schema Overview
 
