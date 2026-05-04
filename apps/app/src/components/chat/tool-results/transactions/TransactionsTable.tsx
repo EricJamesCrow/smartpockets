@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMoneyFromMilliunits } from "@/utils/money";
+import { formatTransactionAmount } from "@/utils/transaction-helpers";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveTransactions } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -13,10 +13,6 @@ type Preview = {
 };
 
 const MAX_VISIBLE_ROWS = 500;
-
-function formatAmount(milliunits: number): string {
-    return formatMoneyFromMilliunits(milliunits);
-}
 
 function formatDate(dateString: string): string {
     const [year, month, day] = dateString.split("-").map(Number);
@@ -64,20 +60,23 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
                     </tr>
                 </thead>
                 <tbody>
-                    {visible.map((tx) => (
-                        <tr
-                            key={tx._id}
-                            onClick={() => {
-                                void hint.openTransaction(tx._id);
-                            }}
-                            className="border-secondary hover:bg-secondary/40 cursor-pointer border-t"
-                        >
-                            <td className="text-secondary py-2 pr-2 tabular-nums">{formatDate(tx.date)}</td>
-                            <td className="text-primary py-2 pr-2">{tx.merchantName ?? tx.name}</td>
-                            <td className="text-primary py-2 pr-2 text-right tabular-nums">{formatAmount(tx.amount)}</td>
-                            <td className="text-secondary py-2">{tx.categoryPrimary ?? "-"}</td>
-                        </tr>
-                    ))}
+                    {visible.map((tx) => {
+                        const { text: amountText, colorClass: amountColor } = formatTransactionAmount(tx.amount);
+                        return (
+                            <tr
+                                key={tx._id}
+                                onClick={() => {
+                                    void hint.openTransaction(tx._id);
+                                }}
+                                className="border-secondary hover:bg-secondary/40 cursor-pointer border-t"
+                            >
+                                <td className="text-secondary py-2 pr-2 tabular-nums">{formatDate(tx.date)}</td>
+                                <td className="text-primary py-2 pr-2">{tx.merchantName ?? tx.name}</td>
+                                <td className={`py-2 pr-2 text-right tabular-nums ${amountColor}`}>{amountText}</td>
+                                <td className="text-secondary py-2">{tx.categoryPrimary ?? "-"}</td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
             {overflow > 0 && (

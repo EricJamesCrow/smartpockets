@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMoneyFromMilliunits } from "@/utils/money";
+import { formatTransactionAmount } from "@/utils/transaction-helpers";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveTransactions } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -13,10 +13,6 @@ type Preview = {
     date?: string;
     categoryPrimary?: string | null;
 };
-
-function formatAmount(milliunits: number): string {
-    return formatMoneyFromMilliunits(milliunits);
-}
 
 function formatDateFull(dateString: string): string {
     const [year, month, day] = dateString.split("-").map(Number);
@@ -69,12 +65,15 @@ export function TransactionDetailCard(props: ToolResultComponentProps<unknown, T
             }
         >
             <dl className="space-y-2 text-sm">
-                {amount !== undefined && (
-                    <div className="flex items-baseline justify-between">
-                        <dt className="text-tertiary">Amount</dt>
-                        <dd className="text-primary font-semibold tabular-nums">{formatAmount(amount)}</dd>
-                    </div>
-                )}
+                {amount !== undefined && (() => {
+                    const { text: amountText, colorClass: amountColor } = formatTransactionAmount(amount);
+                    return (
+                        <div className="flex items-baseline justify-between">
+                            <dt className="text-tertiary">Amount</dt>
+                            <dd className={`font-semibold tabular-nums ${amountColor}`}>{amountText}</dd>
+                        </div>
+                    );
+                })()}
                 <div className="flex items-baseline justify-between">
                     <dt className="text-tertiary">Category</dt>
                     <dd className="text-primary">{category ?? "Uncategorized"}</dd>
