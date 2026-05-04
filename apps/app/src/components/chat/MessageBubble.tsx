@@ -108,6 +108,14 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
     );
   }
 
+  // CROWDEV-343 (FIX 7): the assistant typing indicator. While `isStreaming`
+  // is true and no text has arrived yet, swap the markdown body for three
+  // bouncing dots. Same bubble shell + same min-height so the layout doesn't
+  // shift when the first token lands. Pattern (3 dots, animation-delay
+  // staggered) mirrors UntitledUI's Messaging `typing` state to stay
+  // consistent with the design system.
+  const showTypingDots = isAssistant && isStreaming && (!displayText || displayText === "");
+
   return (
     <div className={cx("group/msg relative flex gap-4", isUser && "flex-row-reverse")}>
       {isUser ? <UserAvatar /> : <AssistantAvatar />}
@@ -122,6 +130,16 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
         >
           {isUser ? (
             <p className="whitespace-pre-wrap leading-relaxed">{displayText}</p>
+          ) : showTypingDots ? (
+            <span
+              className="inline-flex items-center gap-1"
+              role="status"
+              aria-label="Assistant is thinking"
+            >
+              <span className="size-2 animate-bounce rounded-full bg-tertiary [animation-delay:-0.3s]" />
+              <span className="size-2 animate-bounce rounded-full bg-tertiary [animation-delay:-0.15s]" />
+              <span className="size-2 animate-bounce rounded-full bg-tertiary" />
+            </span>
           ) : (
             <MarkdownContent content={displayText} />
           )}
