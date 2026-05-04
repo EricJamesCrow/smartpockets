@@ -46,6 +46,9 @@ function JsonView({ label, value }: { label: string; value: unknown }) {
     }
   };
 
+  // CROWDEV-364: Replace the visible "Copy"/"Copied" text label with a copy
+  // → check icon swap. Without the text label, the dynamic aria-label and the
+  // aria-live wrapper carry the success signal for assistive tech.
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
@@ -53,11 +56,17 @@ function JsonView({ label, value }: { label: string; value: unknown }) {
         <button
           type="button"
           onClick={handleCopy}
-          aria-label={`Copy ${label.toLowerCase()}`}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-tertiary transition-colors hover:bg-secondary"
+          aria-label={
+            copied ? `Copied ${label.toLowerCase()}` : `Copy ${label.toLowerCase()}`
+          }
+          aria-live="polite"
+          className="flex items-center justify-center rounded p-1 text-tertiary transition-colors hover:bg-secondary"
         >
-          <Copy01 className="size-3" />
-          <span>{copied ? "Copied" : "Copy"}</span>
+          {copied ? (
+            <Check className="size-3.5 text-success-secondary" />
+          ) : (
+            <Copy01 className="size-3.5" />
+          )}
         </button>
       </div>
       <pre className="max-h-64 overflow-auto rounded bg-secondary p-2 font-[family-name:var(--font-geist-mono)] text-xs text-secondary">
