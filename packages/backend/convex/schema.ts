@@ -378,6 +378,12 @@ const schema = defineEntSchema(
             summaryUpToMessageId: v.optional(v.id("agentMessages")),
             componentThreadId: v.string(),
             readCallCount: v.number(),
+            // CROWDEV-342: per-thread cancellation flag. Set by `abortRun` to
+            // `Date.now()`; read by `runAgentTurn`'s drain loop and
+            // `onStepFinish` to short-circuit a streaming run. Cleared at the
+            // start of each new user turn (`appendUserTurn`). Optional ⇒
+            // existing rows unaffected (migration-safe).
+            cancelledAtTurn: v.optional(v.number()),
         })
             .edge("user")
             .edges("agentMessages", { ref: true })

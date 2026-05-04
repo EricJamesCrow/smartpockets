@@ -41,11 +41,15 @@ export const appendUserTurn = internalMutation({
         summaryUpToMessageId: undefined,
         componentThreadId: `ct_${Math.random().toString(36).slice(2, 14)}`,
         readCallCount: 0,
+        cancelledAtTurn: undefined,
       });
     } else {
       const thread = await ctx.table("agentThreads").getX(targetThreadId);
       if (thread.userId !== userId) throw new Error("Not authorized");
-      await thread.patch({ lastTurnAt: now });
+      // CROWDEV-342: clear the cancellation flag at the start of each new
+      // turn so a stale flag from a prior aborted turn doesn't pre-cancel
+      // this one.
+      await thread.patch({ lastTurnAt: now, cancelledAtTurn: undefined });
     }
 
     const messageId = await ctx.table("agentMessages").insert({
@@ -211,24 +215,24 @@ export const deleteThread = mutation({
 /**
  * Public mutation: user-initiated abort of an in-flight agent run.
  *
- * UX-level stop. This codebase doesn't use the `@convex-dev/agent` streaming
- * infrastructure (the runtime calls AI SDK's `streamText` directly inside a
- * scheduled action — see `runtime.ts`), so the agent component's `abortStream`
- * helper has nothing to abort. As a Path-(b) measure per the polish plan
- * Revision 1, this mutation:
- *   1. Flips `isStreaming: false` on any user-turn marker rows for the thread,
- *      so the UI immediately drops the streaming-cursor / shows MessageActions /
- *      derives `isStreaming === false` and swaps stop → send.
- *   2. Inserts a `system`-role tombstone row indicating user-initiated stop,
- *      so the assistant has context about why the run ended on the next turn.
+ * Two-pronged stop:
+ *   1. UX-effective (CROWDEV-336): flips `isStreaming: false` on user-turn
+ *      marker rows so the UI swaps stop → send, and writes a "Run stopped by
+ *      user." system tombstone row so the next turn has context.
+ *   2. Backend-effective (CROWDEV-342): sets `agentThreads.cancelledAtTurn`
+ *      to `Date.now()`. The scheduled `runAgentTurn` action in `runtime.ts`
+ *      polls this flag inside its `streamText` drain loop and inside
+ *      `onStepFinish`; on detect, it calls `controller.abort()` to halt the
+ *      underlying fetch and skips persistence/usage for the cancelled
+ *      remainder of the turn.
  *
- * The actual `streamText` call in the scheduled action continues to run — a
- * full backend cancellation (a per-run cancel flag table that `onStepFinish`
- * checks and breaks the loop on) is a follow-up sub-issue.
+ * `appendUserTurn` clears `cancelledAtTurn` at the start of each new user
+ * turn so a prior abort doesn't pre-cancel a fresh run.
  *
  * Idempotent: safe to call when no run is active (no-ops the patch loop, no
  * extra tombstone row written if the most recent system row already says
- * "stopped").
+ * "stopped"). The flag is set unconditionally — if the runtime isn't
+ * currently streaming, it'll be cleared by the next `appendUserTurn`.
  */
 export const abortRun = mutation({
   args: {
@@ -254,6 +258,10 @@ export const abortRun = mutation({
     // No active streaming-marker rows — nothing to do, stay idempotent.
     if (flippedCount === 0) return null;
 
+    // CROWDEV-342: signal the runtime to abort its in-flight `streamText`
+    // call. Read by `getCancelFlag`; cleared by `appendUserTurn`.
+    await thread.patch({ cancelledAtTurn: Date.now() });
+
     const lastMessage = messages[messages.length - 1];
     const lastIsStopTombstone =
       lastMessage?.role === "system" &&
@@ -271,6 +279,29 @@ export const abortRun = mutation({
     }
 
     return null;
+  },
+});
+
+/**
+ * Internal: light read used by `runAgentTurn`'s drain loop and `onStepFinish`
+ * to check whether the user has aborted the current run. Returns the
+ * `cancelledAtTurn` epoch-ms or `null`.
+ *
+ * The runtime captures `turnStartedAt = Date.now()` before invoking
+ * `streamText`. A flag value `>= turnStartedAt` means the user clicked stop
+ * after this turn began ⇒ the runtime should `controller.abort()` and skip
+ * further persistence. A flag value strictly less than `turnStartedAt` is
+ * stale (carried over from a prior aborted turn that wasn't followed by a
+ * user message — `appendUserTurn` is the canonical clear point, but we still
+ * compare timestamps as a defensive belt-and-suspenders check in case a turn
+ * is scheduled outside that path).
+ */
+export const getCancelFlag = internalQuery({
+  args: { threadId: v.id("agentThreads") },
+  returns: v.union(v.number(), v.null()),
+  handler: async (ctx, { threadId }) => {
+    const thread = await ctx.table("agentThreads").get(threadId);
+    return thread?.cancelledAtTurn ?? null;
   },
 });
 
