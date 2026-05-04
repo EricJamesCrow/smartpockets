@@ -333,6 +333,69 @@ export const getCancelFlag = internalQuery({
   },
 });
 
+/**
+ * CROWDEV-367: defensive cleanup called from `runAgentTurn`'s `finally`.
+ *
+ * The user-turn marker row is inserted with `isStreaming: true`. The chat UI
+ * derives "is the run in flight?" from
+ * `lastUser.isStreaming === true && noAssistantRowAfter`. Three terminal
+ * paths exist:
+ *
+ *   1. Successful completion — assistant row(s) land via `persistStep`. The
+ *      user row's flag stays true, but `noAssistantRowAfter` is false, so
+ *      the UI shows the run as complete. No-op for this mutation.
+ *   2. User-initiated abort — `abortRun` flips the flag to false AND writes
+ *      a system tombstone. This mutation finds the flag already false and
+ *      no-ops.
+ *   3. Runtime error mid-turn — provider 5xx, network failure, Zod
+ *      validation in `loadForStream` → `standardizePrompt`, invalid model
+ *      id, etc. No assistant row lands. The user row's flag stays true and
+ *      `noAssistantRowAfter` stays true, sticking the typing indicator and
+ *      stop button in the UI forever (and the next `appendUserTurn` only
+ *      clears `cancelledAtTurn`, not the prior user row's flag). **This
+ *      mutation flips the flag in that case.**
+ *
+ * Idempotent. Empty thread, missing user row, or already-false flag all
+ * no-op. Safe to call from anywhere; the runtime calls it from `finally`
+ * regardless of how the turn ended.
+ */
+export const finalizeUserTurnIfStranded = internalMutation({
+  args: { threadId: v.id("agentThreads") },
+  returns: v.null(),
+  handler: async (ctx, { threadId }) => {
+    const thread = await ctx.table("agentThreads").get(threadId);
+    if (!thread) return null;
+    const messages = await thread.edge("agentMessages").order("asc");
+    if (messages.length === 0) return null;
+
+    // Find the most-recent user row.
+    let lastUser:
+      | { _id: import("../_generated/dataModel").Id<"agentMessages">; _creationTime: number; isStreaming?: boolean }
+      | undefined;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m && m.role === "user") {
+        lastUser = m as typeof lastUser;
+        break;
+      }
+    }
+    if (!lastUser) return null;
+    if (lastUser.isStreaming !== true) return null;
+
+    // Any assistant row created strictly after the user row means a reply
+    // landed and the run completed; don't touch the flag in that case.
+    const userCreationTime = lastUser._creationTime;
+    const hasAssistantAfter = messages.some(
+      (m) => m.role === "assistant" && (m._creationTime ?? 0) > userCreationTime,
+    );
+    if (hasAssistantAfter) return null;
+
+    const writable = await ctx.table("agentMessages").getX(lastUser._id);
+    await writable.patch({ isStreaming: false });
+    return null;
+  },
+});
+
 export const writeSummary = internalMutation({
   args: {
     threadId: v.id("agentThreads"),
