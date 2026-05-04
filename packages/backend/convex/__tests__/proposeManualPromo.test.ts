@@ -141,9 +141,9 @@ describe("propose_manual_promo executor", () => {
         });
         expect((result.reversalPayload as any).kind).toBe("promo_soft_delete");
         const [promo] = Array.from(ctx.promos.values());
-        expect(promo.isManual).toBe(true);
-        expect(promo.isActive).toBe(true);
-        expect(promo.userId).toBe("user_1");
+        expect(promo!.isManual).toBe(true);
+        expect(promo!.isActive).toBe(true);
+        expect(promo!.userId).toBe("user_1");
     });
 
     it("update returns promo_restore payload with prior snapshot", async () => {

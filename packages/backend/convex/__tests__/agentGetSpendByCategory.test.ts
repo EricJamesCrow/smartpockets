@@ -302,9 +302,9 @@ describe("get_spend_by_category agent tool (CROWDEV-346)", () => {
 
         // 7 head buckets + 1 "Other" = 8 total.
         expect(out.preview.buckets).toHaveLength(8);
-        expect(out.preview.buckets[7].category).toBe("Other");
+        expect(out.preview.buckets[7]!.category).toBe("Other");
         // The "Other" bucket sums the bottom 3 (cat_7 + cat_8 + cat_9) = 3+2+1 = 6 dollars.
-        expect(out.preview.buckets[7].amount).toBe(6);
+        expect(out.preview.buckets[7]!.amount).toBe(6);
         // Total still equals the full sum (1+2+...+10 = 55 dollars).
         expect(out.preview.totalAmount).toBe(55);
     });

@@ -179,8 +179,8 @@ describe("propose_transaction_update executor", () => {
     expect(payload.created).toBe(true);
 
     const row = Array.from(ctx.store.values())[0];
-    expect(row.userCategory).toBe("groceries");
-    expect(row.userId).toBe("user_1");
+    expect(row!.userCategory).toBe("groceries");
+    expect(row!.userId).toBe("user_1");
   });
 
   it("patches an existing overlay and captures prior values", async () => {

@@ -146,7 +146,7 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
         )) as { ids: string[]; preview: { merchants: Array<{ name: string }> } };
 
         expect(out.ids).toEqual(["tx_named"]);
-        expect(out.preview.merchants[0].name).toBe("Whole Foods Market");
+        expect(out.preview.merchants[0]!.name).toBe("Whole Foods Market");
     });
 
     it("matches user-edited merchant names (overlay applied before search)", async () => {
@@ -173,7 +173,7 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
         )) as { ids: string[]; preview: { merchants: Array<{ name: string }> } };
 
         expect(out.ids).toEqual(["tx_renamed"]);
-        expect(out.preview.merchants[0].name).toBe("Amazon Subscription");
+        expect(out.preview.merchants[0]!.name).toBe("Amazon Subscription");
     });
 
     it("excludes hidden-overlay transactions", async () => {
@@ -199,8 +199,8 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
 
         // Only the visible Amazon shows up.
         expect(out.ids).toEqual(["tx_v"]);
-        expect(out.preview.merchants[0].count).toBe(1);
-        expect(out.preview.merchants[0].totalAmount).toBe(10);
+        expect(out.preview.merchants[0]!.count).toBe(1);
+        expect(out.preview.merchants[0]!.totalAmount).toBe(10);
     });
 
     it("honors optional date window (defaults excluded)", async () => {
@@ -218,8 +218,8 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
         )) as { ids: string[]; preview: { merchants: Array<{ count: number; totalAmount: number }> } };
 
         expect(out.ids).toEqual(["tx_in"]);
-        expect(out.preview.merchants[0].count).toBe(1);
-        expect(out.preview.merchants[0].totalAmount).toBe(25);
+        expect(out.preview.merchants[0]!.count).toBe(1);
+        expect(out.preview.merchants[0]!.totalAmount).toBe(25);
     });
 
     it("honors limit cap (registry max 50; default 10)", async () => {

@@ -154,8 +154,8 @@ describe("computeCashflowForecast", () => {
                 },
             ],
         });
-        expect(out.lineItems[0].amount).toBe(-1200);
-        expect(out.lineItems[0].evidence).toEqual({
+        expect(out.lineItems[0]!.amount).toBe(-1200);
+        expect(out.lineItems[0]!.evidence).toEqual({
             source: "last_statement_balance_fallback",
         });
     });
@@ -179,7 +179,7 @@ describe("computeCashflowForecast", () => {
             amount: 0,
             evidence: { source: "minimum_payment" },
         });
-        expect(Object.is(out.lineItems[0].amount, -0)).toBe(false);
+        expect(Object.is(out.lineItems[0]!.amount, -0)).toBe(false);
         expect(out.projectedNetCash).toBe(0);
     });
 
