@@ -344,6 +344,8 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
                 merchantName: string;
                 amount: number;
                 displayAmount: number;
+                amountFormatted: string;
+                direction: "inflow" | "outflow";
                 date: string;
                 pending: boolean;
                 accountMask?: string;
@@ -357,6 +359,8 @@ describe("search_merchants agent tool (CROWDEV-348)", () => {
             merchantName: "eBay",
             amount: 42.99, // Plaid convention: positive = outflow
             displayAmount: -42.99, // Human convention: negative = money out
+            amountFormatted: "-$42.99", // Verbatim copy target
+            direction: "outflow",
             date: TODAY,
             pending: false,
             accountMask: "1234",

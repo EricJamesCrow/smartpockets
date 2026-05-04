@@ -80,7 +80,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     list_transactions: {
         description:
-            "List transactions, optionally filtered by account, date range, and limit. Each row carries `amount` (Plaid convention) and `displayAmount` (human convention: positive = money in, negative = money out) — use `displayAmount` for any amount you write back to the user.",
+            "List transactions, optionally filtered by account, date range, and limit. Each row carries `amount` (Plaid convention), `displayAmount` (human convention number), `amountFormatted` (pre-formatted string like `+$550.47` or `-$117.87`), and `direction` (`inflow` or `outflow`). When echoing the amount to the user, copy `amountFormatted` VERBATIM and use `direction` to pick the verb (refund vs purchase) — never infer direction from merchant name.",
         llmInputSchema: z.object({
             accountId: z.string().optional(),
             dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
@@ -97,7 +97,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     get_transaction_detail: {
         description:
-            "Get a single transaction's full detail including any user overlay. The `row` field carries `amount` (Plaid convention) and `displayAmount` (human convention) — use `displayAmount` when you echo the amount back to the user.",
+            "Get a single transaction's full detail including any user overlay. The `row` field carries `amount` (Plaid convention), `displayAmount` (human convention number), `amountFormatted` (pre-formatted string), and `direction` (`inflow`/`outflow`) — copy `amountFormatted` VERBATIM and use `direction` to pick the verb when echoing back to the user.",
         llmInputSchema: z.object({
             plaidTransactionId: z.string(),
         }),
@@ -222,7 +222,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     search_merchants: {
         description:
-            "Substring (case-insensitive) search for merchants by name across the user's transactions. Honors user-edited merchant names. Defaults window to last 90 days; returns merchants ranked by transaction count. Per-row `displayAmount` (human convention: positive = money in, negative = money out) — use it for any amount you echo back to the user.",
+            "Substring (case-insensitive) search for merchants by name across the user's transactions. Honors user-edited merchant names. Defaults window to last 90 days; returns merchants ranked by transaction count. Per-row carries `amountFormatted` and `direction` (copy verbatim / use direction for verb). Each merchant in `preview.merchants` carries `displayTotalAmount` (human convention) — quote that, not `totalAmount`.",
         llmInputSchema: z.object({
             query: z.string().min(1).max(128),
             dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
