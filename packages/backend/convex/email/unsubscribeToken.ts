@@ -24,7 +24,12 @@ function base64urlFromBytes(bytes: Uint8Array): string {
 }
 
 function base64urlToBytes(s: string): Uint8Array {
-  const padded = s.replace(/-/g, "+").replace(/_/g, "/") + "==".slice((s.length + 3) % 4);
+  // Pad to a multiple of 4. For length L the required `=` count is
+  // `(4 - L % 4) % 4`. The previous formula `"==".slice((L + 3) % 4)`
+  // returned the wrong count for non-multiple-of-4 lengths and
+  // produced strings that `atob` rejected with "invalid characters".
+  const padCount = (4 - (s.length % 4)) % 4;
+  const padded = s.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(padCount);
   const binary = atob(padded);
   const out = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
