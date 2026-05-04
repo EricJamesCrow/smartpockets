@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy01 } from "@untitledui/icons";
+import { Check, Copy01 } from "@untitledui/icons";
 import { cx } from "@/utils/cx";
 
 interface MessageActionsProps {
@@ -27,13 +27,24 @@ export function MessageActions({ messageText, role, onRegenerate, className }: M
         className,
       )}
     >
+      {/*
+        CROWDEV-364: Swap copy icon → checkmark on success instead of showing
+        a "Copied" text label. `aria-label` flips to "Copied" and the button is
+        wrapped in an aria-live region so assistive tech still hears the state
+        change after the visual text label was removed.
+      */}
       <button
         type="button"
         onClick={handleCopy}
-        aria-label="Copy"
+        aria-label={copied ? "Copied" : "Copy"}
+        aria-live="polite"
         className="rounded p-1 hover:bg-secondary"
       >
-        <Copy01 className="size-4 text-quaternary" />
+        {copied ? (
+          <Check className="size-4 text-success-secondary" />
+        ) : (
+          <Copy01 className="size-4 text-quaternary" />
+        )}
       </button>
       {role === "assistant" && onRegenerate && (
         <button
@@ -44,7 +55,6 @@ export function MessageActions({ messageText, role, onRegenerate, className }: M
           Retry
         </button>
       )}
-      {copied && <span className="text-xs text-tertiary">Copied</span>}
     </div>
   );
 }
