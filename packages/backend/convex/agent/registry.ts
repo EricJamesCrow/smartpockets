@@ -219,9 +219,12 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         incrementsReadCount: true,
     },
     search_merchants: {
-        description: "Fuzzy search for merchants by name. Returns top matches by transaction count.",
+        description:
+            "Substring (case-insensitive) search for merchants by name across the user's transactions. Honors user-edited merchant names. Defaults window to last 90 days; returns merchants ranked by transaction count.",
         llmInputSchema: z.object({
             query: z.string().min(1).max(128),
+            dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
+            dateTo: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
             limit: z.number().int().max(50).optional(),
         }),
         handler: agent.tools.read.searchMerchants.searchMerchants,
