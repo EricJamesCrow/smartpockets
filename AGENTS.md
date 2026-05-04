@@ -500,6 +500,32 @@ Things AI agents frequently get wrong in this codebase.
 | Push to main without PR | Create a Linear-linked feature branch, open PR via Graphite |
 | Showing `github.com/.../pull/<N>` URLs in user-facing output | Always use the Graphite URL — never show GitHub PR links unless the user explicitly asks |
 
+### Sub-Agent Mistakes
+
+| Mistake | Correct Approach |
+|---------|------------------|
+| Dispatching parallel sub-agents into the shared worktree | Pass `isolation: "worktree"` to every parallel Agent call so each one gets its own checkout |
+| Assuming sub-agents inherit `.env.local` and `node_modules` from the parent | Brief them to bootstrap: `cp <parent-worktree>/apps/app/.env.local apps/app/.env.local && bun install` before any backend deploy or app build |
+| One sub-agent running `git branch -f` or `git symbolic-ref HEAD ...` to "recover" | That's a sign two agents collided in one worktree — abort and re-dispatch with isolation instead of patching corruption |
+| Letting parallel sub-agents stack PRs off the same parent without telling them which parent commit | Name the explicit parent SHA / Graphite branch in each prompt so their stacks don't overlap |
+
+When you need to fan out to two or more sub-agents at the same time, **always** pass `isolation: "worktree"` on every parallel `Agent` tool call. Sharing one worktree across parallel agents is unsafe: they will race on `git checkout`, force-move branches with `git branch -f`, stash files into `/tmp`, and overwrite each other's edits. We have already spent multiple sessions recovering from this with `git symbolic-ref HEAD ...` — the recovery is not worth the avoidable risk.
+
+A solo sub-agent running by itself can use the parent worktree (and benefit from the existing `node_modules` cache). The rule only kicks in once a second concurrent agent enters the picture.
+
+**Worktree bootstrap recipe** — include this in the prompt of every isolated sub-agent that needs to run the app, deploy backend, or open Plaid/Clerk-authenticated flows:
+
+```bash
+# from the freshly created worktree
+cp <PARENT_WORKTREE>/apps/app/.env.local apps/app/.env.local
+cp <PARENT_WORKTREE>/packages/backend/.env.local packages/backend/.env.local 2>/dev/null || true
+bun install
+```
+
+The cached `node_modules` from the parent worktree is NOT shared — each worktree gets its own. Skipping `bun install` will surface as missing-module errors at typecheck or build time.
+
+When you want all the parallel sub-agents to land on the same eventual stack, give each one an explicit `parent commit SHA` or `Graphite branch name` to branch from. Don't leave them to guess; otherwise they'll each fork off `main` and their stacks will collide at consolidation time.
+
 ### Graphite PR Links
 
 SmartPockets uses Graphite as the primary review surface. When referring to a PR in any user-facing output — chat responses, summaries, status updates, Linear comments, tables — **always** use the Graphite link. **Never include `github.com/.../pull/<N>` URLs** unless the user explicitly asks for the GitHub link.
