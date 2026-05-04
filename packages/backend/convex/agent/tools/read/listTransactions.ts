@@ -48,14 +48,28 @@ type RawAccount = {
  * sees in the rendered TransactionsTable (merchant, amount, date, category,
  * pending status, account mask) so that follow-up questions like "give me
  * full details for the eBay row" can be answered without another tool
- * round-trip. Amount is in dollars (signed: positive = outflow per Plaid
- * convention) so the model doesn't reason about milliunits.
+ * round-trip.
+ *
+ * **Two amount fields, two conventions:**
+ * - `amount` — Plaid convention: positive = outflow (purchase/payment),
+ *   negative = inflow (refund/income). Useful for filtering or arithmetic
+ *   that mirrors what `getSpendByCategory` / `getSpendOverTime` operate on.
+ * - `displayAmount` — human convention: positive = money in (refund/income),
+ *   negative = money out (purchase/payment). **Always use this when you
+ *   write an amount in your reply text or markdown.** The frontend
+ *   `TransactionsTable` and `TransactionDetailCard` already use this
+ *   convention, so the model's prose must match what the user sees.
+ *
+ * See system prompt rule "Amount sign convention" for formatting guidance.
  */
 export type AgentTransactionRow = {
     transactionId: string;
     date: string;
     merchantName: string;
+    /** Plaid convention: positive = outflow, negative = inflow (dollars). */
     amount: number;
+    /** Human convention: positive = money in, negative = money out (dollars). Use this in user-facing text. */
+    displayAmount: number;
     category?: string;
     pending: boolean;
     accountMask?: string;
@@ -83,11 +97,13 @@ export function transactionToAgentRow(
     const effectiveDate = overlay?.userDate ?? tx.date;
     const effectiveMerchant = overlay?.userMerchantName ?? tx.merchantName ?? tx.name;
     const effectiveCategory = overlay?.userCategoryDetailed ?? overlay?.userCategory ?? tx.categoryDetailed ?? tx.categoryPrimary;
+    const dollars = tx.amount / 1000;
     return {
         transactionId: tx.transactionId,
         date: effectiveDate,
         merchantName: effectiveMerchant,
-        amount: tx.amount / 1000,
+        amount: dollars,
+        displayAmount: -dollars,
         category: effectiveCategory ?? undefined,
         pending: tx.pending,
         accountMask: accountMaskById.get(tx.accountId) ?? undefined,

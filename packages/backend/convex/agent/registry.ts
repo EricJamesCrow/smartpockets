@@ -79,7 +79,8 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         incrementsReadCount: true,
     },
     list_transactions: {
-        description: "List transactions, optionally filtered by account, date range, and limit.",
+        description:
+            "List transactions, optionally filtered by account, date range, and limit. Each row carries `amount` (Plaid convention) and `displayAmount` (human convention: positive = money in, negative = money out) — use `displayAmount` for any amount you write back to the user.",
         llmInputSchema: z.object({
             accountId: z.string().optional(),
             dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
@@ -95,7 +96,8 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         incrementsReadCount: true,
     },
     get_transaction_detail: {
-        description: "Get a single transaction's full detail including any user overlay.",
+        description:
+            "Get a single transaction's full detail including any user overlay. The `row` field carries `amount` (Plaid convention) and `displayAmount` (human convention) — use `displayAmount` when you echo the amount back to the user.",
         llmInputSchema: z.object({
             plaidTransactionId: z.string(),
         }),
@@ -220,7 +222,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     search_merchants: {
         description:
-            "Substring (case-insensitive) search for merchants by name across the user's transactions. Honors user-edited merchant names. Defaults window to last 90 days; returns merchants ranked by transaction count.",
+            "Substring (case-insensitive) search for merchants by name across the user's transactions. Honors user-edited merchant names. Defaults window to last 90 days; returns merchants ranked by transaction count. Per-row `displayAmount` (human convention: positive = money in, negative = money out) — use it for any amount you echo back to the user.",
         llmInputSchema: z.object({
             query: z.string().min(1).max(128),
             dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
