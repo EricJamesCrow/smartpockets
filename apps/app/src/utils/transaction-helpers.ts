@@ -2,7 +2,7 @@
  * Shared transaction utilities
  */
 import type { TransactionCategory } from "@/types/credit-cards";
-import { formatMoneyFromMilliunits } from "@/utils/money";
+import { displayAmount, formatMoneyFromDollars, formatMoneyFromMilliunits } from "@/utils/money";
 
 /**
  * Map Plaid category to our TransactionCategory type
@@ -36,29 +36,90 @@ export function mapPlaidCategory(category?: string): TransactionCategory {
 }
 
 /**
- * Format transaction amount for display
- * Plaid amounts: positive = money out (charge), negative = money in (refund/credit)
- * We display charges as negative and refunds/credits as positive
+ * Format a Plaid transaction amount for human display.
+ *
+ * Plaid `transactions.amount` convention:
+ *   positive = money OUT (charge / spend)
+ *   negative = money IN (refund / credit / income)
+ *
+ * Human banking-app convention (Monarch, Copilot, etc.):
+ *   positive = money IN (shown with `+` prefix and success color)
+ *   negative = money OUT (shown with `-` prefix and primary text color)
+ *
+ * The flip happens here at the display boundary via `displayAmount()`.
+ * Stored amounts elsewhere keep the Plaid sign convention so aggregations,
+ * sync, and "spend" charts continue to read correctly.
  */
-export function formatTransactionAmount(amount: number, isoCurrencyCode?: string): { text: string; isRefund: boolean; colorClass: string } {
-    const isRefund = amount < 0;
-    const displayAmount = Math.abs(amount);
+export function formatTransactionAmount(amount: number, isoCurrencyCode?: string): { text: string; isMoneyIn: boolean; colorClass: string } {
+    // Flip Plaid sign → human sign before formatting.
+    const humanAmount = displayAmount(amount);
+    const isMoneyIn = humanAmount > 0;
 
-    const formatted = formatMoneyFromMilliunits(displayAmount, {
+    const formattedAbs = formatMoneyFromMilliunits(Math.abs(humanAmount), {
         currency: isoCurrencyCode ?? "USD",
     });
 
-    if (isRefund) {
+    if (humanAmount === 0) {
         return {
-            text: `+${formatted}`,
-            isRefund: true,
+            text: formattedAbs,
+            isMoneyIn: false,
+            colorClass: "text-primary",
+        };
+    }
+
+    if (isMoneyIn) {
+        return {
+            text: `+${formattedAbs}`,
+            isMoneyIn: true,
             colorClass: "text-utility-success-600",
         };
     }
 
     return {
-        text: formatted,
-        isRefund: false,
+        text: `-${formattedAbs}`,
+        isMoneyIn: false,
+        colorClass: "text-primary",
+    };
+}
+
+/**
+ * Format a Plaid transaction amount expressed in **dollars** for human display.
+ *
+ * Same semantics as `formatTransactionAmount` (which takes milliunits) — flips
+ * the Plaid sign so positive aggregations of "spend" render as negative
+ * (money out), and negative aggregations (net incoming) render as positive
+ * (money in, green).
+ */
+export function formatTransactionAmountDollars(
+    dollars: number,
+    isoCurrencyCode?: string,
+): { text: string; isMoneyIn: boolean; colorClass: string } {
+    const humanAmount = displayAmount(dollars);
+    const isMoneyIn = humanAmount > 0;
+
+    const formattedAbs = formatMoneyFromDollars(Math.abs(humanAmount), {
+        currency: isoCurrencyCode ?? "USD",
+    });
+
+    if (humanAmount === 0) {
+        return {
+            text: formattedAbs,
+            isMoneyIn: false,
+            colorClass: "text-primary",
+        };
+    }
+
+    if (isMoneyIn) {
+        return {
+            text: `+${formattedAbs}`,
+            isMoneyIn: true,
+            colorClass: "text-utility-success-600",
+        };
+    }
+
+    return {
+        text: `-${formattedAbs}`,
+        isMoneyIn: false,
         colorClass: "text-primary",
     };
 }
