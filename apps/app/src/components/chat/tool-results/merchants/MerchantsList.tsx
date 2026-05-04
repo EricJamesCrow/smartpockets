@@ -9,7 +9,7 @@ import { MerchantsListSkeleton } from "./MerchantsListSkeleton";
 type MerchantBucket = {
     name: string;
     count: number;
-    /** Sum of `tx.amount / 1000` from the searchMerchants handler — dollars. */
+    /** Sum of `tx.amount / 1000` from the searchMerchants handler - dollars. */
     totalAmount: number;
     lastDate: string;
     sampleTransactionIds: string[];
