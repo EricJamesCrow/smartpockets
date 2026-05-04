@@ -281,6 +281,8 @@ describe("list_transactions agent tool (CROWDEV-344)", () => {
                 merchantName: string;
                 amount: number;
                 displayAmount: number;
+                amountFormatted: string;
+                direction: "inflow" | "outflow";
                 pending: boolean;
                 accountMask?: string;
             }>;
@@ -294,18 +296,22 @@ describe("list_transactions agent tool (CROWDEV-344)", () => {
             merchantName: "eBay",
             amount: 12.5, // Plaid convention: positive = outflow
             displayAmount: -12.5, // Human convention: negative = money out
+            amountFormatted: "-$12.50", // Verbatim copy target for the model
+            direction: "outflow",
             pending: false,
             accountMask: "1234", // from seedPlaidItemAndAccount mask
         });
     });
 
-    it("inflows produce positive displayAmount even though Plaid stores them as negative", async () => {
+    it("inflows produce positive displayAmount + verbatim amountFormatted + 'inflow' direction (CROWDEV-369)", async () => {
         // Plaid convention: negative amount = inflow (refund / income / deposit).
         // The model must emit positive +$X.XX for inflows in user-facing text,
-        // matching what the user sees in TransactionsTable. Without this
-        // sign-flipped `displayAmount`, an eBay refund of -$550.47 (Plaid)
-        // gets echoed as "-$550.47" by the model and the user thinks money
-        // went OUT instead of IN.
+        // matching what the user sees in TransactionsTable. Even with
+        // displayAmount in the row, Haiku has been observed overriding it
+        // for rows with a strong "purchase" prior (eBay + General
+        // Merchandise category). The verbatim `amountFormatted` string
+        // and explicit `direction` label remove any reasoning step the
+        // model could fail.
         const t = setup();
         const userId = await seedUser(t, "user_lt_inflow");
         const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_lt_inflow");
@@ -316,11 +322,34 @@ describe("list_transactions agent tool (CROWDEV-344)", () => {
         const out = (await t.query(
             (internal as any).agent.tools.read.listTransactions.listTransactions,
             { userId },
-        )) as { rows: Array<{ amount: number; displayAmount: number }> };
+        )) as { rows: Array<{ amount: number; displayAmount: number; amountFormatted: string; direction: string }> };
 
         expect(out.rows).toHaveLength(1);
         expect(out.rows[0]?.amount).toBe(-550.47); // Plaid: negative = inflow
         expect(out.rows[0]?.displayAmount).toBe(550.47); // Human: positive = money in
+        expect(out.rows[0]?.amountFormatted).toBe("+$550.47"); // Verbatim copy target
+        expect(out.rows[0]?.direction).toBe("inflow"); // Verb selector
+    });
+
+    it("zero displayAmount renders as +$0.00 with inflow direction (boundary)", async () => {
+        // Edge case: a $0.00 transaction should render as +$0.00 (not
+        // -$0.00). The `displayAmount >= 0` ternary makes zero an
+        // "inflow" direction, which is fine — there's nothing semantic
+        // about zero, and it matches IEEE 754 zero handling.
+        const t = setup();
+        const userId = await seedUser(t, "user_lt_zero");
+        const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_lt_zero");
+        await seedTransactions(t, "user_lt_zero", plaidItemId, [
+            { transactionId: "tx_zero", accountId, date: "2026-05-03", name: "AUTH HOLD", merchantName: "Hotel", amount: 0 },
+        ]);
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.listTransactions.listTransactions,
+            { userId },
+        )) as { rows: Array<{ amountFormatted: string; direction: string }> };
+
+        expect(out.rows[0]?.amountFormatted).toBe("+$0.00");
+        expect(out.rows[0]?.direction).toBe("inflow");
     });
 
     it("rows mirror overlay-corrected merchant name, date, and category", async () => {

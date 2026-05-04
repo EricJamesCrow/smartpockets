@@ -122,6 +122,8 @@ describe("get_transaction_detail agent tool (CROWDEV-365)", () => {
                 merchantName: string;
                 amount: number;
                 displayAmount: number;
+                amountFormatted: string;
+                direction: "inflow" | "outflow";
                 date: string;
                 pending: boolean;
                 accountMask?: string;
@@ -136,6 +138,8 @@ describe("get_transaction_detail agent tool (CROWDEV-365)", () => {
             merchantName: "eBay",
             amount: 42.99, // Plaid convention: positive = outflow
             displayAmount: -42.99, // Human convention: negative = money out
+            amountFormatted: "-$42.99", // Verbatim copy target
+            direction: "outflow",
             date: "2026-04-19",
             pending: false,
             accountMask: "1234",

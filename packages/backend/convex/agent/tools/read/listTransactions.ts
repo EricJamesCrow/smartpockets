@@ -50,17 +50,26 @@ type RawAccount = {
  * full details for the eBay row" can be answered without another tool
  * round-trip.
  *
- * **Two amount fields, two conventions:**
+ * **Three amount fields:**
  * - `amount` — Plaid convention: positive = outflow (purchase/payment),
  *   negative = inflow (refund/income). Useful for filtering or arithmetic
  *   that mirrors what `getSpendByCategory` / `getSpendOverTime` operate on.
- * - `displayAmount` — human convention: positive = money in (refund/income),
- *   negative = money out (purchase/payment). **Always use this when you
- *   write an amount in your reply text or markdown.** The frontend
- *   `TransactionsTable` and `TransactionDetailCard` already use this
- *   convention, so the model's prose must match what the user sees.
+ * - `displayAmount` — human convention as a number: positive = money in,
+ *   negative = money out (dollars). Use for arithmetic that needs to
+ *   produce another user-facing number.
+ * - `amountFormatted` — pre-formatted human-convention string the model
+ *   should **copy verbatim** when writing the amount in markdown/prose.
+ *   Removes any reasoning step the model could fail. Format is always
+ *   `+$X.XX` for inflows and `-$X.XX` for outflows (zero is `+$0.00`).
  *
- * See system prompt rule "Amount sign convention" for formatting guidance.
+ * **`direction`** is the natural-language label ("inflow" / "outflow") so
+ * the model picks the right verb (refund vs purchase, deposit vs payment)
+ * without inferring from merchant name or category.
+ *
+ * The frontend `TransactionsTable` / `TransactionDetailCard` use the same
+ * human convention, so the model's prose lines up with what the user sees.
+ *
+ * See system prompt rule "Amount sign convention" for usage guidance.
  */
 export type AgentTransactionRow = {
     transactionId: string;
@@ -68,12 +77,28 @@ export type AgentTransactionRow = {
     merchantName: string;
     /** Plaid convention: positive = outflow, negative = inflow (dollars). */
     amount: number;
-    /** Human convention: positive = money in, negative = money out (dollars). Use this in user-facing text. */
+    /** Human convention as a number: positive = money in, negative = money out. */
     displayAmount: number;
+    /** Pre-formatted human-convention string ("+$550.47" / "-$117.87"). Copy verbatim into user-facing text. */
+    amountFormatted: string;
+    /** Natural-language direction label so the model picks the right verb. */
+    direction: "inflow" | "outflow";
     category?: string;
     pending: boolean;
     accountMask?: string;
 };
+
+/**
+ * Format a signed dollar amount in human convention as a string the model
+ * should copy verbatim. Always produces `+$X.XX` for inflows / zero and
+ * `-$X.XX` for outflows. Locale-independent on purpose: AI text output
+ * shouldn't depend on the server's `Intl` defaults.
+ */
+function formatHumanAmount(displayAmount: number): string {
+    const sign = displayAmount < 0 ? "-" : "+";
+    const abs = Math.abs(displayAmount).toFixed(2);
+    return `${sign}$${abs}`;
+}
 
 function buildSummary(count: number, dateFrom: string | undefined, dateTo: string | undefined): string {
     const noun = count === 1 ? "transaction" : "transactions";
@@ -98,12 +123,15 @@ export function transactionToAgentRow(
     const effectiveMerchant = overlay?.userMerchantName ?? tx.merchantName ?? tx.name;
     const effectiveCategory = overlay?.userCategoryDetailed ?? overlay?.userCategory ?? tx.categoryDetailed ?? tx.categoryPrimary;
     const dollars = tx.amount / 1000;
+    const displayAmount = -dollars;
     return {
         transactionId: tx.transactionId,
         date: effectiveDate,
         merchantName: effectiveMerchant,
         amount: dollars,
-        displayAmount: -dollars,
+        displayAmount,
+        amountFormatted: formatHumanAmount(displayAmount),
+        direction: displayAmount >= 0 ? "inflow" : "outflow",
         category: effectiveCategory ?? undefined,
         pending: tx.pending,
         accountMask: accountMaskById.get(tx.accountId) ?? undefined,
