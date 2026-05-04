@@ -9,6 +9,11 @@
  *     - filter to a single account when accountId is supplied
  *     - reject access to another user's account
  *     - skip transactions the user has hidden via overlay
+ *
+ * Also covers CROWDEV-365 (this issue):
+ *   The tool must embed compact per-row snapshots in `rows` so the agent can
+ *   reason about the transactions it returned (merchant, amount, date,
+ *   category, mask) without making one `get_transaction_detail` call per ID.
  */
 
 import { describe, expect, it } from "vitest";
@@ -75,7 +80,15 @@ async function seedTransactions(
     t: any,
     userId: string,
     plaidItemId: string,
-    txns: Array<{ transactionId: string; accountId: string; date: string; name: string; amount: number; pending?: boolean }>,
+    txns: Array<{
+        transactionId: string;
+        accountId: string;
+        date: string;
+        name: string;
+        merchantName?: string;
+        amount: number;
+        pending?: boolean;
+    }>,
 ) {
     await t.mutation((components as any).plaid.private.bulkUpsertTransactions, {
         userId,
@@ -87,6 +100,7 @@ async function seedTransactions(
             isoCurrencyCode: "USD",
             date: tx.date,
             name: tx.name,
+            merchantName: tx.merchantName,
             pending: tx.pending ?? false,
         })),
         modified: [],
@@ -243,5 +257,130 @@ describe("list_transactions agent tool (CROWDEV-344)", () => {
 
         expect(out.ids).toEqual(["tx_in"]);
         expect(out.window).toEqual({ from: "2026-04-01", to: "2026-04-30" });
+    });
+
+    // ===== CROWDEV-365: agent rows snapshot =====
+
+    it("embeds compact per-row snapshots so the agent can reason about results without a follow-up tool call", async () => {
+        const t = setup();
+        const userId = await seedUser(t, "user_lt_h");
+        const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_lt_h");
+        // amount in milliunits (= dollars * 1000); seed -12,500 = -$12.50.
+        await seedTransactions(t, "user_lt_h", plaidItemId, [
+            { transactionId: "tx_ebay", accountId, date: "2026-04-19", name: "EBAY*ABC123", merchantName: "eBay", amount: 12_500 },
+        ]);
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.listTransactions.listTransactions,
+            { userId },
+        )) as {
+            ids: string[];
+            rows: Array<{
+                transactionId: string;
+                date: string;
+                merchantName: string;
+                amount: number;
+                pending: boolean;
+                accountMask?: string;
+            }>;
+        };
+
+        expect(out.ids).toEqual(["tx_ebay"]);
+        expect(out.rows).toHaveLength(1);
+        expect(out.rows[0]).toMatchObject({
+            transactionId: "tx_ebay",
+            date: "2026-04-19",
+            merchantName: "eBay",
+            amount: 12.5, // milliunits → dollars
+            pending: false,
+            accountMask: "1234", // from seedPlaidItemAndAccount mask
+        });
+    });
+
+    it("rows mirror overlay-corrected merchant name, date, and category", async () => {
+        const t = setup();
+        const userId = await seedUser(t, "user_lt_i");
+        const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_lt_i");
+        await seedTransactions(t, "user_lt_i", plaidItemId, [
+            {
+                transactionId: "tx_renamed",
+                accountId,
+                date: "2026-04-10",
+                name: "AMZN MKTP US*A12B3CD",
+                merchantName: undefined,
+                amount: 7_777,
+            },
+        ]);
+        await t.run(async (ctx: any) => {
+            await ctx.db.insert("transactionOverlays", {
+                userId,
+                plaidTransactionId: "tx_renamed",
+                userMerchantName: "Amazon",
+                userDate: "2026-04-12",
+                userCategoryDetailed: "GENERAL_MERCHANDISE_ONLINE_MARKETPLACES",
+            });
+        });
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.listTransactions.listTransactions,
+            { userId },
+        )) as { rows: Array<{ merchantName: string; date: string; category?: string }> };
+
+        expect(out.rows).toHaveLength(1);
+        expect(out.rows[0]).toMatchObject({
+            merchantName: "Amazon",
+            date: "2026-04-12",
+            category: "GENERAL_MERCHANDISE_ONLINE_MARKETPLACES",
+        });
+    });
+
+    it("caps embedded rows at 50 even when more transactions are returned via ids", async () => {
+        const t = setup();
+        const userId = await seedUser(t, "user_lt_j");
+        const { plaidItemId, accountId } = await seedPlaidItemAndAccount(t, "user_lt_j");
+        // Seed 60 transactions and request limit=60 to force ids to grow
+        // beyond the per-snapshot cap.
+        const txns = Array.from({ length: 60 }, (_, i) => ({
+            transactionId: `tx_${i.toString().padStart(2, "0")}`,
+            accountId,
+            // Spread dates over Mar 1 → Apr 29 so we have 60 distinct days
+            // (2026-03-01 through 2026-04-29 inclusive = 60 days).
+            date: (() => {
+                const d = new Date(Date.UTC(2026, 2, 1));
+                d.setUTCDate(d.getUTCDate() + i);
+                return d.toISOString().slice(0, 10);
+            })(),
+            name: `Tx ${i}`,
+            amount: 1_000 + i,
+        }));
+        await seedTransactions(t, "user_lt_j", plaidItemId, txns);
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.listTransactions.listTransactions,
+            { userId, limit: 60 },
+        )) as {
+            ids: string[];
+            rows: Array<{ transactionId: string }>;
+            preview: { totalCount: number };
+        };
+
+        expect(out.ids).toHaveLength(60);
+        expect(out.preview.totalCount).toBe(60);
+        // Row cap holds even when ids are larger so the model sees a
+        // bounded payload while preview.totalCount preserves the truth.
+        expect(out.rows).toHaveLength(50);
+    });
+
+    it("returns an empty rows array when the viewer has no accounts linked", async () => {
+        const t = setup();
+        const userId = await seedUser(t, "user_lt_k");
+
+        const out = (await t.query(
+            (internal as any).agent.tools.read.listTransactions.listTransactions,
+            { userId },
+        )) as { ids: string[]; rows: unknown[] };
+
+        expect(out.ids).toEqual([]);
+        expect(out.rows).toEqual([]);
     });
 });

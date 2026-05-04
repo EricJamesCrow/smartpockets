@@ -8,6 +8,15 @@ import { agentQuery } from "../../functions";
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 500;
 
+// Cap on the per-row snapshot embedded for the agent. The frontend ignores
+// `rows` and re-hydrates from `ids` via agent.liveRows.getTransactions, so
+// this only governs how much the model sees. Keeping it ≤ 50 avoids token
+// bloat while still letting the agent reason about realistic windows
+// ("show me the last 10/25 transactions"). Above this cap, rows are
+// truncated but `ids` and `preview.totalCount` remain accurate so the
+// agent knows how many were elided.
+const MAX_AGENT_ROWS = 50;
+
 type TransactionOverlayLike = {
     plaidTransactionId: string;
     userDate?: string;
@@ -20,13 +29,36 @@ type TransactionOverlayLike = {
 type RawTransaction = {
     transactionId: string;
     accountId: string;
-    amount: number;
+    amount: number; // milliunits
     date: string;
     name: string;
     merchantName?: string;
     categoryPrimary?: string;
     categoryDetailed?: string;
     pending: boolean;
+};
+
+type RawAccount = {
+    accountId: string;
+    mask?: string;
+};
+
+/**
+ * Compact per-row snapshot the model sees. Mirrors the columns the user
+ * sees in the rendered TransactionsTable (merchant, amount, date, category,
+ * pending status, account mask) so that follow-up questions like "give me
+ * full details for the eBay row" can be answered without another tool
+ * round-trip. Amount is in dollars (signed: positive = outflow per Plaid
+ * convention) so the model doesn't reason about milliunits.
+ */
+export type AgentTransactionRow = {
+    transactionId: string;
+    date: string;
+    merchantName: string;
+    amount: number;
+    category?: string;
+    pending: boolean;
+    accountMask?: string;
 };
 
 function buildSummary(count: number, dateFrom: string | undefined, dateTo: string | undefined): string {
@@ -41,6 +73,25 @@ function buildSummary(count: number, dateFrom: string | undefined, dateTo: strin
         return `${count} ${noun} through ${dateTo}`;
     }
     return `${count} most-recent ${noun}`;
+}
+
+export function transactionToAgentRow(
+    tx: RawTransaction,
+    overlay: TransactionOverlayLike | undefined,
+    accountMaskById: Map<string, string | undefined>,
+): AgentTransactionRow {
+    const effectiveDate = overlay?.userDate ?? tx.date;
+    const effectiveMerchant = overlay?.userMerchantName ?? tx.merchantName ?? tx.name;
+    const effectiveCategory = overlay?.userCategoryDetailed ?? overlay?.userCategory ?? tx.categoryDetailed ?? tx.categoryPrimary;
+    return {
+        transactionId: tx.transactionId,
+        date: effectiveDate,
+        merchantName: effectiveMerchant,
+        amount: tx.amount / 1000,
+        category: effectiveCategory ?? undefined,
+        pending: tx.pending,
+        accountMask: accountMaskById.get(tx.accountId) ?? undefined,
+    };
 }
 
 export const listTransactions = agentQuery({
@@ -59,12 +110,14 @@ export const listTransactions = agentQuery({
         // anything returned by the Plaid component to accounts they own.
         const viewerAccounts = (await ctx.runQuery(components.plaid.public.getAccountsByUser, {
             userId: viewer.externalId,
-        })) as Array<{ accountId: string }>;
+        })) as RawAccount[];
         const viewerAccountIds = new Set(viewerAccounts.map((a) => a.accountId));
+        const accountMaskById = new Map(viewerAccounts.map((a) => [a.accountId, a.mask]));
 
         if (viewerAccountIds.size === 0) {
             return {
                 ids: [],
+                rows: [],
                 preview: {
                     totalCount: 0,
                     summary: "No accounts linked yet",
@@ -78,6 +131,7 @@ export const listTransactions = agentQuery({
         if (accountId && !viewerAccountIds.has(accountId)) {
             return {
                 ids: [],
+                rows: [],
                 preview: {
                     totalCount: 0,
                     summary: "Account not found for this user",
@@ -127,8 +181,18 @@ export const listTransactions = agentQuery({
         const truncated = sorted.slice(0, effectiveLimit);
         const ids = truncated.map((tx) => tx.transactionId);
 
+        // Embed compact per-row snapshots so the model can answer follow-up
+        // questions ("give me details for the eBay row") without another
+        // tool call. Capped at MAX_AGENT_ROWS for token discipline; `ids`
+        // and `preview.totalCount` still reflect the full window so the
+        // agent knows what was elided.
+        const rows: AgentTransactionRow[] = truncated
+            .slice(0, MAX_AGENT_ROWS)
+            .map((tx) => transactionToAgentRow(tx, overlayByTxId.get(tx.transactionId), accountMaskById));
+
         return {
             ids,
+            rows,
             preview: {
                 totalCount,
                 summary: buildSummary(totalCount, dateFrom, dateTo),
