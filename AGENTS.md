@@ -50,7 +50,9 @@ If an issue or PR reasonably blocks verification, merge, or deployment of anothe
 
 When starting or resuming work on a sub-issue, check its parent issue. If the parent is still To-do or Backlog while child work is active, move the parent to In Progress and leave a short comment naming the active child issue. Never move a parent issue to Done manually.
 
-Never manually mark a Linear issue as Done. PR automation handles status transitions on PR open and merge. Do not merge PRs unless explicitly instructed. Prefer small, reviewable PRs and run verification before opening a PR when possible. If verification cannot be run, say why.
+Keep Linear state in sync with reality. The default path is `Fixes <ISSUE-ID>` in the PR body so the GitHub-Linear automation moves the issue to Done on merge — prefer that over manual updates. But when automation didn't fire (a `Refs` magic word was used, an issue bundled multiple PRs, the integration was offline, etc.) and the work is verifiably shipped to `main`, manually move the issue to Done with a closing comment that cites the merged commit SHA + PR link. Don't mark Done speculatively or for partial work; only when the shipped state on `main` matches the issue's acceptance criteria.
+
+Do not merge PRs unless explicitly instructed. Prefer small, reviewable PRs and run verification before opening a PR when possible. If verification cannot be run, say why.
 
 For reliable linking across Linear, GitHub, and Graphite:
 - Use the Linear issue's generated branch name when available.
