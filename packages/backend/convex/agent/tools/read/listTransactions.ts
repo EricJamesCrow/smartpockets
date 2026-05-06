@@ -144,6 +144,7 @@ export const listTransactions = agentQuery({
         dateFrom: v.optional(v.string()),
         dateTo: v.optional(v.string()),
         limit: v.optional(v.number()),
+        presentation: v.optional(v.union(v.literal("widget"), v.literal("inline"))),
     },
     returns: v.any(),
     handler: async (ctx, { accountId, dateFrom, dateTo, limit }) => {
