@@ -86,6 +86,12 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
             dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
             dateTo: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
             limit: z.number().int().max(500).optional(),
+            presentation: z
+                .enum(["widget", "inline"])
+                .optional()
+                .describe(
+                    "Rendering hint. 'widget' (default) shows the full TransactionsTable component; use for broad exploration where the user wants to scan many rows. 'inline' suppresses the widget and expects you to summarize the relevant rows as a markdown table in your prose response; use for narrow questions like 'any new transactions?', 'show me my latest charges', 'find my X spending'.",
+                ),
         }),
         handler: agent.tools.read.listTransactions.listTransactions,
         handlerType: "query" as const,
