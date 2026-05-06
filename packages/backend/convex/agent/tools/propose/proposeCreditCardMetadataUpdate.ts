@@ -10,10 +10,23 @@ import {
 const TOOL_NAME = "propose_credit_card_metadata_update";
 
 // isPrimary is deferred per spec §2.2, §4.3 and is intentionally absent.
+interface UserOverridesPatch {
+  officialName?: string;
+  accountName?: string;
+  company?: string;
+  aprs?: Array<{
+    index: number;
+    aprPercentage?: number;
+    balanceSubjectToApr?: number;
+    interestChargeAmount?: number;
+  }>;
+  providerDashboardUrl?: string;
+}
+
 interface CardMetadataPatch {
   displayName?: string;
   company?: string;
-  userOverrides?: Record<string, unknown>;
+  userOverrides?: UserOverridesPatch;
 }
 
 function pickPatch(input: unknown): CardMetadataPatch {
@@ -23,7 +36,7 @@ function pickPatch(input: unknown): CardMetadataPatch {
   if (typeof src.displayName === "string") out.displayName = src.displayName;
   if (typeof src.company === "string") out.company = src.company;
   if (src.userOverrides && typeof src.userOverrides === "object") {
-    out.userOverrides = src.userOverrides as Record<string, unknown>;
+    out.userOverrides = src.userOverrides as UserOverridesPatch;
   }
   return out;
 }
@@ -94,6 +107,9 @@ registerToolExecutor(TOOL_NAME, async (ctx, proposal): Promise<ExecutorResult> =
   const companyTouched = parsed.patch.company !== undefined;
   const userOverridesTouched = parsed.patch.userOverrides !== undefined;
 
+  // `as any`: CardMetadataPatch is structurally compatible with the Convex-generated
+  // creditCards patch type, but TypeScript can't verify cross-interface compatibility
+  // with the generated Ents type without coupling this file to the generated model.
   await card.patch(parsed.patch as any);
 
   return {

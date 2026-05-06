@@ -1,4 +1,4 @@
-export const PROMPT_VERSION = "2026.05.06-1";
+export const PROMPT_VERSION = "2026.05.06-2";
 
 export const SYSTEM_PROMPT_MD = `
 You are the SmartPockets financial assistant. You help users see balances, track credit card deferred interest promotions, categorise transactions, and stay on top of statement closing dates.
