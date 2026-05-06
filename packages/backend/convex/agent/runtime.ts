@@ -50,7 +50,17 @@ function publicErrorCode(err: unknown, fallback = "downstream_failed"): string {
     return fallback;
 }
 
-function publicErrorMessage(code: string): string {
+function publicErrorMessage(code: string, originalMessage?: string): string {
+    // If the handler threw with a detailed `invalid_args: <guidance>` message,
+    // forward the guidance to the model so it can self-correct on retry.
+    // Plain `invalid_args:` throws with no detail fall through to the static message.
+    if (code === "validation_failed" && originalMessage) {
+        const prefix = "invalid_args:";
+        if (originalMessage.startsWith(prefix)) {
+            const detail = originalMessage.slice(prefix.length).trim();
+            if (detail.length > 0) return detail;
+        }
+    }
     switch (code) {
         case "not_authorized":
             return "Not authorized.";
@@ -80,9 +90,10 @@ export function sanitizedToolError(
     opts: { fallbackCode?: string; retryable?: boolean } = {},
 ): { code: string; message: string; retryable: boolean } {
     const code = publicErrorCode(err, opts.fallbackCode);
+    const originalMessage = err instanceof Error ? err.message : typeof err === "string" ? err : undefined;
     return {
         code,
-        message: publicErrorMessage(code),
+        message: publicErrorMessage(code, originalMessage),
         retryable: opts.retryable ?? (code === "downstream_failed" || code === "rate_limit_unavailable"),
     };
 }
