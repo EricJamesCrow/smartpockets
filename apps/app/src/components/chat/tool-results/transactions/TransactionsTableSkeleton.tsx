@@ -3,7 +3,11 @@
 import { ShimmerBar } from "../shared/Skeletons";
 import { ToolCardShell } from "../shared/ToolCardShell";
 
-export function TransactionsTableSkeleton() {
+export function TransactionsTableSkeleton(props: { input?: unknown }) {
+    const presentation = (props?.input as { presentation?: "widget" | "inline" } | undefined)?.presentation;
+    if (presentation === "inline") {
+        return null;
+    }
     return (
         <ToolCardShell title="Transactions">
             <div className="space-y-2">
