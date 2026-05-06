@@ -39,7 +39,18 @@ export const proposeCreditCardMetadataUpdate = agentMutation({
     const viewer = ctx.viewerX();
     const patch = pickPatch(args.update);
     if (Object.keys(patch).length === 0) {
-      throw new Error("invalid_args: update has no patchable fields");
+      const sentFields =
+        args.update && typeof args.update === "object"
+          ? Object.keys(args.update as Record<string, unknown>)
+          : [];
+      throw new Error(
+        `invalid_args: tried to update ${
+          sentFields.length ? `[${sentFields.join(", ")}]` : "no fields"
+        }; patchable fields are { displayName?: string, company?: string, userOverrides?: object }. ` +
+          `APR/interest-rate updates go in update.userOverrides.aprs[]: ` +
+          `[{ index: number, aprPercentage?: number, balanceSubjectToApr?: number, interestChargeAmount?: number }]. ` +
+          `Display name → update.displayName. Card issuer → update.company.`,
+      );
     }
 
     const card = await ctx.table("creditCards").getX(args.cardId);
