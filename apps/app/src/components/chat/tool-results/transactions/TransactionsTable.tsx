@@ -31,6 +31,11 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
     const rows = useLiveTransactions(output?.ids ?? []);
     const hint = useToolHintSend();
 
+    const presentation = (props.input as { presentation?: "widget" | "inline" } | undefined)?.presentation;
+    if (presentation === "inline") {
+        return null;
+    }
+
     if (state === "input-streaming" || !output) {
         return <TransactionsTableSkeleton />;
     }
