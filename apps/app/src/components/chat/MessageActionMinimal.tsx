@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowUp } from "@untitledui/icons";
 import { StopButton } from "@/components/chat/StopButton";
 import { cx } from "@/utils/cx";
@@ -32,13 +32,39 @@ export function MessageActionMinimal({
     if (!canSubmit) return;
     onSubmit(value.trim());
     setValue("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.focus();
+    }
   };
 
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    // IME composition guard: ignore events fired mid-composition (Japanese, Chinese, Korean).
+    if (event.nativeEvent.isComposing) return;
+
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      submit();
+      return;
+    }
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       submit();
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (value.trim()) {
+        setValue("");
+        if (textareaRef.current) textareaRef.current.style.height = "auto";
+      } else {
+        textareaRef.current?.blur();
+      }
+      return;
     }
   };
 
