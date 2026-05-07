@@ -6,6 +6,7 @@ import { AssistantAvatar } from "@/components/chat/AssistantAvatar";
 import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { MessageActions } from "@/components/chat/MessageActions";
 import { UserAvatar } from "@/components/chat/UserAvatar";
+import { StreamingCursor } from "@/components/chat/StreamingCursor";
 import { ToolResultRenderer } from "@/components/chat/tool-results/ToolResultRenderer";
 import { RawTextMessage } from "@/components/chat/tool-results/shared/RawTextMessage";
 import type { PartState, ToolName } from "@/components/chat/tool-results/types";
@@ -141,7 +142,10 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
               <span className="size-2 animate-bounce rounded-full bg-tertiary" />
             </span>
           ) : (
-            <MarkdownContent content={displayText} />
+            <>
+              <MarkdownContent content={displayText} />
+              {isStreaming && <StreamingCursor />}
+            </>
           )}
         </div>
         {!isStreaming && (
