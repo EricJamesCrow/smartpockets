@@ -27,7 +27,7 @@ export function StopButton({ onStop, disabled }: StopButtonProps) {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={SP_TRANSITION_FAST}
-      className="flex size-11 items-center justify-center rounded-full bg-brand-solid text-white shadow-[0_4px_14px_rgba(127,184,154,0.25)] transition-all duration-150 hover:scale-[1.04] hover:brightness-110 active:scale-[0.96] active:brightness-95 disabled:opacity-40 md:size-9"
+      className="flex size-11 items-center justify-center rounded-full bg-brand-solid text-white shadow-[0_4px_14px_rgba(127,184,154,0.25)] transition-all duration-[var(--sp-motion-fast)] hover:scale-[1.04] hover:brightness-110 active:scale-[0.96] active:brightness-95 disabled:opacity-40 md:size-9"
     >
       <Stop className="size-4" />
     </motion.button>
