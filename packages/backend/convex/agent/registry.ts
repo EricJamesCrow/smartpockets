@@ -313,14 +313,50 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         incrementsReadCount: false,
     },
     propose_credit_card_metadata_update: {
-        description: "Propose an update to a credit card's metadata (nickname, APRs, etc).",
+        description:
+            "Propose an update to a credit card's metadata. Patchable: displayName (nickname), company (issuer), userOverrides (nested object — see field description for APR path).",
         llmInputSchema: z.object({
             cardId: z.string(),
-            update: z.object({
-                displayName: z.string().optional(),
-                company: z.string().optional(),
-                userOverrides: z.any().optional(),
-            }),
+            update: z
+                .object({
+                    displayName: z.string().optional(),
+                    company: z.string().optional(),
+                    userOverrides: z
+                        .object({
+                            officialName: z.string().optional(),
+                            accountName: z.string().optional(),
+                            company: z.string().optional(),
+                            aprs: z
+                                .array(
+                                    z.object({
+                                        index: z
+                                            .number()
+                                            .int()
+                                            .describe(
+                                                "0 = purchase APR, 1 = balance-transfer APR, etc.",
+                                            ),
+                                        aprPercentage: z
+                                            .number()
+                                            .optional()
+                                            .describe(
+                                                "As a percent, e.g. 0 for 0% intro, 21.99 for standard.",
+                                            ),
+                                        balanceSubjectToApr: z.number().optional(),
+                                        interestChargeAmount: z.number().optional(),
+                                    }),
+                                )
+                                .optional()
+                                .describe(
+                                    "APR overrides keyed by index. To set the purchase APR to 0%, send aprs: [{ index: 0, aprPercentage: 0 }].",
+                                ),
+                            providerDashboardUrl: z.string().optional(),
+                        })
+                        .optional()
+                        .describe(
+                            "User-set overrides for fields the user can correct manually (Plaid-sync'd values stay separate).",
+                        ),
+                })
+                .passthrough(),
         }),
         handler: agent.tools.propose.proposeCreditCardMetadataUpdate.proposeCreditCardMetadataUpdate,
         handlerType: "mutation" as const,
