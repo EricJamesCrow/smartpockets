@@ -75,6 +75,31 @@ When finishing any code-changing task, unless the user explicitly says not to:
 
 When finishing, summarize the Linear issue used or created, branch name, Graphite PR link, what changed, verification performed, and remaining risks or follow-ups.
 
+## Investigation Discipline (Before Asking the User)
+
+Before asking the user any clarifying question, exhaust the read-only paths that can answer it yourself. The user pays a cost (interrupt, context switch) for every question, and most questions about external state are one tool call away. Asking before investigating wastes their time and signals you didn't try.
+
+Order of operations:
+
+1. **Check the codebase** — `Read`, `grep`, `find`. Most "what does X look like / where is Y configured / what value does Z have" questions live in the repo.
+2. **Check the CLI or MCP server that owns the system you're asking about.** Before asking about external state, find the authoritative tool. Quick reference:
+
+| System | Read path |
+|--------|-----------|
+| Vercel env vars / project config / deployments / domains | `npx vercel env ls <env>`, `npx vercel env pull <file> --environment=<env>` (then grep), `npx vercel inspect <url>`, `npx vercel project ls`, `npx vercel domains ls` |
+| Convex schema / functions / data / logs / env | Convex MCP — `mcp__convex__tables`, `mcp__convex__functionSpec`, `mcp__convex__data`, `mcp__convex__logs`, `mcp__convex__envGet`, `mcp__convex__envList` |
+| Linear issues, comments, sub-issue state | Linear MCP |
+| Clerk users, orgs, roles, sessions | Clerk MCP |
+| Plaid sandbox state / production diagnostics | Plaid Sandbox MCP / Plaid Dashboard MCP |
+| Graphite stacks, PR linkage, branches | Graphite MCP (`mcp__graphite__run_gt_cmd`) or `gt` / `gh` CLIs |
+| GitHub PRs, checks, comments, releases | `gh pr view`, `gh pr checks`, `gh api ...` |
+| Library / framework / API docs | Context7 MCP — `mcp__plugin_context7_context7__query-docs` |
+| Browser-side debugging (dev server, preview) | Chrome DevTools MCP / Playwright MCP |
+
+3. **Then ask only what's left.** When you do ask, cite the value you couldn't find and where you already looked so the user doesn't redo your work. "I checked Vercel preview env and `CONVEX_DEPLOYMENT=dev:foo`, but the matching Plaid env isn't set there — is it on the Convex side?" beats "what Plaid env do previews use?"
+
+Secret hygiene when pulling secret-bearing data (e.g. `vercel env pull`): write to a temp file outside the repo (`/tmp/...`), grep only the non-secret keys you need, and `rm` the file in the same command. Never paste secret values into chat. Deployment names, project slugs, and public URLs are not secrets — pasting those is fine.
+
 ## Tech Stack
 
 | Category | Technology | Version |
