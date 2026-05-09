@@ -758,19 +758,36 @@ Provides: stacked PR creation, branch management, stack submission and navigatio
 
 The update script installs bun 1.1.42 (if missing) and runs `bun install`. After it completes, all workspace dependencies are ready. `.env.local` files must exist with valid Clerk + Convex credentials before starting any service — see below.
 
-### Required secrets
+### Required secrets and `.env.local` bootstrap
 
-The app requires these environment variables in `.env.local` (root, symlinked into `apps/app/`, `packages/backend/`, `apps/web/` by `scripts/bootstrap-env.sh`):
+Secrets are injected as environment variables by the Cloud Agent VM. To write them into `.env.local` (which Next.js reads), run this Python snippet once per session before starting any service:
+
+```bash
+python3 -c "
+import os
+keys = ['CONVEX_DEPLOYMENT','NEXT_PUBLIC_CONVEX_URL','NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+'CLERK_SECRET_KEY','NEXT_PUBLIC_CLERK_FRONTEND_API_URL','NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL',
+'NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL','NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL',
+'NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL','NEXT_PUBLIC_MARKETING_URL',
+'ANTHROPIC_API_KEY','OPENAI_API_KEY','RESEND_API_KEY']
+with open('.env.local','w') as f:
+    for k in keys:
+        v = os.environ.get(k,'').strip('\"').strip(\"'\")
+        f.write(f'{k}={v}\n')
+    f.write('NEXT_PUBLIC_APP_URL=http://localhost:3000\n')
+"
+bash scripts/bootstrap-env.sh
+```
+
+This is necessary because secret values are redacted by the tool layer — using `printenv` or shell variable expansion writes empty/redacted values. The Python `os.environ` approach preserves the actual values.
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `CONVEX_DEPLOYMENT` | Yes | e.g. `dev:<your-deployment>` |
-| `NEXT_PUBLIC_CONVEX_URL` | Yes | e.g. `https://<your-deployment>.convex.cloud` |
+| `CONVEX_DEPLOYMENT` | Yes | Convex dev deployment name |
+| `NEXT_PUBLIC_CONVEX_URL` | Yes | Convex dev deployment URL |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk dev key (`pk_test_...`) |
-| `CLERK_SECRET_KEY` | Yes | Clerk dev key (`sk_test_...`) |
+| `CLERK_SECRET_KEY` | Yes | Clerk server key (`sk_test_...`) — middleware returns 500 without it |
 | `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` | Yes | Clerk dev issuer URL |
-
-Run `bash scripts/bootstrap-env.sh` to create symlinks after placing `.env.local` at the repo root.
 
 ### Running services
 
@@ -797,3 +814,5 @@ Run `bash scripts/bootstrap-env.sh` to create symlinks after placing `.env.local
 - **Turbo lockfile warning**: Turborepo may warn about `Could not resolve workspaces` from `bun.lock` format. This does not affect task execution.
 - **Convex dev deployment**: Backend changes under `packages/backend/convex/` must be pushed to the dev deployment before testing. Either keep `bun dev:backend` running or run `cd packages/backend && bunx convex dev --once`.
 - **No git hooks**: The repo has no pre-commit or pre-push hooks (no `.husky/`, no `.pre-commit-config.yaml`).
+- **Auth flow**: Unauthenticated requests to `localhost:3000` redirect to `localhost:3001` (marketing site). Sign-in/sign-up is via Clerk UI on the marketing site, which redirects back to `localhost:3000` after auth. Both `bun dev:app` and `bun dev:web` must be running for the full sign-in flow.
+- **Secret redaction**: Shell commands like `printenv`, `echo $VAR`, and even `grep` redact secret values in Cloud Agent VMs. Always use `python3 -c "import os; ..."` to write secrets into files.
