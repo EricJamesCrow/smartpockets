@@ -751,3 +751,49 @@ Provides: stacked PR creation, branch management, stack submission and navigatio
 | `docs/ARCHITECTURE.md` | Detailed architecture notes |
 | `docs/email-infrastructure-roadmap.md` | Email system status |
 | `packages/backend/convex/schema.ts` | Full schema definition |
+
+## Cursor Cloud specific instructions
+
+### Environment bootstrap
+
+The update script installs bun 1.1.42 (if missing) and runs `bun install`. After it completes, all workspace dependencies are ready. `.env.local` files must exist with valid Clerk + Convex credentials before starting any service — see below.
+
+### Required secrets
+
+The app requires these environment variables in `.env.local` (root, symlinked into `apps/app/`, `packages/backend/`, `apps/web/` by `scripts/bootstrap-env.sh`):
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `CONVEX_DEPLOYMENT` | Yes | e.g. `dev:<your-deployment>` |
+| `NEXT_PUBLIC_CONVEX_URL` | Yes | e.g. `https://<your-deployment>.convex.cloud` |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk dev key (`pk_test_...`) |
+| `CLERK_SECRET_KEY` | Yes | Clerk dev key (`sk_test_...`) |
+| `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` | Yes | Clerk dev issuer URL |
+
+Run `bash scripts/bootstrap-env.sh` to create symlinks after placing `.env.local` at the repo root.
+
+### Running services
+
+| Service | Command | Notes |
+|---------|---------|-------|
+| Next.js app | `bun dev:app` | Port 3000. Requires valid Clerk keys or middleware returns 500. |
+| Convex backend | `bun dev:backend` | Streams logs; pushes functions on save. Not needed if using an existing dev deployment. |
+| Marketing site | `bun dev:web` (optional) | Port 3001. |
+| All services | `bun dev` | Runs app + backend + web in parallel via Turbo. |
+
+### Testing and verification
+
+| Check | Command |
+|-------|---------|
+| Lint | `bun lint` |
+| Typecheck | `bun typecheck` |
+| Backend unit tests | `cd packages/backend && npx vitest run --typecheck` |
+| App-only typecheck | `cd apps/app && bun typecheck` |
+
+### Gotchas
+
+- **bun.lock version mismatch**: bun 1.1.42 warns `Unknown lockfile version` and ignores the lockfile. This is harmless — it resolves fresh and saves a compatible lockfile. Do not upgrade bun beyond the pinned 1.1.42.
+- **Pre-existing typecheck error**: `apps/app/src/components/chat/tool-results/charts/SpendByCategoryChart.tsx` has a type error on `main` related to `recharts` `Pie` component callback types. This is not a setup issue.
+- **Turbo lockfile warning**: Turborepo may warn about `Could not resolve workspaces` from `bun.lock` format. This does not affect task execution.
+- **Convex dev deployment**: Backend changes under `packages/backend/convex/` must be pushed to the dev deployment before testing. Either keep `bun dev:backend` running or run `cd packages/backend && bunx convex dev --once`.
+- **No git hooks**: The repo has no pre-commit or pre-push hooks (no `.husky/`, no `.pre-commit-config.yaml`).
