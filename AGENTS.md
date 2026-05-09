@@ -751,3 +751,79 @@ Provides: stacked PR creation, branch management, stack submission and navigatio
 | `docs/ARCHITECTURE.md` | Detailed architecture notes |
 | `docs/email-infrastructure-roadmap.md` | Email system status |
 | `packages/backend/convex/schema.ts` | Full schema definition |
+
+## Cursor Cloud specific instructions
+
+### Environment bootstrap
+
+The update script installs bun 1.1.42 (if missing) and runs `bun install`. After it completes, all workspace dependencies are ready. `.env.local` files must exist with valid Clerk + Convex credentials before starting any service — see below.
+
+### Required secrets and `.env.local` bootstrap
+
+Secrets are injected as environment variables by the Cloud Agent VM. To write them into the **root** `.env.local` (which `scripts/bootstrap-env.sh` then symlinks into each workspace), run this from the repo root once per session before starting any service:
+
+```bash
+cd /workspace
+python3 -c "
+import os
+keys = ['CONVEX_DEPLOYMENT','NEXT_PUBLIC_CONVEX_URL','NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+'CLERK_SECRET_KEY','NEXT_PUBLIC_CLERK_FRONTEND_API_URL','NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL',
+'NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL','NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL',
+'NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL','NEXT_PUBLIC_MARKETING_URL',
+'ANTHROPIC_API_KEY','OPENAI_API_KEY','RESEND_API_KEY']
+with open('.env.local','w') as f:
+    for k in keys:
+        v = os.environ.get(k,'').strip('\"').strip(\"'\")
+        f.write(f'{k}={v}\n')
+    f.write('NEXT_PUBLIC_APP_URL=http://localhost:3000\n')
+"
+bash scripts/bootstrap-env.sh
+```
+
+`scripts/bootstrap-env.sh` creates `.env.local` from `.env.example` (if missing) and symlinks `apps/app/.env.local`, `packages/backend/.env.local`, and `apps/web/.env.local` to the root `.env.local` so all services share the same environment file.
+
+This Python approach is necessary because secret values are redacted by the Cloud Agent tool layer — using `printenv` or shell variable expansion writes empty/redacted values. `os.environ` in Python preserves the actual values.
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `CONVEX_DEPLOYMENT` | Yes | Convex dev deployment name |
+| `NEXT_PUBLIC_CONVEX_URL` | Yes | Convex dev deployment URL |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk dev key (`pk_test_...`) |
+| `CLERK_SECRET_KEY` | Yes | Clerk server key (`sk_test_...`) — middleware returns 500 without it |
+| `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` | Yes | Clerk dev issuer URL |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL` | No | Clerk redirect after sign-in (defaults to `/`) |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL` | No | Clerk redirect after sign-up (defaults to `/`) |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | No | Clerk fallback redirect after sign-in |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | No | Clerk fallback redirect after sign-up |
+| `NEXT_PUBLIC_MARKETING_URL` | No | Marketing site URL (defaults to `http://localhost:3001` in dev) |
+| `ANTHROPIC_API_KEY` | No | AI agent chat (Claude). Only needed for the chat feature. |
+| `OPENAI_API_KEY` | No | RAG embeddings. Only needed for RAG features. |
+| `RESEND_API_KEY` | No | Email delivery. App works without it; emails silently fail. |
+
+### Running services
+
+| Service | Command | Notes |
+|---------|---------|-------|
+| Next.js app | `bun dev:app` | Port 3000. Requires valid Clerk keys or middleware returns 500. |
+| Convex backend | `bun dev:backend` | Streams logs; pushes functions on save. Not needed if using an existing dev deployment. |
+| Marketing site | `bun dev:web` (optional) | Port 3001. |
+| All services | `bun dev` | Runs app + backend + web in parallel via Turbo. |
+
+### Testing and verification
+
+| Check | Command |
+|-------|---------|
+| Lint | `bun lint` |
+| Typecheck | `bun typecheck` |
+| Backend unit tests | `cd packages/backend && npx vitest run --typecheck` |
+| App-only typecheck | `cd apps/app && bun typecheck` |
+
+### Gotchas
+
+- **bun.lock version mismatch**: bun 1.1.42 warns `Unknown lockfile version` and ignores the lockfile. This is harmless for local dev — it resolves fresh. However, **do not commit the regenerated `bun.lock`** because Vercel uses bun 1.3.6 and the lockfile format change causes different dependency resolutions, which can introduce type errors in the Vercel build. If `bun.lock` is modified by `bun install`, revert it before committing: `git checkout -- bun.lock`.
+- **Pre-existing typecheck error**: `apps/app/src/components/chat/tool-results/charts/SpendByCategoryChart.tsx` has a type error on `main` related to `recharts` `Pie` component callback types. This is not a setup issue.
+- **Turbo lockfile warning**: Turborepo may warn about `Could not resolve workspaces` from `bun.lock` format. This does not affect task execution.
+- **Convex dev deployment**: Backend changes under `packages/backend/convex/` must be pushed to the dev deployment before testing. Either keep `bun dev:backend` running or run `cd packages/backend && bunx convex dev --once`.
+- **No git hooks**: The repo has no pre-commit or pre-push hooks (no `.husky/`, no `.pre-commit-config.yaml`).
+- **Auth flow**: Unauthenticated requests to `localhost:3000` redirect to `localhost:3001` (marketing site). Sign-in/sign-up is via Clerk UI on the marketing site, which redirects back to `localhost:3000` after auth. Both `bun dev:app` and `bun dev:web` must be running for the full sign-in flow.
+- **Secret redaction**: Shell commands like `printenv`, `echo $VAR`, and even `grep` redact secret values in Cloud Agent VMs. Always use `python3 -c "import os; ..."` to write secrets into files.
