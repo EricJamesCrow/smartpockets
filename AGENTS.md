@@ -809,7 +809,7 @@ This is necessary because secret values are redacted by the tool layer — using
 
 ### Gotchas
 
-- **bun.lock version mismatch**: bun 1.1.42 warns `Unknown lockfile version` and ignores the lockfile. This is harmless — it resolves fresh and saves a compatible lockfile. Do not upgrade bun beyond the pinned 1.1.42.
+- **bun.lock version mismatch**: bun 1.1.42 warns `Unknown lockfile version` and ignores the lockfile. This is harmless for local dev — it resolves fresh. However, **do not commit the regenerated `bun.lock`** because Vercel uses bun 1.3.6 and the lockfile format change causes different dependency resolutions, which can introduce type errors in the Vercel build. If `bun.lock` is modified by `bun install`, revert it before committing: `git checkout -- bun.lock`.
 - **Pre-existing typecheck error**: `apps/app/src/components/chat/tool-results/charts/SpendByCategoryChart.tsx` has a type error on `main` related to `recharts` `Pie` component callback types. This is not a setup issue.
 - **Turbo lockfile warning**: Turborepo may warn about `Could not resolve workspaces` from `bun.lock` format. This does not affect task execution.
 - **Convex dev deployment**: Backend changes under `packages/backend/convex/` must be pushed to the dev deployment before testing. Either keep `bun dev:backend` running or run `cd packages/backend && bunx convex dev --once`.
