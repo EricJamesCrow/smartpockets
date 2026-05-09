@@ -760,9 +760,10 @@ The update script installs bun 1.1.42 (if missing) and runs `bun install`. After
 
 ### Required secrets and `.env.local` bootstrap
 
-Secrets are injected as environment variables by the Cloud Agent VM. To write them into `.env.local` (which Next.js reads), run this Python snippet once per session before starting any service:
+Secrets are injected as environment variables by the Cloud Agent VM. To write them into the **root** `.env.local` (which `scripts/bootstrap-env.sh` then symlinks into each workspace), run this from the repo root once per session before starting any service:
 
 ```bash
+cd /workspace
 python3 -c "
 import os
 keys = ['CONVEX_DEPLOYMENT','NEXT_PUBLIC_CONVEX_URL','NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
@@ -779,7 +780,9 @@ with open('.env.local','w') as f:
 bash scripts/bootstrap-env.sh
 ```
 
-This is necessary because secret values are redacted by the tool layer — using `printenv` or shell variable expansion writes empty/redacted values. The Python `os.environ` approach preserves the actual values.
+`scripts/bootstrap-env.sh` creates `.env.local` from `.env.example` (if missing) and symlinks `apps/app/.env.local`, `packages/backend/.env.local`, and `apps/web/.env.local` to the root `.env.local` so all services share the same environment file.
+
+This Python approach is necessary because secret values are redacted by the Cloud Agent tool layer — using `printenv` or shell variable expansion writes empty/redacted values. `os.environ` in Python preserves the actual values.
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
@@ -788,6 +791,14 @@ This is necessary because secret values are redacted by the tool layer — using
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk dev key (`pk_test_...`) |
 | `CLERK_SECRET_KEY` | Yes | Clerk server key (`sk_test_...`) — middleware returns 500 without it |
 | `NEXT_PUBLIC_CLERK_FRONTEND_API_URL` | Yes | Clerk dev issuer URL |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL` | No | Clerk redirect after sign-in (defaults to `/`) |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL` | No | Clerk redirect after sign-up (defaults to `/`) |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | No | Clerk fallback redirect after sign-in |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | No | Clerk fallback redirect after sign-up |
+| `NEXT_PUBLIC_MARKETING_URL` | No | Marketing site URL (defaults to `http://localhost:3001` in dev) |
+| `ANTHROPIC_API_KEY` | No | AI agent chat (Claude). Only needed for the chat feature. |
+| `OPENAI_API_KEY` | No | RAG embeddings. Only needed for RAG features. |
+| `RESEND_API_KEY` | No | Email delivery. App works without it; emails silently fail. |
 
 ### Running services
 
