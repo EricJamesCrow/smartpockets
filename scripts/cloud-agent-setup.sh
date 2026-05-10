@@ -10,7 +10,17 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Find the repo root tolerantly. Some platforms (Claude Code on the Web,
+# possibly Codex) run setup from `~` or `/` rather than the repo root, and
+# `bash -c` invocations leave BASH_SOURCE empty — so prefer git when available.
+if ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  :
+elif [ -n "${BASH_SOURCE[0]:-}" ]; then
+  ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+else
+  echo "[cloud-agent-setup] ERROR: cannot determine repo root (not in a git repo and BASH_SOURCE is empty). Invoke this script from inside the repo." >&2
+  exit 1
+fi
 cd "$ROOT_DIR"
 
 # Bun version must match `packageManager` in the root package.json. Otherwise

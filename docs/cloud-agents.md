@@ -46,9 +46,9 @@ There is no CLI/API for managing cloud-session env on these platforms — each o
 ### OpenAI Codex Cloud
 
 1. Open `chatgpt.com/codex` → **Environments** → connect `EricJamesCrow/smartpockets` (requires the OpenAI GitHub app installed on the repo or org).
-2. **Setup script** field:
+2. **Setup script** field — path-safe in case Codex's setup CWD isn't the repo root:
    ```bash
-   bash scripts/cloud-agent-setup.sh
+   cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && bash scripts/cloud-agent-setup.sh
    ```
 3. **Environment variables** section — paste each value from the [env checklist](#env-var-checklist) as a plain **environment variable**, not a "secret". Codex strips secrets before the agent phase starts, so anything the agent needs at runtime must be a plain env var.
 4. **Maintenance script** — leave empty. The setup script is idempotent.
@@ -62,9 +62,9 @@ There is no CLI/API for managing cloud-session env on these platforms — each o
    - `*.convex.cloud`, `*.convex.site` (Convex)
    - `*.plaid.com` (Plaid; only if the agent will hit Plaid directly)
    - `*.clerk.accounts.dev` (Clerk dev FAPI)
-5. **Setup script** field:
+5. **Setup script** field — uses `$CLAUDE_PROJECT_DIR` because setup runs from `~`, not the repo root:
    ```bash
-   bash scripts/cloud-agent-setup.sh
+   bash "$CLAUDE_PROJECT_DIR/scripts/cloud-agent-setup.sh"
    ```
 6. **Environment variables** field — paste from the [env checklist](#env-var-checklist), one `KEY=value` per line.
 7. The UI warns "don't add secrets" — this is about visibility to anyone editing the environment, which doesn't apply to a solo account. The values do flow into the sandbox.
