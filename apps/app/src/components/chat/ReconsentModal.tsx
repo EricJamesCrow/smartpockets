@@ -29,7 +29,15 @@ export function ReconsentModal({ plaidItemId, onDismiss }: ReconsentModalProps) 
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning-primary" />
               <div className="flex-1">
-                <p className="sp-kicker text-tertiary dark:text-stone-500">
+                {/*
+                  CROWDEV-390: lift fallback `dark:text-stone-500` →
+                  `dark:text-stone-400` so the Tailwind utility passes AA on
+                  the moss panel (panel-strong) backdrop even if
+                  `.sp-kicker`'s `var(--sp-microcopy)` color rule loses the
+                  cascade. Defense-in-depth (parity with the chat home and
+                  message-input kicker copy).
+                */}
+                <p className="sp-kicker text-tertiary dark:text-stone-400">
                   <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
                   Action required
                 </p>

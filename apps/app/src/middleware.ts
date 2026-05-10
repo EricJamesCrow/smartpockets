@@ -12,6 +12,13 @@ const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 // shipped. See `apps/app/tests/helpers/auth.ts` for the helper that uses it.
 const isE2eBootstrapRoute = createRouteMatcher(["/e2e-bootstrap"]);
 
+// CROWDEV-390: Lighthouse a11y audit harness lives at /a11y-audit/*. When
+// `NEXT_PUBLIC_A11Y_AUDIT=1` is set we bypass the unauthenticated-user
+// redirect so headless Chrome can score the chat surfaces without a Clerk
+// session. Each harness page also calls `notFound()` when the env var is
+// unset so the harness never renders in production deployments.
+const isAuditRoute = createRouteMatcher(["/a11y-audit(.*)"]);
+
 // Marketing site URL (use localhost in development)
 const MARKETING_URL =
   process.env.NODE_ENV === "development"
@@ -33,6 +40,17 @@ export default clerkMiddleware(async (auth, req) => {
     isE2eBootstrapRoute(req)
   ) {
     return NextResponse.next();
+  }
+
+  if (isAuditRoute(req) && process.env.NEXT_PUBLIC_A11Y_AUDIT === "1") {
+    // Pass the pathname through to RSC layout via a forwarded header so the
+    // root layout can pick the right `dark-mode` / `light-mode` class for
+    // the requested audit surface (CROWDEV-390).
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-pathname", req.nextUrl.pathname);
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
   }
 
   // Check if user is authenticated

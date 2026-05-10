@@ -118,8 +118,19 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
   // consistent with the design system.
   const showTypingDots = isAssistant && isStreaming && (!displayText || displayText === "");
 
+  // CROWDEV-390: VoiceOver smoke. Wrap each turn in an `article` landmark
+  // with a role-specific `aria-label` so screen-reader users hear "Message
+  // from you" / "Message from agent" when navigating between turns. Without
+  // this the bubble is just a stack of <div>s and the speaker is implicit
+  // only in visual layout.
+  const turnLabel = isUser ? "Message from you" : "Message from agent";
+
   return (
-    <div className={cx("group/msg relative flex gap-4", isUser && "flex-row-reverse")}>
+    <div
+      className={cx("group/msg relative flex gap-4", isUser && "flex-row-reverse")}
+      role="article"
+      aria-label={turnLabel}
+    >
       {isUser ? <UserAvatar /> : <AssistantAvatar />}
       <div className={cx("flex max-w-[80%] flex-col gap-1", isUser ? "items-end" : "items-start")}>
         <div

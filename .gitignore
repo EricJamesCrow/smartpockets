@@ -58,3 +58,6 @@ next-env.d.ts
 
 # worktrees
 .worktrees/
+
+# CROWDEV-390: lighthouse audit output (per-run, reproducible)
+.audit-output/

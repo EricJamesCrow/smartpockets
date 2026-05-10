@@ -78,10 +78,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="bg-primary flex min-h-screen flex-col lg:flex-row">
             <DashboardSidebar />
-            <div className="min-w-0 flex-1 flex flex-col">
+            {/*
+              CROWDEV-390: turn the chat / dashboard column into a `<main>`
+              landmark so the document has exactly one main region (Lighthouse
+              `landmark-one-main` failed before — chat / dashboard / settings
+              pages all rendered into a bare <div>, which left the page
+              landmark-less). The settings sub-route also has an internal
+              `<main>` element; nesting two landmarks is allowed by HTML5
+              (the inner one becomes the more specific main when navigated by
+              assistive tech), but we'd prefer to remove the inner one as
+              follow-up to keep the landmark structure flat.
+            */}
+            <main className="min-w-0 flex-1 flex flex-col">
                 <AlertBanner />
                 {children}
-            </div>
+            </main>
         </div>
     );
 }
