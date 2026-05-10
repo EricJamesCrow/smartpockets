@@ -22,15 +22,20 @@ Cloud agents run with the same env as a Vercel **Preview** deployment of `apps/a
 This is the simplest tier and matches how preview builds already operate. Two safer tiers if Path A turns out to be too much exposure:
 
 - **Path B** — strip `CONVEX_DEPLOY_KEY` from each platform's env. Agents can call functions and run the app, but cannot push backend code or run `bunx convex dev --once`.
-- **Path C** — provision a dedicated `dev:` Convex deployment with `PLAID_ENV=sandbox`. Agents never touch `dev:canny-turtle-982`. Add the new deployment to `PLAID_PROD_EXCEPTION_DEPLOYMENTS` in `apps/app/scripts/vercel-build.sh` is **not** needed because the new deployment runs sandbox Plaid.
+- **Path C** — provision a dedicated `dev:` Convex deployment with `PLAID_ENV=sandbox`. Agents never touch `dev:canny-turtle-982`.
 
-## Repo artifacts (already in place)
+## Setup philosophy: let agents bootstrap themselves
+
+There is **no committed setup script** in this repo. Cloud agentic environments are themselves capable of detecting missing dependencies (Bun, `node_modules`, etc.) and installing on demand. When they hit an obstacle (missing tool, wrong version, blocked URL) they patch it via a PR — which is exactly the workflow we want.
+
+The only repo-side artifact is `.cursor/environment.json`, which Cursor reads automatically:
 
 | File | Role |
 |---|---|
-| `scripts/cloud-agent-setup.sh` | Idempotent bootstrap — installs Bun, runs `bun install`. All three platforms call it. |
-| `.cursor/environment.json` | Tells Cursor Background Agents to call the bootstrap script. |
-| `packages/backend/convex/_generated/` | Generated Convex types — committed, so `bun typecheck` and `bun build` pass on a fresh checkout. |
+| `.cursor/environment.json` | Tells Cursor Background Agents to run `bun install` after machine setup. Cursor's sandbox ships Bun preinstalled. |
+| `packages/backend/convex/_generated/` | Generated Convex types — committed, so `bun typecheck` and `bun build` pass on a fresh checkout without running `convex codegen`. |
+
+For Codex and Claude Code on the Web, **leave the Setup script field empty**. The agent does its own setup on first use.
 
 ## Per-platform UI walkthrough
 
@@ -41,32 +46,40 @@ There is no CLI/API for managing cloud-session env on these platforms — each o
 1. Open `cursor.com/agents` and sign in.
 2. Authorize the Cursor GitHub app on `EricJamesCrow/smartpockets`.
 3. Open the **Secrets** tab — Cursor's recommended path for env values (KMS-encrypted at rest, redacted in tool output). Paste each key from the [env checklist](#env-var-checklist).
-4. **Environment** tab — `.cursor/environment.json` is auto-detected. If you ever switch to a Dockerfile-based environment, update both `.cursor/environment.json` and the Dockerfile.
+4. **Environment** tab — `.cursor/environment.json` is auto-detected. The install command is just `bun install`; Cursor's sandbox preinstalls Bun, so no extra step is needed.
 
 ### OpenAI Codex Cloud
 
 1. Open `chatgpt.com/codex` → **Environments** → connect `EricJamesCrow/smartpockets` (requires the OpenAI GitHub app installed on the repo or org).
-2. **Setup script** field — Codex's container runs setup with `cwd = worktree root` per [openai/codex#13576](https://github.com/openai/codex/issues/13576), so the relative path resolves directly:
-   ```bash
-   bash scripts/cloud-agent-setup.sh
+2. **Setup script** field — leave empty. The agent will run `bun install` itself (and install Bun if the container doesn't ship it).
+3. **Maintenance script** — leave empty.
+4. **Agent internet access**: turn **On**. Use the **Common dependencies** preset (covers npm + GitHub + GitHub asset hosts). Add to **Additional allowed domains** (comma-separated, exact value below):
    ```
-3. **Environment variables** section — paste each value from the [env checklist](#env-var-checklist) as a plain **environment variable**, not a "secret". Codex strips secrets before the agent phase starts, so anything the agent needs at runtime must be a plain env var.
-4. **Maintenance script** — leave empty. The setup script is idempotent.
+   *.convex.cloud, *.convex.site, *.clerk.accounts.dev, *.plaid.com, bun.sh
+   ```
+5. **Environment variables** section — paste each value from the [env checklist](#env-var-checklist) as a plain **environment variable**, not a "secret". Codex strips secrets before the agent phase starts, so anything the agent needs at runtime must be a plain env var.
 
 ### Claude Code on the Web
 
 1. Open `claude.com/code` and sign in.
 2. Connect GitHub via either the Claude GitHub App on `EricJamesCrow/smartpockets` (recommended — enables auto-fix), or run `/web-setup` locally to sync your `gh` token.
 3. Click the cloud icon → **Add environment**.
-4. **Network access**: switch from "Trusted" to **Custom** and allowlist:
-   - `*.convex.cloud`, `*.convex.site` (Convex)
-   - `*.plaid.com` (Plaid; only if the agent will hit Plaid directly)
-   - `*.clerk.accounts.dev` (Clerk dev FAPI)
-5. **Setup script** field — VM-level Bun install only. Per Anthropic's [Claude Code on the Web docs](https://code.claude.com/docs/en/claude-code-on-the-web), setup scripts run *before Claude Code launches*, so `$CLAUDE_PROJECT_DIR` is **not** set at this point and the repo isn't yet at a discoverable path. The canonical pattern is "setup script for VM-level installs (cached ~7 days), `SessionStart` hook for per-session repo work like `bun install`." This repo's `.claude/settings.json` already wires the SessionStart hook (gated on `CLAUDE_CODE_REMOTE=true` so it's a no-op locally) — paste only the Bun installer here:
-   ```bash
-   curl -fsSL https://bun.sh/install | bash -s "bun-v1.1.42"
-   echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.bashrc
+4. **Network access**: switch from "Trusted" to **Custom** and allowlist (one per line — Custom mode has no baseline, so include npm + GitHub explicitly):
    ```
+   registry.npmjs.org
+   github.com
+   api.github.com
+   objects.githubusercontent.com
+   bun.sh
+   *.convex.cloud
+   *.convex.site
+   *.clerk.accounts.dev
+   *.plaid.com
+   vercel.com
+   *.vercel.app
+   ```
+   Note: `bun.sh/install` may still return 403 inside the Claude Web sandbox (Cloudflare bot detection + Anthropic's egress proxy). The sandbox ships Bun preinstalled (1.3.x), so the agent uses that.
+5. **Setup script** field — leave empty. The Claude Web sandbox preinstalls Bun; the agent runs `bun install` itself.
 6. **Environment variables** field — paste from the [env checklist](#env-var-checklist), one `KEY=value` per line.
 7. The UI warns "don't add secrets" — this is about visibility to anyone editing the environment, which doesn't apply to a solo account. The values do flow into the sandbox.
 
@@ -81,7 +94,7 @@ TEMP="/tmp/sp-preview.env" && \
   rm -f "$TEMP"
 ```
 
-Paste the non-branch-scoped values. Skip any keys the Vercel CLI shows as scoped to a specific branch (e.g. `Preview (codex/m3-ralph-integration)`) — those are overrides for one preview deployment, not cloud-agent material.
+Paste the non-branch-scoped values. Skip any keys the Vercel CLI shows as scoped to a specific branch — those are overrides for one preview deployment, not cloud-agent material. Also strip Vercel-injected build vars (`VERCEL_*`, `TURBO_*`, `NX_DAEMON`); they don't apply outside Vercel build contexts.
 
 Expected key set (values redacted):
 
@@ -91,7 +104,7 @@ CONVEX_SITE_URL=...
 NEXT_PUBLIC_CONVEX_URL=...
 CONVEX_DEPLOY_KEY=...                        # admin to canny-turtle-982 — omit for Path B
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
+CLERK_SECRET_KEY=sk_test_...                 # NOTE: stored as Sensitive type in Vercel; pull returns empty. Paste your local value manually.
 NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev>.clerk.accounts.dev
 NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL=...
 NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL=...
@@ -112,6 +125,7 @@ INNGEST_SIGNING_KEY=...
 2. **Real-data exposure** — `dev:canny-turtle-982` carries real Plaid production data. Path A inherits the existing "never share, never bulk-export" rule for that deployment, but extends it to multi-tenant LLM sandboxes. If that becomes uncomfortable, move to Path C.
 3. **Threat-model delta vs Vercel previews** — Vercel runs your code with your secrets. Cloud agents run LLM-generated code with your secrets. Prompt injection and model misbehavior are categories Vercel previews don't have.
 4. **Migration is cheap** — Path A → Path B is a 30-second env edit per platform. Path A → Path C is ~1-2 hours (provision a new Convex, switch keys).
+5. **Bun version drift is a non-issue under this model** — agents use whatever Bun the sandbox ships (currently 1.3.x). The `package.json` `packageManager` field documents intent but isn't enforced; if `bun install` regenerates `bun.lock`, agents are instructed via the project's standard workflow rules to not commit the regenerated lockfile.
 
 ## Related
 
