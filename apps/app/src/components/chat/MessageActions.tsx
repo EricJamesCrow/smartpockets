@@ -1,17 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy01 } from "@untitledui/icons";
+import { Check, Copy01, Edit05 } from "@untitledui/icons";
 import { cx } from "@/utils/cx";
 
 interface MessageActionsProps {
   messageText: string;
   role: "user" | "assistant";
   onRegenerate?: () => Promise<void> | void;
+  /**
+   * CROWDEV-395: edit-and-resend on user messages. When provided and `role`
+   * is `"user"`, an Edit affordance is rendered alongside the copy button.
+   * Click swaps the bubble into an inline editor (handled by `MessageBubble`)
+   * — this prop is the click handler that flips that local editing state.
+   */
+  onEdit?: () => void;
   className?: string;
 }
 
-export function MessageActions({ messageText, role, onRegenerate, className }: MessageActionsProps) {
+export function MessageActions({ messageText, role, onRegenerate, onEdit, className }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -46,6 +53,21 @@ export function MessageActions({ messageText, role, onRegenerate, className }: M
           <Copy01 className="size-4 text-quaternary" />
         )}
       </button>
+      {/*
+        CROWDEV-395: Edit button gated to user messages with an `onEdit`
+        handler attached. The actual textarea swap and submit/cancel flow
+        live in `MessageBubble` — this just toggles editing mode.
+      */}
+      {role === "user" && onEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label="Edit message"
+          className="rounded p-1 hover:bg-secondary"
+        >
+          <Edit05 className="size-4 text-quaternary" />
+        </button>
+      )}
       {role === "assistant" && onRegenerate && (
         <button
           type="button"

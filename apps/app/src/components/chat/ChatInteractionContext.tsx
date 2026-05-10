@@ -12,6 +12,9 @@
 // ============================================================================
 import { type ReactNode, createContext, useContext, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import type { AgentThreadId, ToolName } from "./tool-results/types";
 
 export type SendMessageInput = {
@@ -22,8 +25,25 @@ export type SendMessageInput = {
     };
 };
 
+/**
+ * CROWDEV-395: edit-and-resend on a user message.
+ *
+ * Hard re-send semantics: the backend mutation truncates every message
+ * created after the target user message (assistant text, tool calls, tool
+ * results, follow-up turns), patches the target's `text`, and reschedules
+ * `runAgentTurn`. The chat UI's existing `isStreaming` derivation
+ * (`lastUser.isStreaming === true && noAssistantRowAfter`) drives the
+ * typing indicator and aria-busy region for the new turn — same as a
+ * normal `sendMessage`.
+ */
+export type EditAndResendInput = {
+    messageId: Id<"agentMessages">;
+    newText: string;
+};
+
 export type ChatInteractionValue = {
     sendMessage: (input: SendMessageInput) => Promise<void>;
+    editAndResend: (input: EditAndResendInput) => Promise<void>;
     threadId: AgentThreadId | null;
 };
 
@@ -35,6 +55,8 @@ type ProviderProps = {
     children: ReactNode;
     // Stub override used by the preview harness.
     sendMessage?: (input: SendMessageInput) => Promise<void>;
+    // CROWDEV-395: stub override for the preview harness (mirrors `sendMessage`).
+    editAndResend?: (input: EditAndResendInput) => Promise<void>;
 };
 
 export class ChatHttpError extends Error {
@@ -84,9 +106,10 @@ function getAgentSendEndpoint(): string {
     }
 }
 
-export function ChatInteractionProvider({ threadId, onThreadIdChange, children, sendMessage: sendMessageOverride }: ProviderProps) {
+export function ChatInteractionProvider({ threadId, onThreadIdChange, children, sendMessage: sendMessageOverride, editAndResend: editAndResendOverride }: ProviderProps) {
     const { getToken } = useAuth();
     const [localThreadId, setLocalThreadId] = useState<AgentThreadId | null>(threadId ?? null);
+    const editAndResendMutation = useMutation(api.agent.threads.editAndResendUserTurn);
 
     // Keep local state in sync with controlled prop.
     const currentThreadId = threadId ?? localThreadId;
@@ -153,9 +176,33 @@ export function ChatInteractionProvider({ threadId, onThreadIdChange, children, 
         }
     };
 
+    const defaultEditAndResend = async (input: EditAndResendInput) => {
+        try {
+            await editAndResendMutation({
+                messageId: input.messageId,
+                newText: input.newText,
+            });
+        } catch (err) {
+            // CROWDEV-395: translate the backend's `budget_exhausted:<reason>`
+            // sentinel into the same `TypedAgentError` surface the HTTP send
+            // path uses, so `ChatView`'s `routeError` shows the budget banner
+            // instead of a console-only error.
+            const message = (err as { message?: string })?.message ?? "";
+            const budgetMatch = message.match(/budget_exhausted:(.+)$/);
+            if (budgetMatch) {
+                throw new TypedAgentError({
+                    kind: "budget_exhausted",
+                    reason: budgetMatch[1] ?? "Monthly budget reached.",
+                });
+            }
+            throw err;
+        }
+    };
+
     const value: ChatInteractionValue = {
         threadId: currentThreadId,
         sendMessage: sendMessageOverride ?? defaultSendMessage,
+        editAndResend: editAndResendOverride ?? defaultEditAndResend,
     };
 
     return <ChatInteractionContext.Provider value={value}>{children}</ChatInteractionContext.Provider>;
