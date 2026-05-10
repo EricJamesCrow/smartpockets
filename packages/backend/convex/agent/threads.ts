@@ -409,3 +409,87 @@ export const writeSummary = internalMutation({
     return null;
   },
 });
+
+// CROWDEV-353: dev/test-only seed helpers used by Playwright e2e (`apps/app/tests/`).
+//
+// Both mutations refuse to run on a production Convex deployment by checking
+// `CONVEX_CLOUD_URL` (a built-in env var Convex sets to the deployment URL).
+// Production deployments use `https://*.convex.cloud` with a deployment name
+// matching `prod:*` — the gating value here is `process.env.CONVEX_DEPLOYMENT`,
+// which Convex injects into both dev and prod runtimes; on dev deployments it
+// looks like `dev:foo-123`, on prod it's `prod:smartpockets`.
+//
+// We do NOT use `viewer.email` allow-listing because the `users` ent here uses
+// a Clerk `externalId` mapping with no email field on the row itself. The
+// owner/sole-tester model is sufficient for the gating goal.
+function assertNotProduction(): void {
+  const deployment = process.env.CONVEX_DEPLOYMENT ?? "";
+  if (deployment.startsWith("prod:")) {
+    throw new Error(
+      "createTestThread/deleteAllTestThreads must never run on a production deployment. " +
+        `CONVEX_DEPLOYMENT=${deployment}`,
+    );
+  }
+}
+
+/**
+ * Creates a thread for the signed-in viewer with the given title. Used by
+ * Playwright e2e specs to seed deterministic sidebar state without driving
+ * the full chat-send flow (which requires the LLM provider and is slow + flaky).
+ *
+ * Gated to non-production deployments. Viewer-scoped; safe to call repeatedly.
+ */
+export const createTestThread = mutation({
+  args: { title: v.string() },
+  returns: v.id("agentThreads"),
+  handler: async (ctx, { title }) => {
+    assertNotProduction();
+    const viewer = ctx.viewerX();
+    const now = Date.now();
+    const trimmed = title.trim().slice(0, 120) || "Test thread";
+    return await ctx.table("agentThreads").insert({
+      userId: viewer._id,
+      title: trimmed,
+      isArchived: false,
+      lastTurnAt: now,
+      promptVersion: PROMPT_VERSION,
+      summaryText: undefined,
+      summaryUpToMessageId: undefined,
+      componentThreadId: `ct_test_${Math.random().toString(36).slice(2, 14)}`,
+      readCallCount: 0,
+      cancelledAtTurn: undefined,
+    });
+  },
+});
+
+/**
+ * Hard-deletes all of the signed-in viewer's threads + their child messages.
+ * Used by Playwright `beforeEach` to reset state between specs so the kebab
+ * spec sees exactly the threads it seeded — not leftovers from a previous run.
+ *
+ * Note: production sidebar uses soft-delete (`isArchived: true`) via
+ * `deleteThread`. This helper hard-deletes because soft-deleted rows still
+ * sit in the table and will count toward the user's thread budget over time.
+ *
+ * Gated to non-production deployments. Viewer-scoped.
+ */
+export const deleteAllTestThreads = mutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    assertNotProduction();
+    const viewer = ctx.viewerX();
+    const threads = await ctx
+      .table("agentThreads", "by_user_lastTurnAt", (q) => q.eq("userId", viewer._id));
+    let count = 0;
+    for (const thread of threads) {
+      const messages = await thread.edge("agentMessages");
+      for (const msg of messages) {
+        await ctx.table("agentMessages").getX(msg._id).then((m) => m.delete());
+      }
+      await thread.delete();
+      count += 1;
+    }
+    return count;
+  },
+});

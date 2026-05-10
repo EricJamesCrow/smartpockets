@@ -87,7 +87,12 @@ export function ChatHistoryItem({
     }
 
     return (
-        <li className="group/item relative">
+        <li
+            className="group/item relative"
+            data-test="sidebar-thread-row"
+            data-test-thread-id={threadId}
+            data-test-thread-title={title}
+        >
             <Link
                 href={`/${threadId}`}
                 title={summary ?? title}
@@ -99,7 +104,9 @@ export function ChatHistoryItem({
                         : "text-secondary hover:bg-secondary/50 hover:text-primary dark:hover:bg-white/5",
                 )}
             >
-                <span className="block truncate">{truncate(title, 40)}</span>
+                <span className="block truncate" data-test="sidebar-thread-title">
+                    {truncate(title, 40)}
+                </span>
             </Link>
             <div
                 className={cx(
@@ -113,6 +120,7 @@ export function ChatHistoryItem({
                     <Dropdown.DotsButton
                         className="size-7 p-1"
                         aria-label={`Actions for ${title}`}
+                        data-test="sidebar-thread-kebab"
                     />
                     <Dropdown.Popover className="w-min" placement="bottom right">
                         <Dropdown.Menu onAction={handleMenuAction}>

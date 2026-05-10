@@ -11,7 +11,10 @@
     "lint": "bun scripts/check-tool-results.ts && node scripts/verify-reserved-slugs.mjs && bun run test:vercel-build",
     "check:tool-results": "bun scripts/check-tool-results.ts",
     "test:vercel-build": "bash scripts/vercel-build.test.sh",
-    "verify:slugs": "node scripts/verify-reserved-slugs.mjs"
+    "verify:slugs": "node scripts/verify-reserved-slugs.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@clerk/backend": "^2.24.0",
@@ -47,6 +50,8 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@clerk/testing": "^2.0.27",
+    "@playwright/test": "^1.59.1",
     "@repo/typescript": "workspace:*",
     "@types/node": "^24.2.1",
     "@types/react": "^19.1.9",
