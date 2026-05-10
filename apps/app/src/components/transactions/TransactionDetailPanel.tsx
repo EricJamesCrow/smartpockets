@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { SlideoutMenu } from "@repo/ui/untitledui/application/slideout-menus/slideout-menu";
-import { DialogTrigger } from "react-aria-components";
 import { toast } from "sonner";
 import { useTransactionOverlay } from "@/hooks/useTransactionOverlay";
 import { TransactionDetailActions } from "./TransactionDetailActions";
@@ -51,13 +51,25 @@ interface TransactionDetailPanelProps {
 /**
  * Full-featured transaction detail panel with editable fields.
  *
- * Wraps Header, Merchant, Fields, and Actions in a DialogTrigger + SlideoutMenu
- * pattern. All edits are persisted via the transaction overlay system.
+ * Uses controlled SlideoutMenu (same pattern as AddCardsSlideout) so the overlay
+ * keeps mounted while `isOpen` becomes false, allowing fade/slide exit animations.
+ * `lastTransaction` preserves row content during that exit after the parent clears
+ * `transaction`.
  */
 export function TransactionDetailPanel({ transaction, onClose }: TransactionDetailPanelProps) {
-    const { overlay, savingField, upsertField, toggleReviewed, toggleHidden } = useTransactionOverlay(transaction?.transactionId ?? null);
+    const [lastTransaction, setLastTransaction] = useState<DetailPanelTransaction | null>(null);
 
-    if (!transaction) return null;
+    useEffect(() => {
+        if (transaction) {
+            setLastTransaction(transaction);
+        }
+    }, [transaction]);
+
+    const panelTransaction = transaction ?? lastTransaction;
+
+    const { overlay, savingField, upsertField, toggleReviewed, toggleHidden } = useTransactionOverlay(
+        panelTransaction?.transactionId ?? null,
+    );
 
     const handleHide = () => {
         void toggleHidden(true);
@@ -78,9 +90,9 @@ export function TransactionDetailPanel({ transaction, onClose }: TransactionDeta
     const isHidden = overlay?.isHidden ?? false;
 
     return (
-        <DialogTrigger isOpen={transaction !== null} onOpenChange={(open) => !open && onClose()}>
-            <SlideoutMenu>
-                {({ close }) => (
+        <SlideoutMenu isOpen={transaction !== null} onOpenChange={(open) => !open && onClose()}>
+            {({ close }) =>
+                panelTransaction ? (
                     <>
                         <SlideoutMenu.Header onClose={close}>
                             <TransactionDetailHeader
@@ -96,24 +108,31 @@ export function TransactionDetailPanel({ transaction, onClose }: TransactionDeta
                         <SlideoutMenu.Content>
                             <div className="flex flex-col gap-6 py-2">
                                 {/* 1. Merchant (logo, name, amount) */}
-                                <TransactionDetailMerchant transaction={transaction} />
+                                <TransactionDetailMerchant transaction={panelTransaction} />
 
                                 {/* 2. Fields (statement, date+time, category, notes) */}
-                                <TransactionDetailFields transaction={transaction} overlay={overlay} savingField={savingField} upsertField={upsertField} />
+                                <TransactionDetailFields
+                                    transaction={panelTransaction}
+                                    overlay={overlay}
+                                    savingField={savingField}
+                                    upsertField={upsertField}
+                                />
 
                                 {/* 3. Source Card */}
-                                {transaction.sourceInfo && <TransactionDetailSourceCard sourceInfo={transaction.sourceInfo} />}
+                                {panelTransaction.sourceInfo && (
+                                    <TransactionDetailSourceCard sourceInfo={panelTransaction.sourceInfo} />
+                                )}
 
                                 {/* 4. Attachments */}
-                                <TransactionDetailAttachments plaidTransactionId={transaction.transactionId} />
+                                <TransactionDetailAttachments plaidTransactionId={panelTransaction.transactionId} />
 
                                 {/* 5. Other Options (hide) */}
                                 <TransactionDetailActions onHide={handleHide} isHiding={savingField === "isHidden"} />
                             </div>
                         </SlideoutMenu.Content>
                     </>
-                )}
-            </SlideoutMenu>
-        </DialogTrigger>
+                ) : null
+            }
+        </SlideoutMenu>
     );
 }
