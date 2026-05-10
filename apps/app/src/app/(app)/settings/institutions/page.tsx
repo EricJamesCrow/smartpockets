@@ -12,7 +12,7 @@ import { Input } from "@repo/ui/untitledui/base/input/input";
 import { Tabs } from "@repo/ui/untitledui/application/tabs/tabs";
 import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { FeaturedIcon } from "@repo/ui/untitledui/foundations/featured-icon/featured-icon";
-import { PlaidLinkButton, useTogglePlaidItem } from "@/features/institutions";
+import { PlaidLinkButton, useTogglePlaidItem, InstitutionLogo } from "@/features/institutions";
 
 /**
  * Banking Institutions List Page
@@ -155,11 +155,13 @@ export default function InstitutionsPage() {
                 className="flex flex-col gap-4 border-b border-secondary py-4 last:border-none lg:flex-row lg:items-center"
               >
                 <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:items-center">
-                  {/* Institution icon placeholder */}
+                  {/* Institution logo (Plaid) or fallback icon */}
                   <div className="flex items-center justify-between">
-                    <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-gray-100 shadow-xs ring-1 ring-secondary ring-inset">
-                      <Building07 className="size-6 text-gray-500" />
-                    </div>
+                    <InstitutionLogo
+                      institutionName={item.institutionName}
+                      logoBase64={item.institutionLogoBase64}
+                      size="md"
+                    />
                     <div className="lg:hidden">
                       <Toggle
                         isSelected={isActive}

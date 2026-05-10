@@ -10,6 +10,7 @@
 // Components
 export { PlaidLinkButton } from "./components/plaid-link-button";
 export { DisconnectBankModal } from "./components/disconnect-bank-modal";
+export { InstitutionLogo } from "./components/institution-logo";
 
 // Hooks
 export { useTogglePlaidItem } from "./hooks/useTogglePlaidItem";
