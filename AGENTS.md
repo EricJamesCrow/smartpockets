@@ -795,7 +795,7 @@ keys = ['CONVEX_DEPLOYMENT','NEXT_PUBLIC_CONVEX_URL','NEXT_PUBLIC_CLERK_PUBLISHA
 'CLERK_SECRET_KEY','NEXT_PUBLIC_CLERK_FRONTEND_API_URL','NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL',
 'NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL','NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL',
 'NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL','NEXT_PUBLIC_MARKETING_URL',
-'ANTHROPIC_API_KEY','OPENAI_API_KEY','RESEND_API_KEY']
+'ANTHROPIC_API_KEY','OPENAI_API_KEY','RESEND_API_KEY','CONVEX_DEPLOY_KEY']
 with open('.env.local','w') as f:
     for k in keys:
         v = os.environ.get(k,'').strip('\"').strip(\"'\")
@@ -824,13 +824,14 @@ This Python approach is necessary because secret values are redacted by the Clou
 | `ANTHROPIC_API_KEY` | No | AI agent chat (Claude). Only needed for the chat feature. |
 | `OPENAI_API_KEY` | No | RAG embeddings. Only needed for RAG features. |
 | `RESEND_API_KEY` | No | Email delivery. App works without it; emails silently fail. |
+| `CONVEX_DEPLOY_KEY` | Yes | Deploy key for pushing backend functions. Must match the deployment type. See Convex deploy gotcha below. |
 
 ### Running services
 
 | Service | Command | Notes |
 |---------|---------|-------|
 | Next.js app | `bun dev:app` | Port 3000. Requires valid Clerk keys or middleware returns 500. |
-| Convex backend | `bun dev:backend` | Streams logs; pushes functions on save. Not needed if using an existing dev deployment. |
+| Convex backend (push) | `cd packages/backend && bunx convex deploy --preview-name main --yes` | One-shot push of backend functions. Required after editing files in `packages/backend/convex/`. See Convex deploy gotcha below. |
 | Marketing site | `bun dev:web` (optional) | Port 3001. |
 | All services | `bun dev` | Runs app + backend + web in parallel via Turbo. |
 
@@ -848,7 +849,8 @@ This Python approach is necessary because secret values are redacted by the Clou
 - **bun.lock version mismatch**: bun 1.1.42 warns `Unknown lockfile version` and ignores the lockfile. This is harmless for local dev — it resolves fresh. However, **do not commit the regenerated `bun.lock`** because Vercel uses bun 1.3.6 and the lockfile format change causes different dependency resolutions, which can introduce type errors in the Vercel build. If `bun.lock` is modified by `bun install`, revert it before committing: `git checkout -- bun.lock`.
 - **Pre-existing typecheck error**: `apps/app/src/components/chat/tool-results/charts/SpendByCategoryChart.tsx` has a type error on `main` related to `recharts` `Pie` component callback types. This is not a setup issue.
 - **Turbo lockfile warning**: Turborepo may warn about `Could not resolve workspaces` from `bun.lock` format. This does not affect task execution.
-- **Convex dev deployment**: Backend changes under `packages/backend/convex/` must be pushed to the dev deployment before testing. Either keep `bun dev:backend` running or run `cd packages/backend && bunx convex dev --once`.
+- **Convex deploy key is `preview:` type**: The `CONVEX_DEPLOY_KEY` secret is a preview deploy key, which means `bunx convex dev` and `bunx convex dev --once` will **not work** (they error with "Use `npx convex deploy` to use preview deployments"). Instead, push backend changes with: `cd packages/backend && bunx convex deploy --preview-name main --yes`. This creates/reuses a preview deployment. The preview deployment URL (printed at the end of the deploy output) must match `NEXT_PUBLIC_CONVEX_URL` in `.env.local` for the app to connect. If the URLs don't match, update `.env.local` and restart the app.
+- **Backend changes must be deployed before testing**: Any edit under `packages/backend/convex/` is not visible until pushed. Run `cd packages/backend && bunx convex deploy --preview-name main --yes` after changes.
 - **No git hooks**: The repo has no pre-commit or pre-push hooks (no `.husky/`, no `.pre-commit-config.yaml`).
 - **Auth flow**: Unauthenticated requests to `localhost:3000` redirect to `localhost:3001` (marketing site). Sign-in/sign-up is via Clerk UI on the marketing site, which redirects back to `localhost:3000` after auth. Both `bun dev:app` and `bun dev:web` must be running for the full sign-in flow.
 - **Secret redaction**: Shell commands like `printenv`, `echo $VAR`, and even `grep` redact secret values in Cloud Agent VMs. Always use `python3 -c "import os; ..."` to write secrets into files.
