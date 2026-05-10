@@ -32,7 +32,7 @@ The only repo-side artifact is `.cursor/environment.json`, which Cursor reads au
 
 | File | Role |
 |---|---|
-| `.cursor/environment.json` | Tells Cursor Background Agents to run `bun install` after machine setup. Cursor's sandbox ships Bun preinstalled. |
+| `.cursor/environment.json` | Tells Cursor Background Agents to run `bash scripts/cursor-agent-install.sh`, which puts `~/.bun/bin` on `PATH` (non-login shells often omit it) and falls back to installing Bun if missing. |
 | `packages/backend/convex/_generated/` | Generated Convex types — committed, so `bun typecheck` and `bun build` pass on a fresh checkout without running `convex codegen`. |
 
 For Codex and Claude Code on the Web, **leave the Setup script field empty**. The agent does its own setup on first use.
