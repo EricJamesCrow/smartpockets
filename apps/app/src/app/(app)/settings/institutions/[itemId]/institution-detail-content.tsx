@@ -10,7 +10,7 @@ import { ArrowLeft, Building07, Calendar, Check, CreditCard02, LinkBroken01, Ref
 import { useAction, useConvexAuth, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { DisconnectBankModal } from "@/features/institutions";
+import { DisconnectBankModal, InstitutionLogo } from "@/features/institutions";
 import { formatMoneyFromMilliunits } from "@/utils/money";
 
 interface InstitutionDetailContentProps {
@@ -53,6 +53,7 @@ export function InstitutionDetailContent({ itemId }: InstitutionDetailContentPro
 
     // Sync action
     const syncTransactions = useAction(api.plaidComponent.syncTransactionsAction);
+    const fetchAccounts = useAction(api.plaidComponent.fetchAccountsAction);
     const fetchLiabilities = useAction(api.plaidComponent.fetchLiabilitiesAction);
     const syncCreditCards = useAction(api.creditCards.actions.syncCreditCardsAction);
 
@@ -63,6 +64,9 @@ export function InstitutionDetailContent({ itemId }: InstitutionDetailContentPro
         const toastId = toast.loading("Refreshing data...");
 
         try {
+            // Refresh institution metadata (logo) + accounts from Plaid
+            await fetchAccounts({ plaidItemId: item._id });
+
             // Sync transactions
             await syncTransactions({ plaidItemId: item._id });
 
@@ -117,9 +121,11 @@ export function InstitutionDetailContent({ itemId }: InstitutionDetailContentPro
             <div className="border-secondary bg-primary flex flex-col gap-6 rounded-xl border p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-4">
-                        <div className="ring-secondary flex size-14 shrink-0 items-center justify-center rounded-xl bg-gray-100 shadow-sm ring-1 ring-inset">
-                            <Building07 className="size-7 text-gray-500" />
-                        </div>
+                        <InstitutionLogo
+                            institutionName={item.institutionName}
+                            logoBase64={item.institutionLogoBase64}
+                            size="lg"
+                        />
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
                                 <h1 className="text-primary text-xl font-semibold">{item.institutionName || "Unknown Institution"}</h1>

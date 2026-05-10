@@ -13,7 +13,7 @@
  */
 
 import { v } from "convex/values";
-import { action } from "./_generated/server.js";
+import { action, type ActionCtx } from "./_generated/server.js";
 import { internal } from "./_generated/api.js";
 import {
   initPlaidClient,
@@ -46,6 +46,41 @@ type BackfillTransactionEnrichmentsResult = {
   hasMore: boolean;
   pagesProcessed: number;
 };
+
+/**
+ * Loads institution branding from Plaid (/institutions/get_by_id) into the
+ * shared plaidInstitutions cache (logo, primary color, etc.).
+ *
+ * @returns institution display name when successful
+ */
+async function fetchAndUpsertInstitutionMetadata(
+  ctx: ActionCtx,
+  plaidClient: ReturnType<typeof initPlaidClient>,
+  institutionId: string,
+): Promise<string | undefined> {
+  try {
+    const instResponse = await plaidClient.institutionsGetById({
+      institution_id: institutionId,
+      country_codes: ["US"] as any[],
+      options: {
+        include_optional_metadata: true,
+      },
+    });
+    const institution = instResponse.data.institution;
+    await ctx.runMutation(internal.private.upsertInstitution, {
+      institutionId,
+      name: institution.name,
+      logo: institution.logo ?? undefined,
+      primaryColor: institution.primary_color ?? undefined,
+      url: institution.url ?? undefined,
+      products: institution.products ?? undefined,
+    });
+    return institution.name;
+  } catch (e) {
+    console.warn("[Plaid Component] Failed to fetch institution details:", e);
+    return undefined;
+  }
+}
 
 // =============================================================================
 // CREATE LINK TOKEN
@@ -159,33 +194,16 @@ export const exchangePublicToken = action({
 
     const institutionId = itemResponse.data.item.institution_id ?? undefined;
 
-    // Fetch institution details and cache metadata (logo, branding)
     let institutionName: string | undefined;
     if (institutionId) {
-      try {
-        const instResponse = await plaidClient.institutionsGetById({
-          institution_id: institutionId,
-          country_codes: ["US"] as any[],
-          options: {
-            include_optional_metadata: true,
-          },
-        });
-        const institution = instResponse.data.institution;
-        institutionName = institution.name;
+      institutionName = await fetchAndUpsertInstitutionMetadata(
+        ctx,
+        plaidClient,
+        institutionId,
+      );
+      if (institutionName) {
         console.log("[Plaid Component] Institution:", institutionName);
-
-        // Cache institution metadata (shared across users for efficiency)
-        await ctx.runMutation(internal.private.upsertInstitution, {
-          institutionId,
-          name: institution.name,
-          logo: institution.logo ?? undefined,
-          primaryColor: institution.primary_color ?? undefined,
-          url: institution.url ?? undefined,
-          products: institution.products ?? undefined,
-        });
         console.log("[Plaid Component] Institution metadata cached");
-      } catch (e) {
-        console.warn("[Plaid Component] Failed to fetch institution details:", e);
       }
     }
 
@@ -266,6 +284,28 @@ export const fetchAccounts = action({
         args.plaidSecret,
         args.plaidEnv
       );
+
+      let institutionId = item.institutionId;
+      if (!institutionId) {
+        try {
+          const itemResp = await plaidClient.itemGet({
+            access_token: accessToken,
+          });
+          institutionId = itemResp.data.item.institution_id ?? undefined;
+        } catch (e) {
+          console.warn(
+            "[Plaid Component] itemGet failed while resolving institution_id:",
+            e,
+          );
+        }
+      }
+      if (institutionId) {
+        await fetchAndUpsertInstitutionMetadata(
+          ctx,
+          plaidClient,
+          institutionId,
+        );
+      }
 
       const accountsResponse = await plaidClient.accountsGet({
         access_token: accessToken,

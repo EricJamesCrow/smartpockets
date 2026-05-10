@@ -208,6 +208,41 @@ export const fetchAccounts = action({
         console.log("[Plaid Component] Fetching accounts...");
         try {
             const plaidClient = initPlaidClient(args.plaidClientId, args.plaidSecret, args.plaidEnv);
+            let institutionId = item.institutionId;
+            if (!institutionId) {
+                try {
+                    const itemResp = await plaidClient.itemGet({
+                        access_token: accessToken,
+                    });
+                    institutionId = itemResp.data.item.institution_id ?? undefined;
+                }
+                catch (e) {
+                    console.warn("[Plaid Component] itemGet failed while resolving institution_id:", e);
+                }
+            }
+            if (institutionId) {
+                try {
+                    const instResponse = await plaidClient.institutionsGetById({
+                        institution_id: institutionId,
+                        country_codes: ["US"],
+                        options: {
+                            include_optional_metadata: true,
+                        },
+                    });
+                    const institution = instResponse.data.institution;
+                    await ctx.runMutation(internal.private.upsertInstitution, {
+                        institutionId,
+                        name: institution.name,
+                        logo: institution.logo ?? undefined,
+                        primaryColor: institution.primary_color ?? undefined,
+                        url: institution.url ?? undefined,
+                        products: institution.products ?? undefined,
+                    });
+                }
+                catch (e) {
+                    console.warn("[Plaid Component] Failed to refresh institution metadata during fetchAccounts:", e);
+                }
+            }
             const accountsResponse = await plaidClient.accountsGet({
                 access_token: accessToken,
             });

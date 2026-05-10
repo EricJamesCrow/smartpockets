@@ -8,6 +8,7 @@
  */
 
 import { v } from "convex/values";
+import type { QueryCtx } from "../_generated/server";
 import { internalQuery } from "../_generated/server";
 import { components } from "../_generated/api";
 import { query } from "../functions";
@@ -52,6 +53,10 @@ export type SafePlaidItem = {
   itemId: string;
   institutionId?: string;
   institutionName?: string;
+  /** Base64 PNG from Plaid (via cached plaidInstitutions). */
+  institutionLogoBase64?: string;
+  /** Hex color from Plaid institution metadata when available. */
+  institutionPrimaryColor?: string;
   products: string[];
   isActive?: boolean;
   status: string;
@@ -66,6 +71,8 @@ const safePlaidItemValidator = v.object({
   itemId: v.string(),
   institutionId: v.optional(v.string()),
   institutionName: v.optional(v.string()),
+  institutionLogoBase64: v.optional(v.string()),
+  institutionPrimaryColor: v.optional(v.string()),
   products: v.array(v.string()),
   isActive: v.optional(v.boolean()),
   status: v.string(),
@@ -88,6 +95,41 @@ function serializePlaidItem(item: ComponentPlaidItem): SafePlaidItem {
     createdAt: item.createdAt,
     lastSyncedAt: item.lastSyncedAt,
   };
+}
+
+/**
+ * Joins cached institution branding (logo, color) from item health / plaidInstitutions.
+ */
+async function withInstitutionBranding(
+  ctx: { runQuery: QueryCtx["runQuery"] },
+  userId: string,
+  items: ComponentPlaidItem[],
+): Promise<SafePlaidItem[]> {
+  if (items.length === 0) {
+    return [];
+  }
+  const health = await ctx.runQuery(
+    components.plaid.public.getItemHealthByUser,
+    { userId },
+  );
+  const brandingByPlaidId = new Map(
+    health.map((h) => [
+      h.plaidItemId,
+      {
+        logo: h.institutionLogoBase64,
+        color: h.institutionPrimaryColor,
+      },
+    ]),
+  );
+  return items.map((item) => {
+    const row = brandingByPlaidId.get(String(item._id));
+    const base = serializePlaidItem(item);
+    return {
+      ...base,
+      institutionLogoBase64: row?.logo ?? undefined,
+      institutionPrimaryColor: row?.color ?? undefined,
+    };
+  });
 }
 
 function assertViewerCanReadUserId(
@@ -154,7 +196,7 @@ export const getItemsByUserId = query({
       userId: args.userId,
     });
 
-    return items.map(serializePlaidItem);
+    return withInstitutionBranding(ctx, args.userId, items);
   },
 });
 
@@ -172,7 +214,7 @@ export const getItemsForViewer = query({
       userId: viewer.externalId,
     });
 
-    return items.map(serializePlaidItem);
+    return withInstitutionBranding(ctx, viewer.externalId, items);
   },
 });
 
@@ -198,7 +240,11 @@ export const getActiveItemsByUserId = query({
     });
 
     // Filter to only items where isActive is true or undefined (backward compatibility)
-    return allItems.filter(isPlaidItemActive).map(serializePlaidItem);
+    return withInstitutionBranding(
+      ctx,
+      args.userId,
+      allItems.filter(isPlaidItemActive),
+    );
   },
 });
 
@@ -214,7 +260,11 @@ export const getActiveItemsForViewer = query({
       userId: viewer.externalId,
     });
 
-    return allItems.filter(isPlaidItemActive).map(serializePlaidItem);
+    return withInstitutionBranding(
+      ctx,
+      viewer.externalId,
+      allItems.filter(isPlaidItemActive),
+    );
   },
 });
 
@@ -293,7 +343,7 @@ export const getItemsByTrustedUserId = internalQuery({
       userId: args.userId,
     });
 
-    return items.map(serializePlaidItem);
+    return withInstitutionBranding(ctx, args.userId, items);
   },
 });
 
