@@ -5,6 +5,7 @@ import type { Doc, Id } from "@convex/_generated/dataModel";
 import { AssistantAvatar } from "@/components/chat/AssistantAvatar";
 import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { MessageActions } from "@/components/chat/MessageActions";
+import { MessageTimestamp } from "@/components/chat/MessageTimestamp";
 import { UserAvatar } from "@/components/chat/UserAvatar";
 import { StreamingCursor } from "@/components/chat/StreamingCursor";
 import { ToolResultRenderer } from "@/components/chat/tool-results/ToolResultRenderer";
@@ -123,12 +124,21 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
       <div className={cx("flex max-w-[80%] flex-col gap-1", isUser ? "items-end" : "items-start")}>
         <div
           className={cx(
-            "rounded-2xl px-5 py-3 text-sm",
+            "relative rounded-2xl px-5 py-3 text-sm",
             isUser
               ? "rounded-tr-none bg-brand-solid text-white"
               : "min-h-[42px] rounded-tl-none border border-secondary bg-secondary text-primary dark:border-[var(--sp-moss-line)] dark:bg-[var(--sp-surface-panel-strong)] dark:shadow-[var(--sp-inset-hairline)]",
           )}
         >
+          {/*
+            CROWDEV-394: Hover-revealed timestamp at the bubble corner.
+            Anchored opposite the avatar (top-right for assistant, top-left
+            for user). Hidden at rest; fades in via the `group/msg` ancestor.
+          */}
+          <MessageTimestamp
+            creationTime={message._creationTime}
+            align={isUser ? "left" : "right"}
+          />
           {isUser ? (
             <p className="whitespace-pre-wrap leading-relaxed">{displayText}</p>
           ) : showTypingDots ? (
