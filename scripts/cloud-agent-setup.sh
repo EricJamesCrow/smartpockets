@@ -13,12 +13,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Cursor + Codex universal containers don't ship Bun.
-# Claude Code on the Web ships Bun preinstalled, but the install path is
-# defensive in case proxy/network conditions break the preinstall.
-if ! command -v bun >/dev/null 2>&1; then
-  echo "[cloud-agent-setup] Installing Bun..."
-  curl -fsSL https://bun.sh/install | bash
+# Bun version must match `packageManager` in the root package.json. Otherwise
+# `bun install` re-resolves and rewrites bun.lock — Cursor's sandbox ships a
+# newer Bun, Codex's universal container ships none, Claude Code on the Web
+# ships some Bun, and any of those without pinning produces spurious diffs
+# that fail CI (Vercel uses the pinned version).
+TARGET_BUN_VERSION="1.1.42"  # Keep in sync with package.json `packageManager`.
+if ! command -v bun >/dev/null 2>&1 || [ "$(bun --version 2>/dev/null)" != "$TARGET_BUN_VERSION" ]; then
+  echo "[cloud-agent-setup] Installing Bun ${TARGET_BUN_VERSION}..."
+  curl -fsSL https://bun.sh/install | bash -s "bun-v${TARGET_BUN_VERSION}"
   echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.bashrc
   export PATH="$HOME/.bun/bin:$PATH"
 fi
