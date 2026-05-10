@@ -365,6 +365,43 @@
     50% { opacity: 0.15; }
 }
 
+/*
+ * CROWDEV-391 — inline streaming cursor injected by `streamdown-cursor-plugin`.
+ *
+ * The plugin appends `<span data-stream-cursor class="sp-stream-cursor">` to
+ * the deepest leaf text element of EVERY Streamdown block (it can't tell
+ * which block is last). We hide every cursor that is not inside the
+ * wrapper's `*:last-child`, so visually only the last block shows it and
+ * the cursor trails the last visible character of the streamed message.
+ *
+ * The host class `.sp-stream-host` is set on the Streamdown wrapper div
+ * only while `isStreaming` is true (see `MarkdownContent.tsx`); on
+ * resolve the rehype plugin stops emitting markers and the host class
+ * is dropped.
+ */
+.sp-stream-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin-left: 0.125rem;
+    margin-bottom: -0.125rem;
+    vertical-align: middle;
+    background: currentColor;
+    opacity: 0.6;
+}
+
+.sp-stream-host > *:not(:last-child) .sp-stream-cursor,
+.sp-stream-host > *:not(:last-child).sp-stream-cursor {
+    display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .sp-stream-host > *:last-child .sp-stream-cursor,
+    .sp-stream-host > *:last-child.sp-stream-cursor {
+        animation: sp-cursor-pulse 1s ease-in-out infinite;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .sp-aurora,
     .sp-shimmer-text,

@@ -1,11 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
+import { streamdownCursorPlugin } from "@/components/chat/streamdown-cursor-plugin";
 
 interface MarkdownContentProps {
     content: string;
+    /**
+     * When `true`, the rendered markdown receives an inline streaming
+     * cursor (a pulsing span) trailing the last visible character. The
+     * cursor is appended to the deepest leaf text-bearing element of
+     * the LAST Streamdown block via a rehype plugin and is hidden via
+     * CSS on every non-final block (CROWDEV-391).
+     */
+    isStreaming?: boolean;
 }
+
+type StreamdownProps = {
+    children: string;
+    rehypePlugins?: unknown;
+    className?: string;
+    mode?: "static" | "streaming";
+};
+
+type StreamdownExports = {
+    Streamdown: ComponentType<StreamdownProps>;
+    defaultRehypePlugins: Record<string, unknown>;
+};
 
 /*
  * Streamdown is loaded lazily to keep the ~131KB gzipped chunk (shiki +
@@ -27,30 +48,55 @@ interface MarkdownContentProps {
  * +74KB gzipped over react-markdown, exceeding the +60KB gate.
  */
 
-let streamdownPromise: Promise<ComponentType<{ children: string }>> | null = null;
+let streamdownPromise: Promise<StreamdownExports> | null = null;
 
-function loadStreamdown(): Promise<ComponentType<{ children: string }>> {
-    streamdownPromise ??= import("streamdown").then(
-        (mod) => mod.Streamdown as ComponentType<{ children: string }>,
-    );
+function loadStreamdown(): Promise<StreamdownExports> {
+    streamdownPromise ??= import("streamdown").then((mod) => ({
+        Streamdown: mod.Streamdown as ComponentType<StreamdownProps>,
+        defaultRehypePlugins: mod.defaultRehypePlugins as Record<string, unknown>,
+    }));
     return streamdownPromise;
 }
 
-export function MarkdownContent({ content }: MarkdownContentProps) {
-    const [Streamdown, setStreamdown] = useState<ComponentType<{ children: string }> | null>(null);
+export function MarkdownContent({ content, isStreaming = false }: MarkdownContentProps) {
+    const [streamdown, setStreamdown] = useState<StreamdownExports | null>(null);
 
     useEffect(() => {
         let cancelled = false;
-        loadStreamdown().then((Component) => {
-            if (!cancelled) setStreamdown(() => Component);
+        loadStreamdown().then((exports_) => {
+            if (!cancelled) setStreamdown(exports_);
         });
         return () => {
             cancelled = true;
         };
     }, []);
 
-    if (!Streamdown) {
+    /*
+     * Re-create the rehype plugin tuple whenever `isStreaming` flips so
+     * the cursor marker is injected on streaming-active renders and
+     * dropped on the resolve render. The plugin reads `active` from its
+     * options closure; the boolean is captured at render-time, so each
+     * tuple identity changes when the flag changes — that triggers
+     * Streamdown's plugin-list memo to rerun without thrashing on
+     * stable-state renders.
+     */
+    const rehypePlugins = useMemo(() => {
+        if (!streamdown) return undefined;
+        const defaults = Object.values(streamdown.defaultRehypePlugins);
+        return [...defaults, [streamdownCursorPlugin, { active: isStreaming }]];
+    }, [streamdown, isStreaming]);
+
+    if (!streamdown) {
         return <p className="whitespace-pre-wrap">{content}</p>;
     }
-    return <Streamdown>{content}</Streamdown>;
+
+    const { Streamdown } = streamdown;
+    return (
+        <Streamdown
+            className={isStreaming ? "sp-stream-host" : undefined}
+            rehypePlugins={rehypePlugins}
+        >
+            {content}
+        </Streamdown>
+    );
 }
