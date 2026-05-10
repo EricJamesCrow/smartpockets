@@ -28,6 +28,14 @@ At the start of each session:
 3. Review recent commits: `git log --oneline -10`
 4. Read `AGENTS.md` for full project context
 
+## Investigate Before Asking
+
+Before asking any clarifying question, exhaust the read-only paths that can answer it. Most questions about external state are one tool call away — Vercel CLI (`npx vercel env ls/pull/inspect`), Convex MCP, Linear MCP, Clerk MCP, Plaid MCPs, Graphite MCP, `gh`, Context7 MCP — plus `Read`/`grep`/`find` for the codebase. Ask only what's left after the investigation, and cite where you looked so the user doesn't redo your work.
+
+When pulling secret-bearing data (e.g. `vercel env pull`), write to `/tmp/...`, grep just the non-secret keys you need, and `rm` the file in the same command. Never paste secret values into chat. Deployment names, project slugs, and public URLs are not secrets.
+
+See `AGENTS.md` → "Investigation Discipline" for the full read-path table.
+
 ## Task Tracking
 
 **Always update `TODO.md` when completing tasks:**
