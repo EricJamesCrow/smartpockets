@@ -854,3 +854,22 @@ This Python approach is necessary because secret values are redacted by the Clou
 - **No git hooks**: The repo has no pre-commit or pre-push hooks (no `.husky/`, no `.pre-commit-config.yaml`).
 - **Auth flow**: Unauthenticated requests to `localhost:3000` redirect to `localhost:3001` (marketing site). Sign-in/sign-up is via Clerk UI on the marketing site, which redirects back to `localhost:3000` after auth. Both `bun dev:app` and `bun dev:web` must be running for the full sign-in flow.
 - **Secret redaction**: Shell commands like `printenv`, `echo $VAR`, and even `grep` redact secret values in Cloud Agent VMs. Always use `python3 -c "import os; ..."` to write secrets into files.
+
+### Test account for authenticated testing
+
+A dedicated Clerk test account is available via secrets `TEST_LOGIN_USERNAME` and `TEST_LOGIN_PASSWORD`. To sign in:
+
+1. Start both `bun dev:app` (port 3000) and `bun dev:web` (port 3001).
+2. Navigate to `http://localhost:3001/sign-in`.
+3. Enter the email from `TEST_LOGIN_USERNAME`, click Continue.
+4. Enter the password from `TEST_LOGIN_PASSWORD`, click Continue.
+5. After sign-in, the browser redirects to `http://localhost:3000` (the authenticated app).
+
+Read the credentials via Python to avoid redaction:
+
+```bash
+python3 -c "import os; print(os.environ['TEST_LOGIN_USERNAME'])"
+python3 -c "import os; print(os.environ['TEST_LOGIN_PASSWORD'])"
+```
+
+The test account has "Bypass Client Trust" enabled in the Clerk dashboard. This is a fresh test account with 0 credit cards — it will show empty states for cards, wallets, and transactions.
