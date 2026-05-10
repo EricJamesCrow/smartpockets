@@ -29,7 +29,7 @@ export function MessageInput({
           className="w-full"
         />
         <p className="sp-kicker mt-3 text-center text-tertiary dark:text-stone-500">
-          Assistant can make mistakes &middot; check important info
+          Agent can make mistakes &middot; check important info
         </p>
       </div>
     </div>
