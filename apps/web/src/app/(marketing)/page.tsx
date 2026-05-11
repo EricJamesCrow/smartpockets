@@ -563,7 +563,9 @@ export default function HomePage() {
                         </div>
                         <h1 className="sp-hero-in mt-7 max-w-5xl text-balance font-[family-name:var(--font-inter)] text-[clamp(3.1rem,5.6vw,5.8rem)] font-medium leading-[0.92] tracking-[-0.04em] text-white">
                             Open-source finance that hands{" "}
-                            <em className="font-[family-name:var(--font-fraunces)] font-medium italic text-stone-300 [font-feature-settings:'ss01']">you</em>{" "}
+                            <em className="inline-block translate-y-[0.03em] font-[family-name:var(--font-fraunces)] text-[1.28em] font-medium italic text-stone-300 [font-feature-settings:'ss01']">
+                                you
+                            </em>{" "}
                             the keys.
                         </h1>
                         <p className="sp-hero-in mt-7 max-w-2xl text-pretty text-[1.15rem] leading-8 text-stone-400">
