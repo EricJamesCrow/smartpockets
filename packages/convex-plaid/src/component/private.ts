@@ -3002,14 +3002,29 @@ export const upsertInstitution = internalMutation({
         });
         return String(id);
       },
-      // Update function
+      // Update function — merge optional branding fields so a later Plaid response
+      // that omits logo/color (or returns null coerced to undefined) cannot wipe
+      // cached artwork fetched on an earlier successful institutions/get_by_id call.
       async (id) => {
+        const existing = await ctx.db.get(id);
+        if (!existing) return;
+
+        const pickString = (
+          incoming: string | undefined,
+          prior: string | undefined,
+        ): string | undefined => {
+          if (typeof incoming === "string" && incoming.length > 0) {
+            return incoming;
+          }
+          return prior;
+        };
+
         await ctx.db.patch(id, {
           name: args.name,
-          logo: args.logo,
-          primaryColor: args.primaryColor,
-          url: args.url,
-          products: args.products,
+          logo: pickString(args.logo, existing.logo),
+          primaryColor: pickString(args.primaryColor, existing.primaryColor),
+          url: pickString(args.url, existing.url),
+          products: args.products ?? existing.products,
           lastFetched: now,
         });
       }

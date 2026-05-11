@@ -124,7 +124,11 @@ export function InstitutionDetailContent({ itemId }: InstitutionDetailContentPro
                         <InstitutionLogo
                             institutionName={item.institutionName}
                             logoBase64={item.institutionLogoBase64}
+                            primaryColor={item.institutionPrimaryColor}
+                            isActive={isActive}
+                            hasError={hasError}
                             size="lg"
+                            className="shrink-0"
                         />
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">

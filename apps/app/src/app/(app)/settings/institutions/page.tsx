@@ -152,28 +152,20 @@ export default function InstitutionsPage() {
             return (
               <li
                 key={item._id}
-                className="flex flex-col gap-4 border-b border-secondary py-4 last:border-none lg:flex-row lg:items-center"
+                className="flex flex-col gap-4 border-b border-secondary py-4 last:border-none sm:flex-row sm:items-center sm:justify-between sm:gap-6"
               >
-                <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:items-center">
-                  {/* Institution logo (Plaid) or fallback icon */}
-                  <div className="flex items-center justify-between">
-                    <InstitutionLogo
-                      institutionName={item.institutionName}
-                      logoBase64={item.institutionLogoBase64}
-                      size="md"
-                    />
-                    <div className="lg:hidden">
-                      <Toggle
-                        isSelected={isActive}
-                        size="md"
-                        onChange={() => toggleItem(item._id)}
-                        isDisabled={isToggling}
-                      />
-                    </div>
-                  </div>
-                  {/* Institution details */}
-                  <div className="flex flex-1 flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-4">
+                  <InstitutionLogo
+                    institutionName={item.institutionName}
+                    logoBase64={item.institutionLogoBase64}
+                    primaryColor={item.institutionPrimaryColor}
+                    isActive={isActive}
+                    hasError={hasError}
+                    size="md"
+                    className="shrink-0"
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
                       <p className="text-md font-semibold text-secondary">
                         {item.institutionName || "Unknown Institution"}
                       </p>
@@ -193,8 +185,7 @@ export default function InstitutionsPage() {
                     </p>
                   </div>
                 </div>
-                {/* Actions */}
-                <div className="-mt-1 flex items-center gap-4 lg:mt-0">
+                <div className="flex shrink-0 items-center justify-between gap-4 sm:justify-end">
                   <Button
                     color="link-gray"
                     size="md"
@@ -204,14 +195,12 @@ export default function InstitutionsPage() {
                   >
                     View details
                   </Button>
-                  <div className="max-lg:hidden">
-                    <Toggle
-                      isSelected={isActive}
-                      size="md"
-                      onChange={() => toggleItem(item._id)}
-                      isDisabled={isToggling}
-                    />
-                  </div>
+                  <Toggle
+                    isSelected={isActive}
+                    size="md"
+                    onChange={() => toggleItem(item._id)}
+                    isDisabled={isToggling}
+                  />
                 </div>
               </li>
             );
