@@ -24,6 +24,8 @@ import type { AgentProposalId } from "../types";
 
 type TransactionRow = {
     _id: string;
+    /** Same as Plaid `transactionId` (liveRows sets `_id` from it for table collection keys). */
+    transactionId?: string;
     _updateTime?: number;
     date: string;
     amount: number; // canonical milliunits
