@@ -161,11 +161,28 @@ validate_plaid_env() {
   echo "[vercel-build] Note: PLAID_ENV=production allowed for documented exception CONVEX_DEPLOYMENT=${CONVEX_DEPLOYMENT_VALUE}."
 }
 
+# CROWDEV-422: defense-in-depth against the /a11y-audit/* harness ever
+# rendering in production. NEXT_PUBLIC_A11Y_AUDIT is build-time baked into
+# the client bundle and is the primary feature gate, but a Vercel
+# misconfiguration could flip it to "1" on Production. This build-time block
+# trips the deploy before the bundle ever ships. Layered with the
+# middleware bypass + per-page notFound() guards (which also key on
+# VERCEL_ENV).
+validate_a11y_audit_env() {
+  if [[ "${NEXT_PUBLIC_A11Y_AUDIT:-}" == "1" && "${VERCEL_ENV_VALUE}" == "production" ]]; then
+    echo "[vercel-build] ERROR: NEXT_PUBLIC_A11Y_AUDIT=1 is not allowed for VERCEL_ENV=production." >&2
+    echo "[vercel-build] The /a11y-audit/* harness is for non-production builds only." >&2
+    echo "[vercel-build] Unset NEXT_PUBLIC_A11Y_AUDIT in Vercel Production env vars." >&2
+    exit 1
+  fi
+}
+
 main() {
   echo "[vercel-build] VERCEL_ENV=${VERCEL_ENV_VALUE}"
 
   validate_clerk_env
   validate_plaid_env
+  validate_a11y_audit_env
 
   # Production deploys are the only builds allowed to trigger `convex deploy`.
   if [[ "${VERCEL_ENV_VALUE}" == "production" ]]; then
