@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "../_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "../functions";
 import { PROMPT_VERSION } from "./system";
 
@@ -62,6 +63,103 @@ export const appendUserTurn = internalMutation({
     });
 
     return { threadId: targetThreadId, messageId };
+  },
+});
+
+/**
+ * CROWDEV-395: edit-and-resend on a user message.
+ *
+ * Hard re-send semantics (NOT branching/forking):
+ *   1. Verify the viewer owns the thread AND the target message is a user row.
+ *   2. Delete every message in the thread with `createdAt > target.createdAt`
+ *      (assistant text, tool calls, tool results from the original turn —
+ *      and any later turns layered on top of it).
+ *   3. Patch the target row's `text` to the new prompt and flip `isStreaming`
+ *      back to `true`. This matches `appendUserTurn`'s convention so the chat
+ *      UI's "is the run in flight?" derivation
+ *      (`lastUser.isStreaming === true && noAssistantRowAfter`) kicks in
+ *      automatically — same aria-busy, same typing-indicator, same stop button.
+ *   4. Patch the thread: bump `lastTurnAt` (sidebar ordering) and clear
+ *      `cancelledAtTurn` so a stale flag from a prior aborted turn doesn't
+ *      pre-cancel this fresh run.
+ *   5. Schedule `runAgentTurn` directly. The runtime's `loadForStream` reads
+ *      `agentMessages` rows live, so the truncated history is what reaches
+ *      `streamText`. The `componentThreadId` field on `agentThreads` is just
+ *      an opaque identifier — the agent has no separate component-side
+ *      message log to truncate, so deleting Convex rows is sufficient.
+ *
+ * Budget headroom is checked inline (same as `appendUserTurn`'s HTTP entry
+ * point in `http.ts`); on cap the mutation throws so the frontend can route
+ * the error through `TypedAgentError`.
+ */
+export const editAndResendUserTurn = mutation({
+  args: {
+    messageId: v.id("agentMessages"),
+    newText: v.string(),
+  },
+  returns: v.object({
+    threadId: v.id("agentThreads"),
+    messageId: v.id("agentMessages"),
+  }),
+  handler: async (ctx, { messageId, newText }) => {
+    const trimmed = newText.trim();
+    if (!trimmed) throw new Error("Message cannot be empty");
+    if (trimmed.length > 8192) throw new Error("Message too long");
+
+    const viewer = ctx.viewerX();
+    const target = await ctx.table("agentMessages").getX(messageId);
+    if (target.role !== "user") {
+      throw new Error("Only user messages can be edited");
+    }
+
+    const thread = await ctx.table("agentThreads").getX(target.agentThreadId);
+    if (thread.userId !== viewer._id) throw new Error("Not authorized");
+
+    const budget = await ctx.runQuery(internal.agent.budgets.checkHeadroom, {
+      userId: viewer._id,
+      threadId: thread._id,
+    });
+    if (!budget.ok) {
+      throw new Error(`budget_exhausted:${budget.reason ?? "unknown"}`);
+    }
+
+    // Truncate every message strictly after the target. Range query on
+    // `by_thread_createdAt` gives us only the rows we need, and matches the
+    // sort order the chat UI renders in. Matching `createdAt > target` (not
+    // `>=`) preserves the target row itself — we patch it below.
+    const downstream = await ctx
+      .table("agentMessages", "by_thread_createdAt", (q) =>
+        q.eq("agentThreadId", thread._id).gt("createdAt", target.createdAt),
+      );
+    for (const msg of downstream) {
+      const writable = await ctx.table("agentMessages").getX(msg._id);
+      await writable.delete();
+    }
+
+    const writableTarget = await ctx.table("agentMessages").getX(messageId);
+    await writableTarget.patch({
+      text: trimmed,
+      // Clear any stale tool hint or tool-call breadcrumb on the original
+      // row; this is a fresh prompt, not a replay of the prior toolHint.
+      toolCallsJson: undefined,
+      isStreaming: true,
+    });
+
+    const now = Date.now();
+    await thread.patch({ lastTurnAt: now, cancelledAtTurn: undefined });
+
+    // CROWDEV-343: capture schedule timestamp BEFORE `runAfter` so the
+    // runtime's cancel-flag comparison covers any Stop click that lands
+    // between schedule and action-start.
+    const turnScheduledAt = Date.now();
+    await ctx.scheduler.runAfter(0, internal.agent.runtime.runAgentTurn, {
+      userId: viewer._id,
+      threadId: thread._id,
+      userMessageId: messageId,
+      turnScheduledAt,
+    });
+
+    return { threadId: thread._id, messageId };
   },
 });
 

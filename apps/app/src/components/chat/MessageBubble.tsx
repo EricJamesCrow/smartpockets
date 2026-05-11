@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useSmoothText } from "@convex-dev/agent/react";
 import type { Doc, Id } from "@convex/_generated/dataModel";
 import { AssistantAvatar } from "@/components/chat/AssistantAvatar";
+import { useChatInteraction } from "@/components/chat/ChatInteractionContext";
 import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { MessageActions } from "@/components/chat/MessageActions";
 import { MessageTimestamp } from "@/components/chat/MessageTimestamp";
@@ -78,6 +80,129 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
   const [smoothText] = useSmoothText(message.text ?? "", { startStreaming: isStreaming });
   const displayText = isUser || isSystem ? message.text ?? "" : smoothText;
 
+  // CROWDEV-395: inline edit-and-resend on user messages.
+  //   - `isEditing` toggles the bubble between display markup and an inline
+  //     textarea pre-filled with the original text.
+  //   - The original `message.text` is the source of truth on cancel — we
+  //     never mutate it locally on Esc/click-outside, so cancel can't lose
+  //     data even if React state has churned. On submit, the backend
+  //     mutation patches the row's `text` and re-renders flow naturally.
+  const chatInteraction = useChatInteraction();
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(message.text ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Keep the draft in sync with the source-of-truth `message.text` whenever
+  // the bubble is NOT editing. This handles two cases:
+  //   1. The reactive query updates the row's text (e.g. after a successful
+  //      edit submit, the patched text flows back through `messages`).
+  //   2. The user closes the editor and a parent re-renders.
+  useEffect(() => {
+    if (!isEditing) setDraft(message.text ?? "");
+  }, [message.text, isEditing]);
+
+  // Auto-focus + caret-to-end on edit entry.
+  useEffect(() => {
+    if (!isEditing) return;
+    const node = textareaRef.current;
+    if (!node) return;
+    node.focus();
+    const len = node.value.length;
+    node.setSelectionRange(len, len);
+    // Resize the textarea to fit current content.
+    node.style.height = "auto";
+    node.style.height = `${Math.min(node.scrollHeight, 320)}px`;
+  }, [isEditing]);
+
+  // Click-outside cancels editing. Mouse-down is used (not click) so the
+  // cancel fires before any focus shift inside the bubble itself can
+  // accidentally re-trigger it. Restoring `draft` from `message.text` on
+  // exit guarantees the original content is preserved on cancel.
+  useEffect(() => {
+    if (!isEditing) return;
+    const onMouseDown = (event: MouseEvent) => {
+      if (!editorRef.current) return;
+      if (editorRef.current.contains(event.target as Node)) return;
+      setIsEditing(false);
+      setDraft(message.text ?? "");
+    };
+    window.addEventListener("mousedown", onMouseDown);
+    return () => window.removeEventListener("mousedown", onMouseDown);
+  }, [isEditing, message.text]);
+
+  const handleEditStart = () => {
+    // NOTE: Don't guard on `isStreaming` here. For user messages, the
+    // row-level `isStreaming` flag is a turn-in-flight marker that's
+    // inserted as `true` by `appendUserTurn` and STAYS `true` after the
+    // assistant replies (only `abortRun` and `finalizeUserTurnIfStranded`
+    // flip it, both of which only fire on aborted/stranded runs). Guarding
+    // on it here would mean Edit-on-user is permanently disabled after the
+    // first turn completes. The submit handler already throws on
+    // backend-side conflicts (budget cap, viewer mismatch).
+    setDraft(message.text ?? "");
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setDraft(message.text ?? "");
+  };
+
+  const handleSubmitEdit = async () => {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    if (trimmed === (message.text ?? "").trim()) {
+      // No-op: same text. Just close the editor.
+      setIsEditing(false);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await chatInteraction.editAndResend({
+        messageId: message._id,
+        newText: trimmed,
+      });
+      setIsEditing(false);
+    } catch (err) {
+      // Surface to console; ChatView's error boundary covers fatal cases. We
+      // intentionally don't swallow — leaving the editor open lets the user
+      // retry or copy the text out.
+      console.error("[MessageBubble] editAndResend failed", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    // IME composition guard.
+    if (event.nativeEvent.isComposing) return;
+
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      void handleSubmitEdit();
+      return;
+    }
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void handleSubmitEdit();
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      handleCancelEdit();
+      return;
+    }
+  };
+
+  const handleTextareaInput = () => {
+    const node = textareaRef.current;
+    if (!node) return;
+    node.style.height = "auto";
+    node.style.height = `${Math.min(node.scrollHeight, 320)}px`;
+  };
+
   if (isTool) {
     const parsedInput = tryParseJson(message.toolCallsJson);
     const parsedOutput = tryParseJson(message.toolResultJson);
@@ -133,10 +258,13 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
       {isUser ? <UserAvatar /> : <AssistantAvatar />}
       <div className={cx("flex max-w-[80%] flex-col gap-1", isUser ? "items-end" : "items-start")}>
         <div
+          ref={isUser && isEditing ? editorRef : undefined}
           className={cx(
             "relative rounded-2xl px-5 py-3 text-sm",
             isUser
-              ? "rounded-tr-none bg-brand-solid text-white"
+              ? isEditing
+                ? "rounded-tr-none w-full border border-[var(--sp-moss-mint)]/40 bg-primary text-primary shadow-md dark:bg-[var(--sp-surface-panel-strong)]"
+                : "rounded-tr-none bg-brand-solid text-white"
               : "min-h-[42px] rounded-tl-none border border-secondary bg-secondary text-primary dark:border-[var(--sp-moss-line)] dark:bg-[var(--sp-surface-panel-strong)] dark:shadow-[var(--sp-inset-hairline)]",
           )}
         >
@@ -149,7 +277,39 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
             creationTime={message._creationTime}
             align={isUser ? "left" : "right"}
           />
-          {isUser ? (
+          {isUser && isEditing ? (
+            <div className="flex flex-col gap-2">
+              <textarea
+                ref={textareaRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onInput={handleTextareaInput}
+                onKeyDown={handleKeyDown}
+                aria-label="Edit message"
+                rows={1}
+                disabled={submitting}
+                className="resize-none bg-transparent text-sm text-primary placeholder:text-quaternary focus:outline-none disabled:opacity-60"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  disabled={submitting}
+                  className="rounded-md px-3 py-1 text-xs font-medium text-tertiary hover:bg-secondary disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmitEdit()}
+                  disabled={submitting || !draft.trim()}
+                  className="rounded-md bg-brand-solid px-3 py-1 text-xs font-medium text-white shadow-sm transition-all duration-[var(--sp-motion-base)] hover:brightness-110 active:brightness-95 disabled:opacity-40"
+                >
+                  {submitting ? "Sending…" : "Send"}
+                </button>
+              </div>
+            </div>
+          ) : isUser ? (
             <p className="whitespace-pre-wrap leading-relaxed">{displayText}</p>
           ) : showTypingDots ? (
             <span
@@ -171,11 +331,26 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
             <MarkdownContent content={displayText} isStreaming={isStreaming} />
           )}
         </div>
-        {!isStreaming && (
+        {/*
+          CROWDEV-395 / regression fix: the `isStreaming` gate here was
+          previously a single flag for all roles, which silently blocked
+          actions on user messages forever — `appendUserTurn` inserts user
+          rows with `isStreaming: true` as a turn-in-flight marker and
+          NOTHING flips it to false on a successful run (only `abortRun`
+          and `finalizeUserTurnIfStranded` clear it, both for aborted /
+          stranded turns). Result: every user bubble had no copy or edit
+          affordance after the first reply landed — including the new
+          Edit button shipped with this ticket. Differentiate by role:
+            - User bubble: hide actions ONLY while inline-editing.
+            - Assistant bubble: hide actions while the row is mid-stream
+              (existing behaviour; row flag flips to false on `persistStep`).
+        */}
+        {!isEditing && !(isAssistant && isStreaming) && (
           <MessageActions
             messageText={message.text ?? ""}
             role={isUser ? "user" : "assistant"}
             onRegenerate={isAssistant ? onRegenerate : undefined}
+            onEdit={isUser ? handleEditStart : undefined}
             className={isUser ? "mr-1" : "ml-1"}
           />
         )}
