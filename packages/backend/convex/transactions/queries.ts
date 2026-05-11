@@ -46,6 +46,7 @@ const transactionWithMerchantValidator = v.object({
     datetime: v.optional(v.string()),
     name: v.string(),
     merchantName: v.optional(v.string()),
+    originalDescription: v.optional(v.string()),
     pending: v.boolean(),
     pendingTransactionId: v.optional(v.string()),
     categoryPrimary: v.optional(v.string()),
@@ -72,6 +73,7 @@ const transactionOrStreamValidator = v.object({
     authorizedDatetime: v.optional(v.string()),
     name: v.string(),
     merchantName: v.optional(v.string()),
+    originalDescription: v.optional(v.string()),
     pending: v.boolean(),
     pendingTransactionId: v.optional(v.string()),
     categoryId: v.optional(v.string()),
@@ -107,11 +109,12 @@ async function assertViewerOwnsAccount(ctx: any, accountId: string) {
     const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
         userId: viewer.externalId,
     });
-    const activeItemIds = new Set(userItems.filter((item: { isActive?: boolean }) => item.isActive !== false).map((item: { _id: string }) => item._id));
 
-    for (const itemId of activeItemIds) {
+    // Include paused items: the user still owns accounts on those connections,
+    // and product rules elsewhere decide visibility — do not deny reads here.
+    for (const item of userItems) {
         const itemAccounts = await ctx.runQuery(components.plaid.public.getAccountsByItem, {
-            plaidItemId: itemId,
+            plaidItemId: item._id,
         });
         if (itemAccounts.some((account: { accountId: string }) => account.accountId === accountId)) {
             return viewer;
