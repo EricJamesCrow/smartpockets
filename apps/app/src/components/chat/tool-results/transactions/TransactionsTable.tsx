@@ -1,7 +1,11 @@
 "use client";
 
 import { Table } from "@repo/ui/untitledui/application/table/table";
-import { formatTransactionAmount } from "@/utils/transaction-helpers";
+import { Badge } from "@repo/ui/untitledui/base/badges/badges";
+import { MerchantLogo } from "@/components/credit-cards/MerchantLogo";
+import { TransactionSourceCell } from "@/components/transactions/TransactionSourceCell";
+import { formatTransactionDate, getCategoryBadgeColor } from "@/types/credit-cards";
+import { formatTransactionAmount, mapPlaidCategory } from "@/utils/transaction-helpers";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveTransactions } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -62,8 +66,15 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
     const overflow = output.ids.length - visible.length;
 
     return (
-        <ToolCardShell title={output.preview.summary ?? "Transactions"} subtitle={formatWindow(output.window)}>
-            <Table aria-label={output.preview.summary ?? "Transactions"} selectionMode="none" className="text-sm">
+        <ToolCardShell
+            title={output.preview.summary ?? "Transactions"}
+            subtitle={formatWindow(output.window)}
+            // Widen beyond the default 640px max so the 6-column table (date,
+            // merchant w/ logo, category badge, source w/ logo, status badge,
+            // amount) has room to breathe without horizontal scroll.
+            className="max-w-[820px]!"
+        >
+            <Table aria-label={output.preview.summary ?? "Transactions"} selectionMode="none" size="sm" className="text-sm">
                 <Table.Header bordered={false} className="bg-transparent! h-auto!">
                     <Table.Head id="date" isRowHeader className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-2 px-0!">
                         Date
@@ -71,16 +82,28 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
                     <Table.Head id="merchant" className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-2 px-0!">
                         Merchant
                     </Table.Head>
-                    <Table.Head id="amount" className="text-tertiary text-right text-xs font-medium uppercase py-2 pr-2 px-0! [&>div]:justify-end">
-                        Amount
-                    </Table.Head>
-                    <Table.Head id="category" className="text-tertiary text-left text-xs font-medium uppercase py-2 px-0!">
+                    <Table.Head id="category" className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-2 px-0!">
                         Category
+                    </Table.Head>
+                    <Table.Head id="source" className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-2 px-0!">
+                        Source
+                    </Table.Head>
+                    <Table.Head id="status" className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-2 px-0!">
+                        Status
+                    </Table.Head>
+                    <Table.Head id="amount" className="text-tertiary text-right text-xs font-medium uppercase py-2 px-0! [&>div]:justify-end">
+                        Amount
                     </Table.Head>
                 </Table.Header>
                 <Table.Body items={visible}>
                     {(tx) => {
-                        const { text: amountText, colorClass: amountColor } = formatTransactionAmount(tx.amount);
+                        const category = mapPlaidCategory(tx.categoryPrimary ?? undefined);
+                        const merchantName = tx.merchantEnrichment?.merchantName ?? tx.merchantName ?? tx.name;
+                        const { text: amountText, colorClass: amountColor } = formatTransactionAmount(
+                            tx.amount,
+                            tx.isoCurrencyCode ?? undefined,
+                        );
+                        const pending = tx.pending ?? false;
                         return (
                             <Table.Row
                                 id={tx._id}
@@ -94,10 +117,46 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
                                 // for an explicit `border-t` here.
                                 className="hover:bg-secondary/40 has-[:focus-visible]:bg-secondary/60 cursor-pointer h-auto!"
                             >
-                                <Table.Cell className="text-secondary py-2 pr-2 px-0! tabular-nums">{formatDate(tx.date)}</Table.Cell>
-                                <Table.Cell className="text-primary py-2 pr-2 px-0!">{tx.merchantName ?? tx.name}</Table.Cell>
-                                <Table.Cell className={`py-2 pr-2 px-0! text-right tabular-nums ${amountColor}`}>{amountText}</Table.Cell>
-                                <Table.Cell className="text-secondary py-2 px-0!">{tx.categoryPrimary ?? "-"}</Table.Cell>
+                                <Table.Cell className="text-secondary py-2.5 pr-2 px-0! tabular-nums whitespace-nowrap">
+                                    {formatTransactionDate(tx.date)}
+                                </Table.Cell>
+                                <Table.Cell className="py-2.5 pr-2 px-0!">
+                                    <div className="flex items-center gap-2.5">
+                                        <MerchantLogo
+                                            logoUrl={tx.merchantEnrichment?.logoUrl ?? tx.logoUrl ?? undefined}
+                                            merchantName={merchantName}
+                                            size="sm"
+                                        />
+                                        <span className="text-primary max-w-[160px] truncate text-sm font-medium">
+                                            {merchantName}
+                                        </span>
+                                    </div>
+                                </Table.Cell>
+                                <Table.Cell className="py-2.5 pr-2 px-0!">
+                                    <Badge color={getCategoryBadgeColor(category)} size="sm">
+                                        {category}
+                                    </Badge>
+                                </Table.Cell>
+                                <Table.Cell className="py-2.5 pr-2 px-0!">
+                                    {tx.sourceInfo ? (
+                                        <TransactionSourceCell
+                                            displayName={tx.sourceInfo.displayName}
+                                            lastFour={tx.sourceInfo.lastFour}
+                                            institutionName={tx.sourceInfo.institutionName}
+                                            size="sm"
+                                        />
+                                    ) : (
+                                        <span className="text-tertiary text-xs">-</span>
+                                    )}
+                                </Table.Cell>
+                                <Table.Cell className="py-2.5 pr-2 px-0!">
+                                    <Badge color={pending ? "warning" : "success"} size="sm">
+                                        {pending ? "Pending" : "Posted"}
+                                    </Badge>
+                                </Table.Cell>
+                                <Table.Cell className={`py-2.5 px-0! text-right tabular-nums font-medium ${amountColor}`}>
+                                    {amountText}
+                                </Table.Cell>
                             </Table.Row>
                         );
                     }}

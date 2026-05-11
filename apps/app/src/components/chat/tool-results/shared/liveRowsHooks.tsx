@@ -27,11 +27,27 @@ type TransactionRow = {
     _updateTime?: number;
     date: string;
     amount: number; // canonical milliunits
+    isoCurrencyCode?: string | null;
     merchantName?: string | null;
     name: string;
+    accountId?: string;
     categoryPrimary?: string | null;
     pending?: boolean;
     logoUrl?: string | null;
+    merchantEnrichment?: {
+        merchantName: string;
+        logoUrl?: string;
+        categoryPrimary?: string;
+        categoryIconUrl?: string;
+        confidenceLevel: string;
+    } | null;
+    sourceInfo?: {
+        cardId: string;
+        displayName: string;
+        lastFour?: string;
+        brand?: string;
+        institutionName?: string;
+    };
 };
 
 type CreditCardRow = {

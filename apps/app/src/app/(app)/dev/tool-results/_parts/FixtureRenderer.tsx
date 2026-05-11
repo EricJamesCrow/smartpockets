@@ -103,19 +103,51 @@ function synthesizeOverrides(props: AnyProps, existing: LivePreviewOverrides | u
 
     const now = Date.now();
 
+    // Sample merchant + source fixtures so the harness shows a representative
+    // mix of logos / category badges / pending vs posted rows when the
+    // /dev/tool-results preview page boots without a live Convex backend.
+    const sampleMerchants = [
+        { name: "Whole Foods", logo: "https://logo.clearbit.com/wholefoodsmarket.com", category: "FOOD_AND_DRINK" },
+        { name: "Uber", logo: "https://logo.clearbit.com/uber.com", category: "TRANSPORTATION" },
+        { name: "Amazon", logo: "https://logo.clearbit.com/amazon.com", category: "GENERAL_MERCHANDISE" },
+        { name: "Netflix", logo: "https://logo.clearbit.com/netflix.com", category: "ENTERTAINMENT" },
+        { name: "Shell", logo: "https://logo.clearbit.com/shell.com", category: "TRANSPORTATION" },
+    ];
+    const sampleCards = [
+        { id: "card_chase_sapphire", displayName: "Chase Sapphire Reserve", lastFour: "4321", brand: "VISA", institutionName: "Chase" },
+        { id: "card_amex_plat", displayName: "Amex Platinum", lastFour: "1009", brand: "AMEX", institutionName: "American Express" },
+    ];
+
     for (const [index, id] of ids.entries()) {
         if (id.startsWith("plaid:plaidTransactions:") && !result.transactions?.[id]) {
             const bucket = o.preview?.buckets?.[index];
-            const category = bucket?.category ?? "Food and Drink";
+            const merchant = sampleMerchants[index % sampleMerchants.length]!;
+            const card = sampleCards[index % sampleCards.length]!;
+            const category = bucket?.category ?? merchant.category;
             const amountDollars = bucket?.amount ?? 42 + index;
+            const pending = index === 0; // First row pending to showcase the badge variant.
             result.transactions![id] = {
                 _id: id,
                 date: bucket?.from ?? o.window?.from ?? "2026-04-15",
                 amount: Math.round(amountDollars * 1000),
-                merchantName: `Sample merchant ${index + 1}`,
-                name: `Sample merchant ${index + 1}`,
+                merchantName: merchant.name,
+                name: merchant.name,
                 categoryPrimary: category,
-                pending: false,
+                pending,
+                logoUrl: merchant.logo,
+                merchantEnrichment: {
+                    merchantName: merchant.name,
+                    logoUrl: merchant.logo,
+                    categoryPrimary: category,
+                    confidenceLevel: "VERY_HIGH",
+                },
+                sourceInfo: {
+                    cardId: card.id,
+                    displayName: card.displayName,
+                    lastFour: card.lastFour,
+                    brand: card.brand,
+                    institutionName: card.institutionName,
+                },
             };
         } else if (id.startsWith("plaid:plaidAccounts:") && !result.plaidAccounts?.[id]) {
             result.plaidAccounts![id] = {
