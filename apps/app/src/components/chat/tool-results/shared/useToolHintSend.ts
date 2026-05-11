@@ -4,7 +4,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { useMutation } from "convex/react";
 import { useChatInteraction } from "@/components/chat/ChatInteractionContext";
-import type { AgentProposalId } from "../types";
+import type { AgentProposalId, ToolName } from "../types";
 
 /**
  * Typed wrapper around `ChatInteractionContext.sendMessage` that hides the
@@ -83,6 +83,16 @@ export function useToolHintSend() {
             sendMessage({
                 text: "Undo",
                 toolHint: { tool: "undo_mutation", args: { reversalToken } },
+            }),
+        /**
+         * Re-dispatch a tool call that previously surfaced as `output-error`.
+         * The dispatcher (`ToolResultRenderer`) is responsible for gating which
+         * tools are eligible - this helper is the transport. CROWDEV-393.
+         */
+        retryFailedTool: (tool: ToolName, args: Record<string, unknown>) =>
+            sendMessage({
+                text: "Retry",
+                toolHint: { tool, args },
             }),
     };
 }
