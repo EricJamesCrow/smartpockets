@@ -152,27 +152,27 @@ export default function InstitutionsPage() {
             return (
               <li
                 key={item._id}
-                className="flex flex-col gap-4 border-b border-secondary py-4 last:border-none lg:flex-row lg:items-center"
+                className="grid grid-cols-1 gap-4 border-b border-secondary py-4 last:border-none lg:grid-cols-[auto,minmax(0,1fr),auto] lg:items-center lg:gap-5"
               >
-                <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:items-center">
-                  {/* Institution logo (Plaid) or fallback icon */}
-                  <div className="flex items-center justify-between">
-                    <InstitutionLogo
-                      institutionName={item.institutionName}
-                      logoBase64={item.institutionLogoBase64}
+                <div className="flex items-start justify-between gap-3 lg:block lg:pt-0.5">
+                  <InstitutionLogo
+                    institutionName={item.institutionName}
+                    logoBase64={item.institutionLogoBase64}
+                    primaryColor={item.institutionPrimaryColor}
+                    isActive={isActive}
+                    hasError={hasError}
+                    size="md"
+                  />
+                  <div className="shrink-0 lg:hidden">
+                    <Toggle
+                      isSelected={isActive}
                       size="md"
+                      onChange={() => toggleItem(item._id)}
+                      isDisabled={isToggling}
                     />
-                    <div className="lg:hidden">
-                      <Toggle
-                        isSelected={isActive}
-                        size="md"
-                        onChange={() => toggleItem(item._id)}
-                        isDisabled={isToggling}
-                      />
-                    </div>
                   </div>
-                  {/* Institution details */}
-                  <div className="flex flex-1 flex-col gap-0.5">
+                </div>
+                <div className="flex min-w-0 flex-col gap-0.5">
                     <div className="flex items-center gap-2">
                       <p className="text-md font-semibold text-secondary">
                         {item.institutionName || "Unknown Institution"}
@@ -191,10 +191,8 @@ export default function InstitutionsPage() {
                     <p className="text-sm text-tertiary">
                       Last synced: {lastSynced}
                     </p>
-                  </div>
                 </div>
-                {/* Actions */}
-                <div className="-mt-1 flex items-center gap-4 lg:mt-0">
+                <div className="flex items-center gap-4 justify-self-end">
                   <Button
                     color="link-gray"
                     size="md"
