@@ -205,6 +205,7 @@ Ensure our transaction exports and statement downloads contain all of the inform
 ## UI/UX Fixes & Cleanup
 
 - [x] Fix money-unit display bug by standardizing Plaid/account/card amounts on milliunits with boundary conversion
+- [x] Fix production chat crash when the streaming cursor follows a markdown horizontal rule
 
 ### Sidebar Logo
 
