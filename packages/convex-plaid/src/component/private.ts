@@ -3002,16 +3002,25 @@ export const upsertInstitution = internalMutation({
         });
         return String(id);
       },
-      // Update function
+      // Update function — merge optional branding fields so later Plaid calls
+      // that omit logo / primary_color / etc. do not clear cached values.
       async (id) => {
-        await ctx.db.patch(id, {
+        const patch: {
+          name: string;
+          lastFetched: number;
+          logo?: string;
+          primaryColor?: string;
+          url?: string;
+          products?: string[];
+        } = {
           name: args.name,
-          logo: args.logo,
-          primaryColor: args.primaryColor,
-          url: args.url,
-          products: args.products,
           lastFetched: now,
-        });
+        };
+        if (args.logo !== undefined) patch.logo = args.logo;
+        if (args.primaryColor !== undefined) patch.primaryColor = args.primaryColor;
+        if (args.url !== undefined) patch.url = args.url;
+        if (args.products !== undefined) patch.products = args.products;
+        await ctx.db.patch(id, patch);
       }
     );
 

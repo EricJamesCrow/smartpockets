@@ -26,6 +26,37 @@ const plaidConfigArgs = {
     plaidEnv: v.string(),
     encryptionKey: v.string(),
 };
+/**
+ * Loads institution branding from Plaid (/institutions/get_by_id) into the
+ * shared plaidInstitutions cache (logo, primary color, etc.).
+ *
+ * @returns institution display name when successful
+ */
+async function fetchAndUpsertInstitutionMetadata(ctx, plaidClient, institutionId) {
+    try {
+        const instResponse = await plaidClient.institutionsGetById({
+            institution_id: institutionId,
+            country_codes: ["US"],
+            options: {
+                include_optional_metadata: true,
+            },
+        });
+        const institution = instResponse.data.institution;
+        await ctx.runMutation(internal.private.upsertInstitution, {
+            institutionId,
+            name: institution.name,
+            logo: institution.logo ?? undefined,
+            primaryColor: institution.primary_color ?? undefined,
+            url: institution.url ?? undefined,
+            products: institution.products ?? undefined,
+        });
+        return institution.name;
+    }
+    catch (e) {
+        console.warn("[Plaid Component] Failed to fetch institution details:", e);
+        return undefined;
+    }
+}
 // =============================================================================
 // CREATE LINK TOKEN
 // =============================================================================
@@ -116,33 +147,12 @@ export const exchangePublicToken = action({
             access_token: accessToken,
         });
         const institutionId = itemResponse.data.item.institution_id ?? undefined;
-        // Fetch institution details and cache metadata (logo, branding)
         let institutionName;
         if (institutionId) {
-            try {
-                const instResponse = await plaidClient.institutionsGetById({
-                    institution_id: institutionId,
-                    country_codes: ["US"],
-                    options: {
-                        include_optional_metadata: true,
-                    },
-                });
-                const institution = instResponse.data.institution;
-                institutionName = institution.name;
+            institutionName = await fetchAndUpsertInstitutionMetadata(ctx, plaidClient, institutionId);
+            if (institutionName) {
                 console.log("[Plaid Component] Institution:", institutionName);
-                // Cache institution metadata (shared across users for efficiency)
-                await ctx.runMutation(internal.private.upsertInstitution, {
-                    institutionId,
-                    name: institution.name,
-                    logo: institution.logo ?? undefined,
-                    primaryColor: institution.primary_color ?? undefined,
-                    url: institution.url ?? undefined,
-                    products: institution.products ?? undefined,
-                });
                 console.log("[Plaid Component] Institution metadata cached");
-            }
-            catch (e) {
-                console.warn("[Plaid Component] Failed to fetch institution details:", e);
             }
         }
         // Encrypt access token before storage
@@ -221,27 +231,7 @@ export const fetchAccounts = action({
                 }
             }
             if (institutionId) {
-                try {
-                    const instResponse = await plaidClient.institutionsGetById({
-                        institution_id: institutionId,
-                        country_codes: ["US"],
-                        options: {
-                            include_optional_metadata: true,
-                        },
-                    });
-                    const institution = instResponse.data.institution;
-                    await ctx.runMutation(internal.private.upsertInstitution, {
-                        institutionId,
-                        name: institution.name,
-                        logo: institution.logo ?? undefined,
-                        primaryColor: institution.primary_color ?? undefined,
-                        url: institution.url ?? undefined,
-                        products: institution.products ?? undefined,
-                    });
-                }
-                catch (e) {
-                    console.warn("[Plaid Component] Failed to refresh institution metadata during fetchAccounts:", e);
-                }
+                await fetchAndUpsertInstitutionMetadata(ctx, plaidClient, institutionId);
             }
             const accountsResponse = await plaidClient.accountsGet({
                 access_token: accessToken,
