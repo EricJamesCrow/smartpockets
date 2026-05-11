@@ -24,9 +24,10 @@ import type { Element, Root, RootContent } from "hast";
  * after the last visible character — the goal of CROWDEV-391.
  *
  * For `<pre>` (Streamdown's syntax-highlighted code block), descending
- * inside would disturb tokenization — we append the cursor as a sibling
- * AFTER the `<pre>` instead. Same behavior as Streamdown's built-in
- * `caret` prop for code-block-tail messages.
+ * inside would disturb tokenization. Void elements like `<hr>` also cannot
+ * receive children. In those cases we append the cursor as a sibling AFTER
+ * the element instead. Same behavior as Streamdown's built-in `caret` prop
+ * for code-block-tail messages.
  */
 
 const LEAF_TEXT_TAGS: ReadonlySet<string> = new Set([
@@ -75,14 +76,29 @@ const CONTAINER_TAGS: ReadonlySet<string> = new Set([
     "figure",
 ]);
 
+const VOID_TAGS: ReadonlySet<string> = new Set([
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
+]);
+
 /*
  * Elements where appending inside would conflict with Streamdown's custom
- * renderers (code blocks, mermaid, etc.) — the cursor is appended as a
- * sibling of the block instead. For now, the only one we have to be
- * careful about is `<pre>`, which Streamdown renders as a tokenized
- * syntax-highlighted code surface.
+ * renderers or React's void-element rules — the cursor is appended as a
+ * sibling of the element instead.
  */
-const SIBLING_PLACEMENT_TAGS: ReadonlySet<string> = new Set(["pre"]);
+const SIBLING_PLACEMENT_TAGS: ReadonlySet<string> = new Set(["pre", ...VOID_TAGS]);
 
 function buildCursorElement(): Element {
     return {
