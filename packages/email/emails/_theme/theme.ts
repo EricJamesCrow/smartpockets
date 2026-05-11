@@ -106,8 +106,9 @@ export const getThemeObject = (theme: "light" | "dark" = "light"): Config["theme
         ],
     },
     fontFamily: {
-        body: [`Inter, -apple-system, "Segoe UI", system-ui, Roboto, Arial, sans-serif`],
-        display: [`Inter, -apple-system, "Segoe UI", system-ui, Roboto, Arial, sans-serif`],
+        body: [`Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, Arial, sans-serif`],
+        display: [`Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, Arial, sans-serif`],
+        serif: [`Fraunces, Georgia, "Times New Roman", "Iowan Old Style", serif`],
         mono: [`ui-monospace, "Roboto Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`],
     },
     textUnderlineOffset: {

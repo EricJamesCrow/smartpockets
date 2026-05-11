@@ -12,8 +12,8 @@ const Logo = ({ logoUrl, logoAlt, className }: { logoUrl: string; logoAlt: strin
     }
     return (
         <EmailText style={{ fontSize: "20px", fontWeight: 700, lineHeight: "28px", margin: 0 }}>
-            <span style={{ color: "#181d27" }}>Smart</span>
-            <span style={{ color: "#099250" }}>Pockets</span>
+            <span style={{ color: "#1c201a" }}>Smart</span>
+            <span style={{ color: "#786032" }}>Pockets</span>
         </EmailText>
     );
 };
