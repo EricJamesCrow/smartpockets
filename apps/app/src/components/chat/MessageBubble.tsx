@@ -7,7 +7,6 @@ import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { MessageActions } from "@/components/chat/MessageActions";
 import { MessageTimestamp } from "@/components/chat/MessageTimestamp";
 import { UserAvatar } from "@/components/chat/UserAvatar";
-import { StreamingCursor } from "@/components/chat/StreamingCursor";
 import { ToolResultRenderer } from "@/components/chat/tool-results/ToolResultRenderer";
 import { RawTextMessage } from "@/components/chat/tool-results/shared/RawTextMessage";
 import type { PartState, ToolName } from "@/components/chat/tool-results/types";
@@ -163,10 +162,13 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
               <span className="size-2 animate-bounce rounded-full bg-tertiary" />
             </span>
           ) : (
-            <>
-              <MarkdownContent content={displayText} />
-              {isStreaming && <StreamingCursor />}
-            </>
+            // CROWDEV-391 — the streaming cursor is injected as an inline
+            // trailer of the last visible character via a Streamdown
+            // rehype plugin (see `MarkdownContent` + `globals.css`'s
+            // `sp-stream-cursor` rules). Previously it rendered as a
+            // sibling AFTER `MarkdownContent`, which Streamdown's block
+            // layout pushed onto a new line.
+            <MarkdownContent content={displayText} isStreaming={isStreaming} />
           )}
         </div>
         {!isStreaming && (
