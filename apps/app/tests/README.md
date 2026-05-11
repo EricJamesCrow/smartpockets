@@ -18,6 +18,7 @@ apps/app/
   tests/
     global.setup.ts           ← clerkSetup() (runs once per `bun test:e2e`)
     sidebar-rename-delete.spec.ts
+    agent-transactions-slideout.spec.ts   ← CROWDEV-416 (agent tx table → detail slideout)
     helpers/
       auth.ts                 ← signInTestUser / signInAndGoHome
       seed-thread.ts          ← seedTestThreads / cleanupTestThreads
