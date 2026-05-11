@@ -260,7 +260,13 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
         <div
           ref={isUser && isEditing ? editorRef : undefined}
           className={cx(
-            "relative rounded-2xl px-5 py-3 text-sm",
+            // CROWDEV-411 (Bug A): `min-w-[8rem]` (128px) keeps very short
+            // messages — "hi", "ok", "thanks" — from collapsing narrower than
+            // the absolute-positioned `<MessageTimestamp>`. The timestamp's
+            // worst case ("May 7, 3:29 PM" at `text-[10px]`) is ~80px wide and
+            // sits at `right-1`/`left-1`; an 8rem bubble guarantees the
+            // timestamp visually nests inside the bubble's horizontal bounds.
+            "relative min-w-[8rem] rounded-2xl px-5 py-3 text-sm",
             isUser
               ? isEditing
                 ? "rounded-tr-none w-full border border-[var(--sp-moss-mint)]/40 bg-primary text-primary shadow-md dark:bg-[var(--sp-surface-panel-strong)]"
