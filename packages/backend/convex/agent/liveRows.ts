@@ -170,19 +170,38 @@ export const getPlaidAccounts = query({
             plaidItemId: string;
         }>;
 
+        // Join institution branding (logo + primary color) so the chat tool-result
+        // can render the same `InstitutionLogo` avatar the native
+        // `/settings/institutions` page uses, instead of a plain text label.
         const healthRows = (await ctx.runQuery(components.plaid.public.getItemHealthByUser, { userId: viewer.externalId })) as Array<{
             plaidItemId: string;
             institutionName?: string;
+            institutionLogoBase64?: string;
+            institutionPrimaryColor?: string;
         }>;
-        const institutionByItem = new Map(healthRows.map((row) => [row.plaidItemId, row.institutionName]));
+        const brandingByItem = new Map(
+            healthRows.map((row) => [
+                row.plaidItemId,
+                {
+                    name: row.institutionName,
+                    logo: row.institutionLogoBase64,
+                    color: row.institutionPrimaryColor,
+                },
+            ]),
+        );
 
         return accounts
             .filter((account) => wanted.has(account.accountId) || wanted.has(account._id))
-            .map((account) => ({
-                ...account,
-                _id: account.accountId,
-                institutionName: institutionByItem.get(account.plaidItemId),
-            }));
+            .map((account) => {
+                const branding = brandingByItem.get(account.plaidItemId);
+                return {
+                    ...account,
+                    _id: account.accountId,
+                    institutionName: branding?.name,
+                    institutionLogoBase64: branding?.logo,
+                    institutionPrimaryColor: branding?.color,
+                };
+            });
     },
 });
 

@@ -150,19 +150,41 @@ function synthesizeOverrides(props: AnyProps, existing: LivePreviewOverrides | u
                 },
             };
         } else if (id.startsWith("plaid:plaidAccounts:") && !result.plaidAccounts?.[id]) {
+            // Seed a representative mix of institutions / account types so the
+            // dev preview at /dev/tool-results/list_accounts renders the
+            // institution-grouped card layout without a live Convex backend.
+            const institutionIndex = Math.floor(index / 2);
+            const institutionPalette = [
+                { name: "Chase Bank", color: "#117ACA" },
+                { name: "American Express", color: "#006FCF" },
+                { name: "Capital One", color: "#D03027" },
+            ];
+            const institution = institutionPalette[institutionIndex % institutionPalette.length]!;
+            const isCredit = index % 3 === 2;
+            const subtypeOptions = isCredit
+                ? ["credit card"]
+                : ["checking", "savings", "money market"];
+            const subtype = subtypeOptions[index % subtypeOptions.length]!;
+            const accountName = isCredit
+                ? `${institution.name} Credit Card`
+                : index % 2 === 0
+                  ? `${institution.name} Checking`
+                  : `${institution.name} Savings`;
             result.plaidAccounts![id] = {
                 _id: id,
-                name: `Checking ${index + 1}`,
-                officialName: `Sample Bank Checking ${index + 1}`,
+                name: accountName,
+                officialName: accountName,
                 mask: String(1000 + index),
-                type: "depository",
-                subtype: "checking",
+                type: isCredit ? "credit" : "depository",
+                subtype,
                 balances: {
-                    current: Math.round((1000 + index * 1000) * 1000),
-                    available: Math.round((900 + index * 1000) * 1000),
+                    current: Math.round((1000 + index * 1500) * 1000),
+                    available: Math.round((900 + index * 1500) * 1000),
+                    limit: isCredit ? Math.round(10000 * 1000) : null,
                 },
-                plaidItemId: `plaid:plaidItems:inst-${Math.floor(index / 2)}`,
-                institutionName: `Sample Bank ${Math.floor(index / 2) + 1}`,
+                plaidItemId: `plaid:plaidItems:inst-${institutionIndex}`,
+                institutionName: institution.name,
+                institutionPrimaryColor: institution.color,
             };
         } else if (id.startsWith("creditCards:") && !result.creditCards?.[id]) {
             result.creditCards![id as Id<"creditCards">] = {

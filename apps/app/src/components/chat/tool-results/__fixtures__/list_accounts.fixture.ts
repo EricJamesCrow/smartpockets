@@ -22,9 +22,12 @@ export const outputAvailable: ToolResultComponentProps<unknown, ToolOutput<Previ
         ids: [
             "plaid:plaidAccounts:chase-checking",
             "plaid:plaidAccounts:chase-savings",
+            "plaid:plaidAccounts:chase-credit",
+            "plaid:plaidAccounts:amex-checking",
+            "plaid:plaidAccounts:amex-savings",
             "plaid:plaidAccounts:amex-plat",
         ],
-        preview: { totalBalance: 12450.32, institutionCount: 2, summary: "3 accounts across 2 institutions" },
+        preview: { totalBalance: 12450.32, institutionCount: 2, summary: "6 accounts across 2 institutions" },
     },
     state: "output-available",
 };

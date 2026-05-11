@@ -78,6 +78,8 @@ type PlaidAccountRow = {
     balances: { current?: number | null; available?: number | null; limit?: number | null };
     plaidItemId: string;
     institutionName?: string | null;
+    institutionLogoBase64?: string | null;
+    institutionPrimaryColor?: string | null;
 };
 
 type PromoRateRow = {
