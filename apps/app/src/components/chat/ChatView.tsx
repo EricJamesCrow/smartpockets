@@ -16,6 +16,7 @@ import {
   useChatInteraction,
   type AgentError,
 } from "@/components/chat/ChatInteractionContext";
+import { ChatSendErrorChip } from "@/components/chat/ChatSendErrorChip";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { MessageList } from "@/components/chat/MessageList";
 import { ReconsentModal } from "@/components/chat/ReconsentModal";
@@ -117,6 +118,14 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [banner, setBanner] = useState<ChatBannerState | null>(null);
   const [reconsent, setReconsent] = useState<{ plaidItemId: string } | null>(null);
+  // CROWDEV-393 (follow-up): inline recovery for HTTP-level send failures.
+  // `ToolErrorRow` only surfaces server-side tool-execution errors that are
+  // persisted into `agentMessages` as tool-role rows. Anything that fails
+  // *before* the agent runtime gets to run — offline, DNS, 5xx — short-circuits
+  // in `defaultSendMessage` and never produces a tool row. Without this chip
+  // the chat input just sits silent and the user can only retype.
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   const abortRun = useMutation(api.agent.threads.abortRun);
 
   // W2 emits a role: "system" row during provider outages; surface the most
@@ -225,26 +234,29 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     return buildOptimisticAssistantMessage(threadId, indicatorSuffix);
   }, [showAssistantTypingIndicator, threadId, indicatorSuffix]);
 
-  const routeError = (err: unknown) => {
+  // Returns true if the error mapped to a typed surface (banner / modal /
+  // info-log). Returns false for unmapped failures so the caller can stash the
+  // prompt for the inline retry chip. CROWDEV-393 (follow-up).
+  const routeError = (err: unknown): boolean => {
     const typed = translateError(err);
     if (!typed) {
       console.error("[ChatView] unexpected error", err);
-      return;
+      return false;
     }
     switch (typed.kind) {
       case "rate_limited":
       case "budget_exhausted":
       case "llm_down":
         setBanner(typed);
-        return;
+        return true;
       case "reconsent_required":
         setReconsent({ plaidItemId: typed.plaidItemId });
-        return;
+        return true;
       case "first_turn_guard":
       case "proposal_timed_out":
       case "proposal_invalid_state":
         console.info("[ChatView]", typed.kind);
-        return;
+        return true;
     }
   };
 
@@ -254,15 +266,47 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     setIsLoading(true);
     setPendingPrompt(trimmed);
     setBanner(null);
+    // Clear any previous retry chip — a fresh send supersedes it.
+    setLastFailedMessage(null);
     try {
       await sendMessage({ text: trimmed });
     } catch (err) {
-      routeError(err);
+      const handled = routeError(err);
       setPendingPrompt(null);
+      if (!handled) {
+        // HTTP-level / transport failure: store the prompt so the user can
+        // re-send it via the inline chip without retyping. Typed errors
+        // already have their own surfaces and don't need this affordance.
+        setLastFailedMessage(trimmed);
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleRetryFailedSend = useCallback(async () => {
+    if (!lastFailedMessage || isRetrying) return;
+    setIsRetrying(true);
+    setPendingPrompt(lastFailedMessage);
+    setBanner(null);
+    try {
+      await sendMessage({ text: lastFailedMessage });
+      // Success: clear chip + pending state (the live messages query will
+      // catch up via the user-row landing).
+      setLastFailedMessage(null);
+    } catch (err) {
+      const handled = routeError(err);
+      setPendingPrompt(null);
+      if (handled) {
+        // Typed error took over (e.g. rate-limited banner). Clear the chip so
+        // we don't double-surface the failure.
+        setLastFailedMessage(null);
+      }
+      // If unhandled, keep `lastFailedMessage` so the chip stays mounted.
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [lastFailedMessage, isRetrying, sendMessage]);
 
   const handleMessagesLoaded = useCallback(() => {
     setPendingPrompt(null);
@@ -281,10 +325,19 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
           onMessagesLoaded={handleMessagesLoaded}
         />
       )}
+      {lastFailedMessage && (
+        <div className="px-4 md:px-8">
+          <ChatSendErrorChip
+            onRetry={handleRetryFailedSend}
+            onDismiss={() => setLastFailedMessage(null)}
+            isRetrying={isRetrying}
+          />
+        </div>
+      )}
       <MessageInput
         onSend={handleSend}
         onStop={handleStop}
-        isLoading={isLoading}
+        isLoading={isLoading || isRetrying}
         isStreaming={isStreaming}
       />
       {reconsent && (

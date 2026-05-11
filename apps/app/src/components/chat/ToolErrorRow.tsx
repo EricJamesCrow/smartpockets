@@ -17,8 +17,11 @@ interface ToolErrorRowProps {
 
 export function ToolErrorRow({ toolName, errorText, onRetry }: ToolErrorRowProps) {
   return (
-    <div className="my-2 flex items-start gap-2 rounded-lg border border-error-200 bg-error-50 px-3 py-2 text-sm text-error-700 dark:border-error-700 dark:bg-error-950 dark:text-error-200">
-      <AlertCircle className="mt-0.5 size-4 shrink-0" />
+    <div
+      role="alert"
+      className="my-2 flex items-start gap-2 rounded-lg border border-error-200 bg-error-50 px-3 py-2 text-sm text-error-700 dark:border-error-700 dark:bg-error-950 dark:text-error-200"
+    >
+      <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <div className="flex-1">
         <p className="font-medium">{toolName} failed</p>
         <p className="mt-1 text-xs text-error-600 dark:text-error-300">{errorText}</p>
@@ -29,6 +32,7 @@ export function ToolErrorRow({ toolName, errorText, onRetry }: ToolErrorRowProps
               color="tertiary"
               iconLeading={RefreshCcw01}
               onClick={onRetry}
+              aria-label={`Retry ${toolName}`}
             >
               Retry
             </Button>
