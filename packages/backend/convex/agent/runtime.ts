@@ -544,6 +544,47 @@ export const runAgentTurn = internalAction({
             return false;
         };
 
+        // CROWDEV-409: incremental-streaming bookkeeping. We accumulate text
+        // chunks from `result.textStream` into `streamingPendingText` and lazy-
+        // insert an assistant row on the FIRST chunk of each step. Patches are
+        // throttled to `STREAMING_FLUSH_INTERVAL_MS` to bound DB writes — too
+        // frequent and we'd flood Convex; too sparse and the smoothing UI lags
+        // behind the model. 80ms ≈ 12 patches/sec which is well within the
+        // 20fps smoothing budget of `useSmoothText` and still indistinguishable
+        // from real-time on the wire.
+        //
+        // The row lifecycle for each text-bearing step:
+        //   1. First chunk → `insertStreamingAssistantRow` (row appears in UI
+        //      with `isStreaming: true`, empty text; `useSmoothText` starts).
+        //   2. Subsequent chunks → throttled `patchStreamingAssistantText`.
+        //   3. `onStepFinish` with non-empty `step.text` →
+        //      `finalizeStreamingAssistantRow` (final text + usage + flips
+        //      `isStreaming: false`). Clears the row reference so the NEXT
+        //      text-bearing step gets its own fresh row.
+        //
+        // Tool-only steps (no text chunks) never trigger insert; only
+        // `persistStep` for tool results, identical to the prior behaviour.
+        const STREAMING_FLUSH_INTERVAL_MS = 80;
+        let streamingRowId: Id<"agentMessages"> | null = null;
+        let streamingPendingText = "";
+        let streamingLastFlushAt = 0;
+        let streamingLastFlushedLength = 0;
+
+        const flushStreamingText = async (force: boolean): Promise<void> => {
+            if (!streamingRowId) return;
+            if (!force) {
+                const now = Date.now();
+                if (now - streamingLastFlushAt < STREAMING_FLUSH_INTERVAL_MS) return;
+                if (streamingPendingText.length === streamingLastFlushedLength) return;
+            }
+            streamingLastFlushAt = Date.now();
+            streamingLastFlushedLength = streamingPendingText.length;
+            await ctx.runMutation(agent.threads.patchStreamingAssistantText, {
+                messageId: streamingRowId,
+                text: streamingPendingText,
+            });
+        };
+
         try {
             const { streamText } = await import("ai");
             const messages: Array<{ role: string; content: string }> = await ctx.runQuery(agent.threads.loadForStream, { threadId });
@@ -592,17 +633,41 @@ export const runAgentTurn = internalAction({
 
                     const tokensIn = step.usage?.inputTokens ?? step.usage?.promptTokens;
                     const tokensOut = step.usage?.outputTokens ?? step.usage?.completionTokens;
-                    await ctx.runMutation(agent.threads.persistStep, {
-                        threadId,
-                        step: {
-                            role: (step.role ?? "assistant") as "assistant" | "tool" | "system",
-                            text: step.text,
-                            toolCallsJson: step.toolCalls ? JSON.stringify(step.toolCalls) : undefined,
+                    const stepText = typeof step.text === "string" ? step.text : "";
+                    const toolCallsJson = step.toolCalls ? JSON.stringify(step.toolCalls) : undefined;
+
+                    // CROWDEV-409: finalize the streaming row if it exists for
+                    // this step; otherwise (text-only step that arrived without
+                    // any `textStream` chunks observed yet — defensive) fall
+                    // back to the legacy insert path so we don't drop the step.
+                    if (streamingRowId) {
+                        await ctx.runMutation(agent.threads.finalizeStreamingAssistantRow, {
+                            messageId: streamingRowId,
+                            text: stepText,
+                            toolCallsJson,
                             tokensIn,
                             tokensOut,
                             modelId,
-                        },
-                    });
+                        });
+                        streamingRowId = null;
+                        streamingPendingText = "";
+                        streamingLastFlushedLength = 0;
+                    } else if (stepText.length > 0 || toolCallsJson) {
+                        // Tool-call-only steps still need a carrier row so the
+                        // next-turn's `loadForStream` sees them (it drops empty
+                        // text rows, so `toolCallsJson` alone is fine to skip).
+                        await ctx.runMutation(agent.threads.persistStep, {
+                            threadId,
+                            step: {
+                                role: (step.role ?? "assistant") as "assistant" | "tool" | "system",
+                                text: stepText.length > 0 ? stepText : undefined,
+                                toolCallsJson,
+                                tokensIn,
+                                tokensOut,
+                                modelId,
+                            },
+                        });
+                    }
 
                     if (Array.isArray(step.toolResults)) {
                         for (const tr of step.toolResults) {
@@ -638,10 +703,30 @@ export const runAgentTurn = internalAction({
             // controller (halts the underlying fetch) and break — the
             // tombstone written by `abortRun` is the authoritative end-of-run
             // marker, so we do NOT write another from here.
+            //
+            // CROWDEV-409: each chunk is appended to `streamingPendingText`
+            // and flushed (throttled) to the lazily-inserted assistant row so
+            // the chat UI sees text grow live. `useSmoothText` in the bubble
+            // reveals the patched text smoothly between flushes (20fps).
             const CANCEL_POLL_INTERVAL = 50;
             let chunkCount = 0;
             try {
-                for await (const _chunk of (result as any).textStream ?? []) {
+                for await (const chunk of (result as any).textStream ?? []) {
+                    if (typeof chunk === "string" && chunk.length > 0) {
+                        streamingPendingText += chunk;
+                        // Lazy-insert the streaming row on the first text of
+                        // the current step. Subsequent chunks in this step
+                        // patch the same row.
+                        if (!streamingRowId) {
+                            streamingRowId = (await ctx.runMutation(
+                                agent.threads.insertStreamingAssistantRow,
+                                { threadId, modelId },
+                            )) as Id<"agentMessages">;
+                            streamingLastFlushAt = 0;
+                            streamingLastFlushedLength = 0;
+                        }
+                        await flushStreamingText(false);
+                    }
                     chunkCount += 1;
                     if (chunkCount % CANCEL_POLL_INTERVAL === 0) {
                         if (await isCancelledForThisTurn()) {
@@ -651,6 +736,9 @@ export const runAgentTurn = internalAction({
                     }
                 }
                 if (!cancelObserved) {
+                    // Make sure the UI sees the final tail of text before the
+                    // step-finish patch lands.
+                    await flushStreamingText(true);
                     await (result as any).text;
                 }
             } catch (err) {
@@ -671,6 +759,27 @@ export const runAgentTurn = internalAction({
                 console.error("[agent.runtime] run failed:", err);
             }
         } finally {
+            // CROWDEV-409: any streaming row still in flight here means the
+            // step never finalized — either the user stopped, the provider
+            // errored mid-stream, or the action was aborted. Flush whatever
+            // text we accumulated (so the user sees the partial reply) and
+            // flip `isStreaming: false` so the chat UI stops treating the row
+            // as in-flight. Idempotent if the row was already finalized.
+            if (streamingRowId) {
+                try {
+                    await flushStreamingText(true);
+                } catch (err) {
+                    console.warn("[agent.runtime] streaming flush failed:", err);
+                }
+                try {
+                    await ctx.runMutation(agent.threads.finalizeStrandedStreamingAssistantRow, {
+                        messageId: streamingRowId,
+                    });
+                } catch (err) {
+                    console.warn("[agent.runtime] finalize stranded streaming row failed:", err);
+                }
+                streamingRowId = null;
+            }
             // CROWDEV-367: defensive cleanup — if `streamText` errored before
             // any assistant row landed (provider 5xx, network failure, Zod
             // validation in `loadForStream` → `standardizePrompt`, invalid
