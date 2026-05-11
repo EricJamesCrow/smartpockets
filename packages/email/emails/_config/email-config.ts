@@ -50,10 +50,12 @@ export interface EmailBrandConfig {
  */
 export const defaultEmailConfig: EmailBrandConfig = {
     companyName: "SmartPockets",
-    // Served from apps/web static at smartpockets.com/email-assets/logo.png.
-    // Asset lands in the same PR as this change; update to Vercel Blob or
-    // Convex Blob if we ever need global CDN over static marketing CDN.
-    logoUrl: "https://smartpockets.com/email-assets/logo.png",
+    // TODO(W7.14): set back to "https://smartpockets.com/email-assets/logo.png"
+    // when the actual PNG asset lands in apps/web/public/email-assets/. Until
+    // then the URL 404s, so an empty string here triggers Logo's styled text
+    // wordmark fallback in header.tsx / footer.tsx instead of a broken-image
+    // placeholder in every email we send.
+    logoUrl: "",
     logoAlt: "SmartPockets",
     supportEmail: "support@smartpockets.com",
     websiteUrl: "https://smartpockets.com",
