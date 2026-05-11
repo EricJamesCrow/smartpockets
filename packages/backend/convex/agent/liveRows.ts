@@ -145,12 +145,46 @@ export const getCreditCards = query({
     returns: v.any(),
     handler: async (ctx, { ids }) => {
         const viewer = ctx.viewerX();
-        const rows = [];
+        if (ids.length === 0) return [];
+
+        const cards = [];
         for (const id of ids) {
             const row = await ctx.table("creditCards").get(id);
-            if (row && row.userId === viewer._id) rows.push(row.doc());
+            if (row && row.userId === viewer._id) cards.push(row.doc());
         }
-        return rows;
+        if (cards.length === 0) return [];
+
+        // Join institution branding (logo + primary color + cached name) so the
+        // chat tool-result can render the same `InstitutionLogo` avatar the
+        // native `/credit-cards` page derives from `plaidItems`.
+        const healthRows = (await ctx.runQuery(components.plaid.public.getItemHealthByUser, {
+            userId: viewer.externalId,
+        })) as Array<{
+            plaidItemId: string;
+            institutionName?: string;
+            institutionLogoBase64?: string;
+            institutionPrimaryColor?: string;
+        }>;
+        const brandingByItem = new Map(
+            healthRows.map((row) => [
+                row.plaidItemId,
+                {
+                    name: row.institutionName,
+                    logo: row.institutionLogoBase64,
+                    color: row.institutionPrimaryColor,
+                },
+            ]),
+        );
+
+        return cards.map((card) => {
+            const branding = card.plaidItemId ? brandingByItem.get(card.plaidItemId) : undefined;
+            return {
+                ...card,
+                institutionName: branding?.name ?? card.company,
+                institutionLogoBase64: branding?.logo,
+                institutionPrimaryColor: branding?.color,
+            };
+        });
     },
 });
 
