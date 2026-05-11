@@ -11,8 +11,8 @@ interface UseTogglePlaidItemOptions {
 }
 
 interface UseTogglePlaidItemReturn {
-  /** Toggle the active state of a plaidItem */
-  toggle: (itemId: string) => Promise<void>;
+  /** Toggle the active state of a plaidItem (pass component `plaidItemId` / row `_id`) */
+  toggle: (plaidItemId: string) => Promise<void>;
   /** Whether the mutation is currently running */
   isLoading: boolean;
   /** The last error that occurred */
@@ -25,7 +25,7 @@ interface UseTogglePlaidItemReturn {
  * Provides clean API for enable/disable functionality with automatic toast notifications.
  * Used to pause/resume syncing for a bank connection.
  *
- * NOTE: The itemId is a string (component ID), not a Convex Id<"plaidItems">.
+ * Pass the institution row's `_id` from `getItemsForViewer` (component plaidItem id).
  *
  * @example
  * ```tsx
@@ -47,12 +47,12 @@ export function useTogglePlaidItem(
 
   const toggleMutation = useMutation(api.plaidComponent.togglePlaidItemActive);
 
-  const toggle = async (itemId: string) => {
+  const toggle = async (plaidItemId: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await toggleMutation({ itemId });
+      const result = await toggleMutation({ plaidItemId });
 
       toast.success(
         result.isActive ? "Institution enabled" : "Institution disabled",

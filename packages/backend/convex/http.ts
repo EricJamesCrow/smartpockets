@@ -373,7 +373,7 @@ http.route({
           // Special handling for login required errors
           if (errorCode === "ITEM_LOGIN_REQUIRED") {
             await ctx.runMutation(internal.plaidComponent.markNeedsReauthInternal, {
-              itemId: plaidItem._id,
+              itemId: plaidItem.itemId,
               reason: errorMessage,
             });
             // W4: dispatch reconsent-required email per contracts §15.
@@ -399,7 +399,7 @@ http.route({
             }
           } else {
             await ctx.runMutation(internal.plaidComponent.setItemErrorInternal, {
-              itemId: plaidItem._id,
+              itemId: plaidItem.itemId,
               errorCode,
               errorMessage,
             });
@@ -415,7 +415,7 @@ http.route({
           });
 
           await ctx.runMutation(internal.plaidComponent.markNeedsReauthInternal, {
-            itemId: plaidItem._id,
+            itemId: plaidItem.itemId,
             reason: `Credentials expiring: ${expirationDate}`,
           });
 
@@ -445,7 +445,7 @@ http.route({
           console.log("[Webhook] User permission revoked");
 
           await ctx.runMutation(internal.plaidComponent.deactivateItemInternal, {
-            itemId: plaidItem._id,
+            itemId: plaidItem.itemId,
             reason: "User revoked access from bank settings",
           });
         } else if (webhookCode === "PENDING_DISCONNECT") {
@@ -453,7 +453,7 @@ http.route({
           console.log("[Webhook] Pending disconnect");
 
           await ctx.runMutation(internal.plaidComponent.deactivateItemInternal, {
-            itemId: plaidItem._id,
+            itemId: plaidItem.itemId,
             reason: "Account pending disconnect",
           });
         } else if (webhookCode === "WEBHOOK_UPDATE_ACKNOWLEDGED") {

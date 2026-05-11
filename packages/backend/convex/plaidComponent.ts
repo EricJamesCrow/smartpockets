@@ -14,7 +14,7 @@
  */
 
 import { action, query, mutation, internalAction, internalMutation } from "./_generated/server";
-import { query as viewerQuery } from "./functions";
+import { mutation as viewerMutation, query as viewerQuery } from "./functions";
 import { v } from "convex/values";
 import { Plaid } from "@crowdevelopment/convex-plaid";
 import { components } from "./_generated/api";
@@ -227,15 +227,24 @@ export const completeReauthAction = action({
 /**
  * Toggle the isActive state of a plaidItem.
  * Used to pause/resume syncing for a bank connection.
+ *
+ * Expects the component plaidItem document id (`_id` from getItemsForViewer),
+ * not Plaid's API `item_id`. The convex-plaid mutation keys by Plaid `itemId`.
  */
-export const togglePlaidItemActive = mutation({
-  args: { itemId: v.string() },
+export const togglePlaidItemActive = viewerMutation({
+  args: { plaidItemId: v.string() },
   returns: v.object({ isActive: v.boolean() }),
   handler: async (ctx, args) => {
-    return await ctx.runMutation(
-      getPlaid().api.togglePlaidItemActive,
-      { itemId: args.itemId }
-    );
+    const viewer = ctx.viewerX();
+    const item = await ctx.runQuery(components.plaid.public.getItem, {
+      plaidItemId: args.plaidItemId,
+    });
+    if (!item || item.userId !== viewer.externalId) {
+      throw new Error("Institution not found or unauthorized");
+    }
+    return await ctx.runMutation(getPlaid().api.togglePlaidItemActive, {
+      itemId: item.itemId,
+    });
   },
 });
 
@@ -918,6 +927,8 @@ export const syncAllActiveItemsInternal = internalAction({
 
 /**
  * Mark a plaidItem as needing re-authentication (internal)
+ *
+ * @param itemId - Plaid API `item_id` (not the component document `_id`)
  */
 export const markNeedsReauthInternal = internalMutation({
   args: {
@@ -942,6 +953,8 @@ export const markNeedsReauthInternal = internalMutation({
 
 /**
  * Set an error on a plaidItem (internal)
+ *
+ * @param itemId - Plaid API `item_id` (not the component document `_id`)
  */
 export const setItemErrorInternal = internalMutation({
   args: {
@@ -967,6 +980,8 @@ export const setItemErrorInternal = internalMutation({
 
 /**
  * Deactivate a plaidItem (internal)
+ *
+ * @param itemId - Plaid API `item_id` (not the component document `_id`)
  */
 export const deactivateItemInternal = internalMutation({
   args: {
