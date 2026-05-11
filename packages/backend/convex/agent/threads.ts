@@ -212,6 +212,117 @@ export const persistStep = internalMutation({
   },
 });
 
+/**
+ * CROWDEV-409: incremental-streaming assistant write path.
+ *
+ * Background: previously the runtime only persisted assistant text in
+ * `onStepFinish` — after the full step completed — by inserting a NEW row
+ * with `isStreaming: false` and the full step text. The chat UI's
+ * `useSmoothText` hook in `MessageBubble.tsx` only smooths text when the
+ * bubble is mounted with `startStreaming: true` (i.e. `message.isStreaming`
+ * is true at mount). Because the real assistant row arrived already-complete
+ * and with `isStreaming: false`, the bubble mounted with full text and never
+ * smoothed — the assistant message rendered all at once, defeating the whole
+ * point of streaming.
+ *
+ * Fix: split assistant text persistence into three lifecycle stages —
+ *   1. `insertStreamingAssistantRow` — inserts an empty placeholder row with
+ *      `isStreaming: true` on the FIRST text chunk of a step. The UI starts
+ *      smoothing immediately.
+ *   2. `patchStreamingAssistantText` — patches the accumulated text. The
+ *      runtime throttles this to ~80ms to keep DB writes bounded.
+ *   3. `finalizeStreamingAssistantRow` — flips `isStreaming: false` and
+ *      records usage at step end. The runtime calls this from `onStepFinish`
+ *      with the canonical step text (defense against drift between chunks
+ *      and step.text).
+ *
+ * Tool-only steps (no text) never insert a streaming row — only `persistStep`
+ * with `toolResultJson` rows are written. Multi-step turns that interleave
+ * text + tool calls get one streaming row per text-bearing step.
+ *
+ * Cancellation: if the runtime is aborted mid-stream, the streaming row is
+ * left with `isStreaming: true` and partial text. The `finally` block in
+ * `runAgentTurn` calls `finalizeStrandedStreamingAssistantRow` to flip the
+ * flag (the partial text is preserved so the user can read what arrived
+ * before they hit stop).
+ */
+export const insertStreamingAssistantRow = internalMutation({
+  args: {
+    threadId: v.id("agentThreads"),
+    modelId: v.optional(v.string()),
+  },
+  returns: v.id("agentMessages"),
+  handler: async (ctx, { threadId, modelId }) => {
+    return await ctx.table("agentMessages").insert({
+      agentThreadId: threadId,
+      role: "assistant",
+      text: "",
+      modelId,
+      createdAt: Date.now(),
+      isStreaming: true,
+    });
+  },
+});
+
+export const patchStreamingAssistantText = internalMutation({
+  args: {
+    messageId: v.id("agentMessages"),
+    text: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, { messageId, text }) => {
+    const writable = await ctx.table("agentMessages").getX(messageId);
+    await writable.patch({ text });
+    return null;
+  },
+});
+
+export const finalizeStreamingAssistantRow = internalMutation({
+  args: {
+    messageId: v.id("agentMessages"),
+    text: v.string(),
+    toolCallsJson: v.optional(v.string()),
+    tokensIn: v.optional(v.number()),
+    tokensOut: v.optional(v.number()),
+    modelId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, { messageId, text, toolCallsJson, tokensIn, tokensOut, modelId }) => {
+    const writable = await ctx.table("agentMessages").getX(messageId);
+    await writable.patch({
+      text,
+      toolCallsJson,
+      tokensIn,
+      tokensOut,
+      modelId,
+      isStreaming: false,
+    });
+    return null;
+  },
+});
+
+/**
+ * CROWDEV-409: clean up an assistant streaming row that the runtime never
+ * finalized — typically because `streamText` errored or was aborted before
+ * `onStepFinish` fired. Flips `isStreaming: false` so the chat UI stops
+ * treating the row as in-flight; preserves whatever partial `text` arrived
+ * so the user can read what they got.
+ *
+ * Idempotent. No-ops if the row is missing or already finalized.
+ */
+export const finalizeStrandedStreamingAssistantRow = internalMutation({
+  args: { messageId: v.id("agentMessages") },
+  returns: v.null(),
+  handler: async (ctx, { messageId }) => {
+    const target = await ctx.table("agentMessages").get(messageId);
+    if (!target) return null;
+    if (target.isStreaming !== true) return null;
+    const writable = await ctx.table("agentMessages").getX(messageId);
+    await writable.patch({ isStreaming: false });
+    return null;
+  },
+});
+
 // Reduces persisted `agentMessages` rows down to a valid Vercel AI SDK
 // `ModelMessage[]` for the next turn's `streamText` call. We must:
 //   - Drop `tool` rows. The AI SDK's `ToolModelMessage` schema requires
@@ -231,6 +342,13 @@ export const persistStep = internalMutation({
 //     prompt is rendered fresh per turn from `renderSystemPrompt`; these
 //     persisted system rows are a UI artifact, not model input.
 //   - Drop `user` rows with empty/undefined text — defensive only.
+//   - Drop `assistant` rows with `isStreaming: true` — defensive only
+//     (CROWDEV-409). The runtime's incremental-streaming writes flip the
+//     flag back to false at step-end via `finalizeStreamingAssistantRow`
+//     (or via the `finally` block's stranded-row cleanup). A row stuck at
+//     `isStreaming: true` here means the prior turn errored mid-stream and
+//     the cleanup didn't run — feeding the partial text to the next turn
+//     would surface ambiguous half-written content to the model.
 //
 // Future improvement (separate ticket): persist `toolCallId` on tool result
 // rows and reconstruct full `ToolCallPart` / `ToolResultPart` content
@@ -243,8 +361,9 @@ export const loadForStream = internalQuery({
     const thread = await ctx.table("agentThreads").getX(threadId);
     const messages = await thread.edge("agentMessages").order("asc");
     const out: Array<{ role: "user" | "assistant"; content: string }> = [];
-    for (const m of messages as Array<{ role: string; text?: string }>) {
+    for (const m of messages as Array<{ role: string; text?: string; isStreaming?: boolean }>) {
       if (m.role !== "user" && m.role !== "assistant") continue;
+      if (m.role === "assistant" && m.isStreaming === true) continue;
       const text = m.text;
       if (typeof text !== "string" || text.length === 0) continue;
       out.push({ role: m.role, content: text });
