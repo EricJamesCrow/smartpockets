@@ -5,9 +5,10 @@ import { cleanupTestThreads, seedTestThreads } from "./helpers/seed-thread";
 /**
  * Verifies the sidebar kebab menu fix from CROWDEV-352:
  *
- *   1. Hover a sidebar row → click its kebab → exactly ONE `[role="menu"]`
- *      is visible. Before the fix, both the desktop and the (portaled)
- *      mobile-sidebar menu rendered simultaneously due to lifted state.
+ *   1. Hover a sidebar row → click its kebab → exactly ONE *visible*
+ *      `[role="menu"]` is present. Before the fix, both the desktop and the
+ *      (portaled) mobile-sidebar menu rendered simultaneously due to lifted
+ *      state.
  *   2. Rename action updates the sidebar row's title in place.
  *   3. Delete action soft-deletes the row so it disappears from the list.
  *
@@ -15,6 +16,10 @@ import { cleanupTestThreads, seedTestThreads } from "./helpers/seed-thread";
  * `tests/helpers/auth.ts`). State seeded by hitting the dev-only Convex
  * mutations `agent.threads.createTestThread` /
  * `agent.threads.deleteAllTestThreads` directly via `ConvexHttpClient`.
+ *
+ * All sidebar locators are scoped to `:visible` — the desktop and mobile
+ * sidebars in `dashboard-sidebar.tsx` both render the same DOM (gated only
+ * by responsive `hidden`/`lg:hidden`), so unfiltered counts would double.
  */
 
 const CONVEX_URL =
