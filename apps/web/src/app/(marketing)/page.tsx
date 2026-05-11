@@ -221,11 +221,11 @@ const BentoVisual = ({ type }: { type: string }) => {
 
     if (type === "cards") {
         return (
-            <div className="relative mt-auto h-44 overflow-hidden pt-4">
-                <div className="absolute -top-3 left-2 w-44 rotate-[-9deg]">
+            <div className="relative mt-auto flex w-full min-h-[11rem] shrink-0 items-end justify-between gap-2 px-0.5 pb-2 pt-8 sm:min-h-[12rem] sm:gap-3 sm:px-1 sm:pb-3 sm:pt-10">
+                <div className="w-[min(calc(50%-0.35rem),13rem)] max-w-[48%] origin-bottom -rotate-[6deg]">
                     <CreditCard type="brand-dark" brand="visa" cardHolder="EC" />
                 </div>
-                <div className="absolute right-2 top-3 w-40 rotate-[7deg]">
+                <div className="w-[min(calc(50%-0.35rem),12rem)] max-w-[48%] origin-bottom rotate-[5deg]">
                     <CreditCard type="transparent-gradient" brand="amex" cardHolder="EC" />
                 </div>
             </div>
@@ -380,7 +380,7 @@ const AgenticSection = () => (
             </div>
 
             <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-2 shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
-                <div className="relative aspect-[4/5] overflow-hidden rounded-[calc(2rem-0.5rem)] bg-[#0a1014] p-5 sm:aspect-[16/11] md:p-7">
+                <div className="relative aspect-[4/5] overflow-hidden rounded-[calc(2rem-0.5rem)] bg-[#0a1014] p-5 pb-8 sm:aspect-[16/11] sm:pb-10 md:p-7 md:pb-12">
                     <div
                         aria-hidden="true"
                         className="sp-aurora absolute inset-0 bg-[radial-gradient(circle_at_72%_22%,rgba(127,184,154,0.28),transparent_36%),radial-gradient(circle_at_8%_82%,rgba(212,197,156,0.16),transparent_30%)]"
