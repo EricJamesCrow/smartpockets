@@ -3019,13 +3019,21 @@ export const upsertInstitution = internalMutation({
           return prior;
         };
 
+        const nextLogo = pickString(args.logo, existing.logo);
+        const nextPrimary = pickString(args.primaryColor, existing.primaryColor);
+        const nextUrl = pickString(args.url, existing.url);
+        const nextProducts =
+          args.products !== undefined ? args.products : existing.products;
+
+        // Omit optional keys when still undefined so Convex does not treat them as
+        // explicit clears (patch + undefined can drop optional fields).
         await ctx.db.patch(id, {
           name: args.name,
-          logo: pickString(args.logo, existing.logo),
-          primaryColor: pickString(args.primaryColor, existing.primaryColor),
-          url: pickString(args.url, existing.url),
-          products: args.products ?? existing.products,
           lastFetched: now,
+          ...(nextLogo !== undefined ? { logo: nextLogo } : {}),
+          ...(nextPrimary !== undefined ? { primaryColor: nextPrimary } : {}),
+          ...(nextUrl !== undefined ? { url: nextUrl } : {}),
+          ...(nextProducts !== undefined ? { products: nextProducts } : {}),
         });
       }
     );
