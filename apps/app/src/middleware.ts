@@ -4,6 +4,14 @@ import { NextResponse } from "next/server";
 // API routes should not redirect (they return 401 instead)
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 
+// Test-only entry point that loads `<ClerkProvider>` so `window.Clerk` is
+// available for Playwright's `clerk.signIn` helper. The route is gated to
+// non-production at the page level (`apps/app/src/app/e2e-bootstrap/page.tsx`
+// 404s in production) and the matcher here mirrors that — we never let the
+// route bypass auth in production, even if the page file were accidentally
+// shipped. See `apps/app/tests/helpers/auth.ts` for the helper that uses it.
+const isE2eBootstrapRoute = createRouteMatcher(["/e2e-bootstrap"]);
+
 // Marketing site URL (use localhost in development)
 const MARKETING_URL =
   process.env.NODE_ENV === "development"
@@ -13,6 +21,17 @@ const MARKETING_URL =
 export default clerkMiddleware(async (auth, req) => {
   // Skip redirect for API routes
   if (isApiRoute(req)) {
+    return NextResponse.next();
+  }
+
+  // Skip redirect for the e2e bootstrap route in non-production only. The
+  // route itself 404s in production; this guard is belt-and-suspenders so a
+  // misbuilt prod bundle can't be coerced into serving an unauthenticated
+  // page with `<ClerkProvider>` loaded.
+  if (
+    process.env.NODE_ENV !== "production" &&
+    isE2eBootstrapRoute(req)
+  ) {
     return NextResponse.next();
   }
 

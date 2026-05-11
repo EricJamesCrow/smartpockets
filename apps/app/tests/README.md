@@ -13,6 +13,8 @@ configured in `apps/app/.env.local`.
 ```
 apps/app/
   playwright.config.ts        ← test config + webServer + project deps
+  src/app/e2e-bootstrap/      ← non-prod-only public landing page used by auth.ts
+  src/middleware.ts           ← bypasses redirect for `/e2e-bootstrap`
   tests/
     global.setup.ts           ← clerkSetup() (runs once per `bun test:e2e`)
     sidebar-rename-delete.spec.ts
@@ -24,8 +26,29 @@ apps/app/
 - **Auth.** `clerkSetup()` (in `global.setup.ts`) issues a Clerk Testing
   Token at the start of the run. Each spec wraps `setupClerkTestingToken({
   page })` in its `beforeEach` to inject that token into the page so Clerk
-  skips bot-detection. Then `clerk.signIn` performs a real password sign-in
-  with the env-configured test user.
+  skips bot-detection.
+
+  The helper then navigates to `/e2e-bootstrap` — a minimal public route in
+  `apps/app` whose only job is to load `<ClerkProvider>` so `window.Clerk` is
+  available before sign-in. The route is permitted through middleware only
+  when `NODE_ENV !== "production"`. Without it, every `apps/app` URL would
+  redirect unauthenticated visitors to the marketing site
+  (`localhost:3001`), which Playwright's `webServer` block doesn't boot —
+  yielding `ECONNREFUSED`. (See CROWDEV-413 for the history.)
+
+  After the bootstrap, `clerk.signIn({ page, emailAddress })` is preferred:
+  it uses `CLERK_SECRET_KEY` to mint a sign-in token via the Backend SDK
+  (no password exchange, no verification step). The fallback password flow
+  remains for environments that haven't provisioned `CLERK_SECRET_KEY` in
+  Playwright env.
+
+  **Org-selection note.** Clerk's `force_organization_selection` is `true`
+  on the dev instance. The dev test user must be an active member of an
+  organization or `clerk.signIn` returns a session in `pending` status with
+  task `choose-organization`, and the app middleware will redirect the
+  resulting page as if the user were unauthenticated. Add the test user as
+  a member via the Clerk Dashboard (or the Backend API) once during
+  provisioning.
 - **Convex seeding.** Two dev-only mutations live in
   `packages/backend/convex/agent/threads.ts`:
   - `createTestThread({ title })`
@@ -47,7 +70,7 @@ for CI (the `.github/workflows/e2e.yml` workflow).
 | `CLERK_PUBLISHABLE_KEY` | Same as above; `clerkSetup` reads this name. The global setup mirrors `NEXT_PUBLIC_*` into it if missing. |
 | `CLERK_SECRET_KEY` | Server Clerk key (`sk_test_*`). Used by `clerkSetup` to mint the testing token. |
 | `E2E_CLERK_USER_USERNAME` | Email/username of the dev Clerk test user the spec signs in as. |
-| `E2E_CLERK_USER_PASSWORD` | That user's password. |
+| `E2E_CLERK_USER_PASSWORD` | _Optional._ Only needed for the legacy fallback password sign-in flow. With `CLERK_SECRET_KEY` present, `auth.ts` uses the Backend-SDK ticket flow and never sees a password. |
 | `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL the seed helpers hit. Must be a dev/staging deployment. |
 | `CONVEX_DEPLOYMENT` | Same deployment name; `assertNotProduction` checks this for `prod:` prefix. |
 
