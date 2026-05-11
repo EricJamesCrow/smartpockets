@@ -20,8 +20,8 @@ import type { AgentProposalId, ToolName } from "../types";
  */
 export function useToolHintSend() {
     const { sendMessage } = useChatInteraction();
-    const confirmProposalMutation = useMutation((api as any).agent.proposals.confirm);
-    const cancelProposalMutation = useMutation((api as any).agent.proposals.cancel);
+    const confirmProposalMutation = useMutation(api.agent.proposals.confirm);
+    const cancelProposalMutation = useMutation(api.agent.proposals.cancel);
 
     return {
         openTransaction: (transactionId: string) =>
