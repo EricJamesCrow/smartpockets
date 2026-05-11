@@ -58,7 +58,7 @@ type RawAccount = {
  *   negative = money out (dollars). Use for arithmetic that needs to
  *   produce another user-facing number.
  * - `amountFormatted` — pre-formatted human-convention string the model
- *   should **copy verbatim** when writing the amount in markdown/prose.
+ *   should **copy verbatim** when writing the amount in prose.
  *   Removes any reasoning step the model could fail. Format is always
  *   `+$X.XX` for inflows and `-$X.XX` for outflows (zero is `+$0.00`).
  *

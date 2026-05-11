@@ -90,7 +90,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
                 .enum(["widget", "inline"])
                 .optional()
                 .describe(
-                    "Rendering hint. 'widget' (default) shows the full TransactionsTable component; use for broad exploration where the user wants to scan many rows. 'inline' suppresses the widget and expects you to summarize the relevant rows as a markdown table in your prose response; use for narrow questions like 'any new transactions?', 'show me my latest charges', 'find my X spending'.",
+                    "Rendering hint. 'widget' (default) shows the full TransactionsTable component; use for broad exploration where the user wants to scan many rows. 'inline' suppresses the widget for narrow questions like 'any new transactions?', 'show my latest charges', 'find my X spending' — in that mode reply with a short bulleted summary or plain prose highlighting a few specific rows. Never emit a markdown table in either mode; the widget is the tabular output in widget mode, and prose/bullets are the format in inline mode.",
                 ),
         }),
         handler: agent.tools.read.listTransactions.listTransactions,
