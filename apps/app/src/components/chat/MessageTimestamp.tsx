@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Focusable } from "react-aria-components";
+import { Tooltip } from "@repo/ui/untitledui/base/tooltip/tooltip";
 import { cx } from "@/utils/cx";
 
 /**
@@ -8,18 +10,25 @@ import { cx } from "@/utils/cx";
  *
  * Renders a small relative timestamp ("2m ago", "yesterday") at the corner of
  * a message bubble. Hidden at rest; fades in on `group-hover/msg` (the parent
- * `MessageBubble` provides the `group/msg` ancestor).
+ * `MessageBubble` provides the `group/msg` ancestor) and on
+ * `group-focus-within/msg` (when a keyboard user tabs through the bubble).
  *
- * - Native `title` carries the absolute ISO timestamp for prolonged hover so
- *   the user can verify exact time without us rendering a heavier tooltip.
- * - `aria-hidden` keeps screen readers focused on the message content (the
- *   bubble itself surfaces who/what; precise time is non-essential).
+ * - The absolute ISO timestamp is exposed via a react-aria-components
+ *   `Tooltip` (CROWDEV-411). The previous native `title="<ISO>"` attribute
+ *   was unreachable: hovering off the bubble hid the timestamp before the
+ *   browser's native title-show delay could fire, so users never actually
+ *   saw the precise time. The aria tooltip stays open as long as the user
+ *   hovers/focuses the timestamp itself, independent of the parent group.
+ * - The span is wrapped in `Focusable` and exposes `tabIndex=0` so keyboard
+ *   users can Tab to the timestamp; `focus-visible:opacity-100` reveals it
+ *   when focused even outside the parent group-hover.
+ * - `aria-label` provides screen-reader copy ("Sent on May 7, 2026, 3:29 PM")
+ *   while the visible text remains the friendly relative form. We removed
+ *   the previous `aria-hidden` to make the timestamp navigable by keyboard
+ *   users — the SR copy uses a localized full date+time, not the raw ISO.
  * - No `motion-safe`/`motion-reduce` toggling needed because we use opacity
- *   transitions only — Tailwind's `transition-opacity` respects the user's
- *   reduced-motion preference at the OS level via the browser engine without
- *   extra work, but more importantly: opacity is not a translation/scale
- *   animation and does not trigger vestibular reactions in reduced-motion
- *   users.
+ *   transitions only — they don't trigger vestibular reactions in
+ *   reduced-motion users.
  * - We tick once a minute only when the message is recent (< 1h old) so we
  *   don't waste re-renders on long-lived chat history.
  */
@@ -32,6 +41,14 @@ interface MessageTimestampProps {
 
 const RELATIVE_FORMATTER = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 const ABSOLUTE_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+const FULL_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  year: "numeric",
   month: "short",
   day: "numeric",
   hour: "numeric",
@@ -72,19 +89,41 @@ export function MessageTimestamp({ creationTime, align = "right" }: MessageTimes
     return () => clearInterval(interval);
   }, [creationTime]);
 
+  const date = new Date(creationTime);
   const relative = formatRelative(creationTime, now);
-  const absolute = new Date(creationTime).toISOString();
+  const fullLocale = FULL_FORMATTER.format(date);
+  const iso = date.toISOString();
+
+  // CROWDEV-411 (Bug B): wrap the timestamp in a sustained tooltip so the
+  // precise ISO time is reachable on hover/focus and stays visible long
+  // enough to actually read. Anchored to "top" so it never collides with
+  // the message body below.
+  //
+  // Tooltip placement flips to match the timestamp's alignment so the
+  // tooltip body always grows toward the bubble centre rather than off the
+  // screen edge.
+  const tooltipPlacement = align === "right" ? "top end" : "top start";
 
   return (
-    <span
-      aria-hidden="true"
-      title={absolute}
-      className={cx(
-        "pointer-events-none absolute -top-4 select-none text-[10px] leading-none text-quaternary opacity-0 transition-opacity group-hover/msg:opacity-100",
-        align === "right" ? "right-1" : "left-1",
-      )}
-    >
-      {relative}
-    </span>
+    <Tooltip title={fullLocale} description={iso} placement={tooltipPlacement} delay={300}>
+      <Focusable>
+        <span
+          tabIndex={0}
+          aria-label={`Sent on ${fullLocale}`}
+          className={cx(
+            // `opacity-0` at rest; revealed by the parent group's hover or
+            // any descendant focus. Once focused directly, the span stays
+            // visible regardless of cursor position — keyboard users get the
+            // same affordance as mouse users without trapping them.
+            "absolute -top-4 select-none rounded-sm text-[10px] leading-none text-quaternary opacity-0 outline-none transition-opacity",
+            "group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus-visible:opacity-100",
+            "focus-visible:ring-1 focus-visible:ring-quaternary",
+            align === "right" ? "right-1" : "left-1",
+          )}
+        >
+          {relative}
+        </span>
+      </Focusable>
+    </Tooltip>
   );
 }
