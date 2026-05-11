@@ -133,7 +133,14 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
   }, [isEditing, message.text]);
 
   const handleEditStart = () => {
-    if (isStreaming) return;
+    // NOTE: Don't guard on `isStreaming` here. For user messages, the
+    // row-level `isStreaming` flag is a turn-in-flight marker that's
+    // inserted as `true` by `appendUserTurn` and STAYS `true` after the
+    // assistant replies (only `abortRun` and `finalizeUserTurnIfStranded`
+    // flip it, both of which only fire on aborted/stranded runs). Guarding
+    // on it here would mean Edit-on-user is permanently disabled after the
+    // first turn completes. The submit handler already throws on
+    // backend-side conflicts (budget cap, viewer mismatch).
     setDraft(message.text ?? "");
     setIsEditing(true);
   };
@@ -324,7 +331,21 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
             <MarkdownContent content={displayText} isStreaming={isStreaming} />
           )}
         </div>
-        {!isStreaming && !isEditing && (
+        {/*
+          CROWDEV-395 / regression fix: the `isStreaming` gate here was
+          previously a single flag for all roles, which silently blocked
+          actions on user messages forever — `appendUserTurn` inserts user
+          rows with `isStreaming: true` as a turn-in-flight marker and
+          NOTHING flips it to false on a successful run (only `abortRun`
+          and `finalizeUserTurnIfStranded` clear it, both for aborted /
+          stranded turns). Result: every user bubble had no copy or edit
+          affordance after the first reply landed — including the new
+          Edit button shipped with this ticket. Differentiate by role:
+            - User bubble: hide actions ONLY while inline-editing.
+            - Assistant bubble: hide actions while the row is mid-stream
+              (existing behaviour; row flag flips to false on `persistStep`).
+        */}
+        {!isEditing && !(isAssistant && isStreaming) && (
           <MessageActions
             messageText={message.text ?? ""}
             role={isUser ? "user" : "assistant"}
