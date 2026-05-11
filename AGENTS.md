@@ -781,7 +781,7 @@ Provides: stacked PR creation, branch management, stack submission and navigatio
 
 ### Environment bootstrap
 
-The update script installs bun 1.1.42 (if missing) and runs `bun install`. After it completes, all workspace dependencies are ready. `.env.local` files must exist with valid Clerk + Convex credentials before starting any service — see below.
+The update script (`install` in `.cursor/environment.json`) runs `scripts/cursor-env-install.sh`, which installs Bun 1.1.42 via the official installer if it is not on `PATH`, then runs `bun install`. After it completes, all workspace dependencies are ready. `.env.local` files must exist with valid Clerk + Convex credentials before starting any service — see below.
 
 ### Required secrets and `.env.local` bootstrap
 
