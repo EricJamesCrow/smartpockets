@@ -1,14 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { Table } from "@repo/ui/untitledui/application/table/table";
 import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { MerchantLogo } from "@/components/credit-cards/MerchantLogo";
+import {
+    TransactionDetailPanel,
+    type DetailPanelTransaction,
+} from "@/components/transactions/TransactionDetailPanel";
 import { TransactionSourceCell } from "@/components/transactions/TransactionSourceCell";
 import { formatTransactionDate, getCategoryBadgeColor } from "@/types/credit-cards";
 import { formatTransactionAmount, mapPlaidCategory } from "@/utils/transaction-helpers";
 import { ToolCardShell } from "../shared/ToolCardShell";
-import { useLiveTransactions } from "../shared/liveRowsHooks";
-import { useToolHintSend } from "../shared/useToolHintSend";
+import { useLiveTransactions, type TransactionRow } from "../shared/liveRowsHooks";
 import type { ToolOutput, ToolResultComponentProps } from "../types";
 import { TransactionsTableSkeleton } from "./TransactionsTableSkeleton";
 
@@ -31,10 +35,36 @@ function formatWindow(window?: { from: string; to: string; granularity?: string 
     return `${formatDate(window.from)} to ${formatDate(window.to)}`;
 }
 
+function transactionRowToDetailPanel(tx: TransactionRow): DetailPanelTransaction {
+    const transactionId = tx.transactionId ?? tx._id;
+    const merchantName = tx.merchantEnrichment?.merchantName ?? tx.merchantName ?? tx.name;
+    const me = tx.merchantEnrichment;
+    return {
+        transactionId,
+        date: tx.date,
+        datetime: "datetime" in tx ? (tx as { datetime?: string }).datetime : undefined,
+        name: tx.name,
+        merchantName,
+        amount: tx.amount,
+        isoCurrencyCode: tx.isoCurrencyCode ?? undefined,
+        pending: tx.pending ?? false,
+        categoryPrimary: tx.categoryPrimary ?? undefined,
+        category: mapPlaidCategory(tx.categoryPrimary ?? undefined),
+        merchantEnrichment: me
+            ? {
+                  merchantName: me.merchantName,
+                  logoUrl: me.logoUrl,
+                  confidenceLevel: me.confidenceLevel,
+              }
+            : null,
+        sourceInfo: tx.sourceInfo,
+    };
+}
+
 export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolOutput<Preview>>) {
     const { output, state } = props;
     const rows = useLiveTransactions(output?.ids ?? []);
-    const hint = useToolHintSend();
+    const [selectedTransaction, setSelectedTransaction] = useState<DetailPanelTransaction | null>(null);
 
     const presentation = (props.input as { presentation?: "widget" | "inline" } | undefined)?.presentation;
     if (presentation === "inline") {
@@ -56,10 +86,8 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
     }
 
     // React Aria's `Table.Body` collection requires each item to expose an `id` key.
-    // The live-rows hook returns rows with `_id`, so map to a new shape that
-    // includes the `id` field react-aria-components needs for keying + selection
-    // bookkeeping. This also keeps the `id` value identical to `_id` so
-    // `onAction` callbacks pass through the canonical Convex id.
+    // Live rows use Plaid `transactionId` as `_id`; we mirror it in `id` for
+    // React Aria collection bookkeeping.
     const visible = rows
         .slice(0, MAX_VISIBLE_ROWS)
         .map((tx) => ({ ...tx, id: tx._id }));
@@ -108,7 +136,7 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
                             <Table.Row
                                 id={tx._id}
                                 onAction={() => {
-                                    void hint.openTransaction(tx._id);
+                                    setSelectedTransaction(transactionRowToDetailPanel(tx));
                                 }}
                                 // ARIA grid pattern: focus moves cell-by-cell with arrow keys, so the
                                 // visible focus ring is owned by the gridcell (via `outline-focus-ring`
@@ -167,6 +195,10 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
                     Showing {visible.length} of {output.ids.length}. Refine the window to narrow results.
                 </footer>
             )}
+            <TransactionDetailPanel
+                transaction={selectedTransaction}
+                onClose={() => setSelectedTransaction(null)}
+            />
         </ToolCardShell>
     );
 }
