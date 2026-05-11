@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Table } from "@repo/ui/untitledui/application/table/table";
 import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { MerchantLogo } from "@/components/credit-cards/MerchantLogo";
+import { TransactionsPagination } from "@/components/transactions/TransactionsPagination";
 import {
     TransactionDetailPanel,
     type DetailPanelTransaction,
@@ -21,7 +22,8 @@ type Preview = {
     summary?: string;
 };
 
-const MAX_VISIBLE_ROWS = 500;
+/** Matches `/transactions` page — client-side slice of hydrated live rows. */
+const PAGE_SIZE = 50;
 
 function formatDate(dateString: string): string {
     const [year, month, day] = dateString.split("-").map(Number);
@@ -63,8 +65,34 @@ function transactionRowToDetailPanel(tx: TransactionRow): DetailPanelTransaction
 
 export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolOutput<Preview>>) {
     const { output, state } = props;
-    const rows = useLiveTransactions(output?.ids ?? []);
+    const ids = output?.ids ?? [];
+    const rows = useLiveTransactions(ids);
     const [selectedTransaction, setSelectedTransaction] = useState<DetailPanelTransaction | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const idsFingerprint = ids.join("\u0001");
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [idsFingerprint]);
+
+    const totalCount = rows?.length ?? 0;
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    // React Aria's `Table.Body` collection requires each item to expose an `id` key.
+    // Live rows use Plaid `transactionId` as `_id`; we mirror it in `id` for
+    // React Aria collection bookkeeping.
+    const visible = useMemo(() => {
+        if (!rows) return [];
+        const start = (currentPage - 1) * PAGE_SIZE;
+        return rows.slice(start, start + PAGE_SIZE).map((tx) => ({ ...tx, id: tx._id }));
+    }, [rows, currentPage]);
 
     const presentation = (props.input as { presentation?: "widget" | "inline" } | undefined)?.presentation;
     if (presentation === "inline") {
@@ -85,13 +113,7 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
         return <TransactionsTableSkeleton />;
     }
 
-    // React Aria's `Table.Body` collection requires each item to expose an `id` key.
-    // Live rows use Plaid `transactionId` as `_id`; we mirror it in `id` for
-    // React Aria collection bookkeeping.
-    const visible = rows
-        .slice(0, MAX_VISIBLE_ROWS)
-        .map((tx) => ({ ...tx, id: tx._id }));
-    const overflow = output.ids.length - visible.length;
+    const idsNotHydrated = output.ids.length > rows.length;
 
     return (
         <ToolCardShell
@@ -190,9 +212,20 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
                     }}
                 </Table.Body>
             </Table>
-            {overflow > 0 && (
-                <footer className="text-tertiary mt-3 text-xs">
-                    Showing {visible.length} of {output.ids.length}. Refine the window to narrow results.
+            {totalPages > 1 && (
+                <TransactionsPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalCount={totalCount}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setCurrentPage}
+                    className="-mx-4 mt-3 border-t border-secondary px-4 py-3 lg:px-6"
+                />
+            )}
+            {idsNotHydrated && (
+                <footer className="text-tertiary mt-2 text-xs">
+                    Showing {rows.length.toLocaleString()} of {output.ids.length.toLocaleString()} transactions loaded.
+                    Refine the query if some results are missing.
                 </footer>
             )}
             <TransactionDetailPanel
