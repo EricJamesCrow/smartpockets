@@ -46,3 +46,17 @@ export const outputError: ToolResultComponentProps<unknown, ToolOutput<Preview>>
     errorText: "Rate limit exceeded. Try again in 30 seconds.",
     state: "output-error",
 };
+
+/** 75 synthetic IDs — exercises client-side pagination (50 per page) in `/dev/tool-results/list_transactions`. */
+export const outputAvailableManyRows: ToolResultComponentProps<unknown, ToolOutput<Preview>> = {
+    ...base,
+    output: {
+        ids: Array.from(
+            { length: 75 },
+            (_, i) => `plaid:plaidTransactions:fx-many-${String(i).padStart(3, "0")}`,
+        ),
+        preview: { totalCount: 75, summary: "75 transactions (pagination harness)" },
+        window: { from: "2026-04-01", to: "2026-04-30" },
+    },
+    state: "output-available",
+};
