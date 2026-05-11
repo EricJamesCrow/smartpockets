@@ -27,6 +27,35 @@ import { notFound } from "next/navigation";
  *     `<ClerkProvider>` from the root layout can finish hydrating. Tests
  *     should not navigate users here outside of `auth.ts`.
  */
+
+/**
+ * EXEMPTION FROM AGENTS.md "no force-dynamic" RULE.
+ *
+ * AGENTS.md (under "Anti-patterns") prohibits `export const dynamic =
+ * "force-dynamic"` in application pages — the rule is "investigate the root
+ * cause instead." This file is the **only** sanctioned exception:
+ *
+ *   - It's a test-only Clerk-sign-in entry point. Real users never reach
+ *     it; only Playwright's `signInTestUser` helper (see
+ *     `apps/app/tests/helpers/auth.ts`) navigates here.
+ *   - `apps/app/src/middleware.ts` bypasses the unauthenticated-redirect
+ *     ONLY when `NODE_ENV !== "production"`. In production the route
+ *     follows the normal redirect-to-marketing path.
+ *   - The page body itself calls `notFound()` in production before any
+ *     HTML is emitted, so even a misbuilt prod bundle can't serve it.
+ *
+ * The `force-dynamic` directive exists because the page reads
+ * `process.env.NODE_ENV` at request time to make the `notFound()` decision.
+ * Statically rendering the page would freeze that environment check at
+ * build time and could expose the sign-in shell on production deploys
+ * that share a build output with a non-production node env.
+ *
+ * DO NOT copy this pattern into regular app pages. Reach for
+ * request-scoped data fetching, `cookies()`/`headers()`, or per-route
+ * cache primitives instead. If you find yourself wanting `force-dynamic`,
+ * the answer is almost always "this should be a Server Action, an RSC
+ * with `cookies()`, or a Convex query," not a forced render mode.
+ */
 export const dynamic = "force-dynamic";
 
 export default function E2eBootstrapPage() {

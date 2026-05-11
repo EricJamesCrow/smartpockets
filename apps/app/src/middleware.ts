@@ -17,6 +17,16 @@ const isE2eBootstrapRoute = createRouteMatcher(["/e2e-bootstrap"]);
 // redirect so headless Chrome can score the chat surfaces without a Clerk
 // session. Each harness page also calls `notFound()` when the env var is
 // unset so the harness never renders in production deployments.
+//
+// CROWDEV-422: `NEXT_PUBLIC_*` values are baked into the JS bundle at build
+// time, so accidentally setting `NEXT_PUBLIC_A11Y_AUDIT=1` in Vercel's
+// Production env vars would simultaneously activate this middleware bypass
+// AND make every audit page render unauthenticated. We add a defensive
+// `VERCEL_ENV !== "production"` server-side check below so that even a
+// misconfigured public flag can't open audit routes on a production
+// deployment. Vercel sets `VERCEL_ENV` to one of `production` |
+// `preview` | `development` on every build/runtime, and unset locally
+// (treated as non-production by `!==`).
 const isAuditRoute = createRouteMatcher(["/a11y-audit(.*)"]);
 
 // Marketing site URL (use localhost in development)
@@ -42,7 +52,11 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  if (isAuditRoute(req) && process.env.NEXT_PUBLIC_A11Y_AUDIT === "1") {
+  if (
+    isAuditRoute(req) &&
+    process.env.NEXT_PUBLIC_A11Y_AUDIT === "1" &&
+    process.env.VERCEL_ENV !== "production"
+  ) {
     // Pass the pathname through to RSC layout via a forwarded header so the
     // root layout can pick the right `dark-mode` / `light-mode` class for
     // the requested audit surface (CROWDEV-390).
