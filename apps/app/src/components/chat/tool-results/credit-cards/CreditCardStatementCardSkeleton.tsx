@@ -14,7 +14,7 @@ export function CreditCardStatementCardSkeleton() {
         <ToolCardShell title="Credit cards" className="max-w-[820px]!">
             <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 py-2">
+                    <div key={i} className="flex items-center gap-6 py-2">
                         {/* Card identity (logo + name/mask) */}
                         <div className="flex flex-1 items-center gap-2.5 min-w-0">
                             <div className="size-10 shrink-0 animate-pulse rounded-lg bg-tertiary/30" />

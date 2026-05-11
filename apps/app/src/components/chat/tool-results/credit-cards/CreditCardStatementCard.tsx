@@ -140,16 +140,16 @@ function ListView({ cards, onOpen }: { cards: CreditCardRow[]; onOpen: OpenCard 
         >
             <Table aria-label="Credit cards" selectionMode="none" size="sm" className="text-sm">
                 <Table.Header bordered={false} className="bg-transparent! h-auto!">
-                    <Table.Head id="card" isRowHeader className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-2 px-0!">
+                    <Table.Head id="card" isRowHeader className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-4 px-0!">
                         Card
                     </Table.Head>
-                    <Table.Head id="balance" className="text-tertiary text-right text-xs font-medium uppercase py-2 pr-2 px-0! [&>div]:justify-end">
+                    <Table.Head id="balance" className="text-tertiary text-right text-xs font-medium uppercase py-2 pr-6 px-0! [&>div]:justify-end">
                         Balance
                     </Table.Head>
-                    <Table.Head id="available" className="text-tertiary text-right text-xs font-medium uppercase py-2 pr-2 px-0! [&>div]:justify-end">
+                    <Table.Head id="available" className="text-tertiary text-right text-xs font-medium uppercase py-2 pr-6 px-0! [&>div]:justify-end">
                         Available
                     </Table.Head>
-                    <Table.Head id="limit" className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-2 px-0!">
+                    <Table.Head id="limit" className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-4 px-0!">
                         Limit
                     </Table.Head>
                     <Table.Head id="status" className="text-tertiary text-left text-xs font-medium uppercase py-2 px-0!">
@@ -163,16 +163,16 @@ function ListView({ cards, onOpen }: { cards: CreditCardRow[]; onOpen: OpenCard 
                             onAction={() => onOpen(card._id)}
                             className="hover:bg-secondary/40 has-[:focus-visible]:bg-secondary/60 cursor-pointer h-auto!"
                         >
-                            <Table.Cell className="py-2.5 pr-2 px-0!">
+                            <Table.Cell className="py-2.5 pr-4 px-0!">
                                 <CardIdentityCell card={card} />
                             </Table.Cell>
-                            <Table.Cell className="py-2.5 pr-2 px-0! text-right tabular-nums font-medium text-primary">
+                            <Table.Cell className="py-2.5 pr-6 px-0! text-right tabular-nums font-medium text-primary whitespace-nowrap">
                                 {formatDisplayCurrency(card.currentBalance ?? null)}
                             </Table.Cell>
-                            <Table.Cell className="py-2.5 pr-2 px-0! text-right tabular-nums text-secondary">
+                            <Table.Cell className="py-2.5 pr-6 px-0! text-right tabular-nums text-secondary whitespace-nowrap">
                                 {formatDisplayCurrency(card.availableCredit ?? null)}
                             </Table.Cell>
-                            <Table.Cell className="py-2.5 pr-2 px-0!">
+                            <Table.Cell className="py-2.5 pr-4 px-0!">
                                 <LimitCell card={card} />
                             </Table.Cell>
                             <Table.Cell className="py-2.5 px-0!">
