@@ -147,7 +147,14 @@ export function MessageBubble({ message, threadId, onRegenerate }: MessageBubble
             // worst case ("May 7, 3:29 PM" at `text-[10px]`) is ~80px wide and
             // sits at `right-1`/`left-1`; an 8rem bubble guarantees the
             // timestamp visually nests inside the bubble's horizontal bounds.
-            "relative min-w-[8rem] rounded-2xl px-5 py-3 text-sm",
+            // CROWDEV-426: skip the min-width while the assistant typing dots
+            // are showing — three 8px dots inside a 128px pill read as "the
+            // bubble is too long". The typing state has no timestamp tooltip
+            // overlap risk (the bubble is empty and the timestamp only matters
+            // once content is present), so the original CROWDEV-411 use case
+            // is unaffected.
+            "relative rounded-2xl px-5 py-3 text-sm",
+            !showTypingDots && "min-w-[8rem]",
             isUser
               ? editing.isEditing
                 ? "rounded-tr-none w-full border border-[var(--sp-moss-mint)]/40 bg-primary text-primary shadow-md dark:bg-[var(--sp-surface-panel-strong)]"
