@@ -6,6 +6,7 @@ import { Toaster } from "@repo/ui/untitledui/application/notifications/toaster";
 import { cx } from "@repo/ui/utils";
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import { AppearanceProvider } from "@/providers/appearance-provider";
 import { ConvexClientProvider } from "@/providers/convex-provider";
 import { RouteProvider } from "@/providers/router-provider";
@@ -50,11 +51,44 @@ export const viewport: Viewport = {
     colorScheme: "dark",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    // CROWDEV-390: a11y audit harness pages at /a11y-audit/* need to render
+    // outside the Theme/AppearanceProvider stack. next-themes' ThemeProvider
+    // overrides our html.class via localStorage on first paint, defeating the
+    // audit-mode hint we pass through the `x-pathname` request header. For
+    // /a11y-audit/*-light we emit `light-mode` and skip the providers
+    // entirely so Lighthouse renders the light tokens. Production paths still
+    // get the full provider tree.
+    const headerList = await headers();
+    const pathname = headerList.get("x-pathname") ?? "";
+    const isAuditPath =
+        process.env.NEXT_PUBLIC_A11Y_AUDIT === "1" &&
+        pathname.startsWith("/a11y-audit/");
+    const auditMode = isAuditPath && /\/a11y-audit\/.*-light/.test(pathname)
+        ? "light-mode"
+        : "dark-mode";
+
+    if (isAuditPath) {
+        return (
+            <html lang="en" className={auditMode} suppressHydrationWarning>
+                <body
+                    className={cx(
+                        geist.variable,
+                        geistMono.variable,
+                        fraunces.variable,
+                        "bg-primary antialiased",
+                    )}
+                >
+                    {children}
+                </body>
+            </html>
+        );
+    }
+
     return (
         <html lang="en" className="dark-mode" suppressHydrationWarning>
             <body

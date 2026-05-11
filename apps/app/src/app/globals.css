@@ -200,6 +200,29 @@
      * moss panel (7.40:1 vs 3.99:1 with the prior stone-500).
      */
     --sp-microcopy: rgb(170 160 140);
+
+    /*
+     * CROWDEV-390: brand-solid AA fix for dark-mode user message bubbles.
+     *
+     * UntitledUI's base theme maps `--color-bg-brand-solid` → brand-600. In
+     * dark mode the default brand-600 (rgb 95 145 121) on white text
+     * (e.g. user chat bubbles, send button icon, stop button icon) only
+     * clears 3.61:1 — fails WCAG AA 4.5:1 for normal text. Lighthouse
+     * a11y audit on the chat thread surfaces flagged this as a
+     * `color-contrast` violation. Bumping the dark-mode brand-solid mapping
+     * to brand-700 (rgb 80 122 102) lifts the ratio to 4.86:1 (AA-clear)
+     * while keeping the moss-mint identity. We also bump `_hover` to
+     * brand-800 to keep the hover surface darker than the rest state.
+     *
+     * AppearanceProvider's `applyBrandColor()` regenerates the entire 25..950
+     * brand chain from a single hex, so user-customized brand colors get the
+     * same darker brand-700 treatment automatically. Reviewers: if a user
+     * picks a high-luminance accent (e.g. yellow), brand-700 may still fall
+     * below AA — track that as a separate enhancement (per-bubble explicit
+     * AA-checked surface token).
+     */
+    --color-bg-brand-solid: var(--color-brand-700);
+    --color-bg-brand-solid_hover: var(--color-brand-800);
 }
 
 /*

@@ -52,7 +52,14 @@ export function ChatHome({ onSend }: ChatHomeProps) {
       />
       <div className="relative flex w-full max-w-2xl flex-col items-center gap-10">
         <div className="text-center">
-          <p className="sp-kicker tracking-[0.28em] dark:text-stone-500">
+          {/*
+            CROWDEV-390: lift fallback `dark:text-stone-500` → `dark:text-stone-400`
+            so the Tailwind utility passes AA (7.86:1 vs 4.13:1) even if
+            `.sp-kicker`'s `var(--sp-microcopy)` color rule ever loses the
+            cascade. The kicker still renders via the class color in the
+            normal cascade order — defense-in-depth.
+          */}
+          <p className="sp-kicker tracking-[0.28em] dark:text-stone-400">
             <span className="mr-2 inline-block h-1 w-1 -translate-y-0.5 rounded-full bg-[var(--sp-moss-mint)]" />
             SmartPockets v0.1
           </p>
