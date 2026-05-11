@@ -1,5 +1,6 @@
 "use client";
 
+import { Table } from "@repo/ui/untitledui/application/table/table";
 import { formatTransactionAmount } from "@/utils/transaction-helpers";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveTransactions } from "../shared/liveRowsHooks";
@@ -50,48 +51,58 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
         return <TransactionsTableSkeleton />;
     }
 
-    const visible = rows.slice(0, MAX_VISIBLE_ROWS);
+    // React Aria's `Table.Body` collection requires each item to expose an `id` key.
+    // The live-rows hook returns rows with `_id`, so map to a new shape that
+    // includes the `id` field react-aria-components needs for keying + selection
+    // bookkeeping. This also keeps the `id` value identical to `_id` so
+    // `onAction` callbacks pass through the canonical Convex id.
+    const visible = rows
+        .slice(0, MAX_VISIBLE_ROWS)
+        .map((tx) => ({ ...tx, id: tx._id }));
     const overflow = output.ids.length - visible.length;
 
     return (
         <ToolCardShell title={output.preview.summary ?? "Transactions"} subtitle={formatWindow(output.window)}>
-            <table className="w-full text-sm">
-                <thead>
-                    <tr className="text-tertiary text-left text-xs uppercase">
-                        <th className="py-2 pr-2 font-medium">Date</th>
-                        <th className="py-2 pr-2 font-medium">Merchant</th>
-                        <th className="py-2 pr-2 text-right font-medium">Amount</th>
-                        <th className="py-2 font-medium">Category</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {visible.map((tx) => {
+            <Table aria-label={output.preview.summary ?? "Transactions"} selectionMode="none" className="text-sm">
+                <Table.Header bordered={false} className="bg-transparent! h-auto!">
+                    <Table.Head id="date" isRowHeader className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-2 px-0!">
+                        Date
+                    </Table.Head>
+                    <Table.Head id="merchant" className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-2 px-0!">
+                        Merchant
+                    </Table.Head>
+                    <Table.Head id="amount" className="text-tertiary text-right text-xs font-medium uppercase py-2 pr-2 px-0! [&>div]:justify-end">
+                        Amount
+                    </Table.Head>
+                    <Table.Head id="category" className="text-tertiary text-left text-xs font-medium uppercase py-2 px-0!">
+                        Category
+                    </Table.Head>
+                </Table.Header>
+                <Table.Body items={visible}>
+                    {(tx) => {
                         const { text: amountText, colorClass: amountColor } = formatTransactionAmount(tx.amount);
                         return (
-                            <tr
-                                key={tx._id}
-                                tabIndex={0}
-                                role="button"
-                                onClick={() => {
+                            <Table.Row
+                                id={tx._id}
+                                onAction={() => {
                                     void hint.openTransaction(tx._id);
                                 }}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        void hint.openTransaction(tx._id);
-                                    }
-                                }}
-                                className="border-secondary hover:bg-secondary/40 focus:bg-secondary/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sp-moss-mint)]/50 cursor-pointer border-t"
+                                // ARIA grid pattern: focus moves cell-by-cell with arrow keys, so the
+                                // visible focus ring is owned by the gridcell (via `outline-focus-ring`
+                                // on `Table.Cell`). The row only owns hover/focus-within highlights.
+                                // The wrapper already paints per-cell `:after` row separators; no need
+                                // for an explicit `border-t` here.
+                                className="hover:bg-secondary/40 has-[:focus-visible]:bg-secondary/60 cursor-pointer h-auto!"
                             >
-                                <td className="text-secondary py-2 pr-2 tabular-nums">{formatDate(tx.date)}</td>
-                                <td className="text-primary py-2 pr-2">{tx.merchantName ?? tx.name}</td>
-                                <td className={`py-2 pr-2 text-right tabular-nums ${amountColor}`}>{amountText}</td>
-                                <td className="text-secondary py-2">{tx.categoryPrimary ?? "-"}</td>
-                            </tr>
+                                <Table.Cell className="text-secondary py-2 pr-2 px-0! tabular-nums">{formatDate(tx.date)}</Table.Cell>
+                                <Table.Cell className="text-primary py-2 pr-2 px-0!">{tx.merchantName ?? tx.name}</Table.Cell>
+                                <Table.Cell className={`py-2 pr-2 px-0! text-right tabular-nums ${amountColor}`}>{amountText}</Table.Cell>
+                                <Table.Cell className="text-secondary py-2 px-0!">{tx.categoryPrimary ?? "-"}</Table.Cell>
+                            </Table.Row>
                         );
-                    })}
-                </tbody>
-            </table>
+                    }}
+                </Table.Body>
+            </Table>
             {overflow > 0 && (
                 <footer className="text-tertiary mt-3 text-xs">
                     Showing {visible.length} of {output.ids.length}. Refine the window to narrow results.
