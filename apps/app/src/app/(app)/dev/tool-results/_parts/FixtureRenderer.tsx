@@ -187,18 +187,38 @@ function synthesizeOverrides(props: AnyProps, existing: LivePreviewOverrides | u
                 institutionPrimaryColor: institution.color,
             };
         } else if (id.startsWith("creditCards:") && !result.creditCards?.[id]) {
+            // Seed enough fields for the rich agent credit-cards table:
+            // institution branding (logo color), brand, statement/min-payment
+            // balances, APRs, and lock/active flags so all status-badge paths
+            // render in the dev preview.
+            const issuerPalette = [
+                { company: "Chase", color: "#117ACA", brand: "visa" as const },
+                { company: "American Express", color: "#006FCF", brand: "amex" as const },
+                { company: "Citibank", color: "#003B70", brand: "mastercard" as const },
+            ];
+            const issuer = issuerPalette[index % issuerPalette.length]!;
+            const balance = 1200 + index * 400;
+            const limit = 10000 + index * 2000;
             result.creditCards![id as Id<"creditCards">] = {
                 _id: id as Id<"creditCards">,
                 displayName: ["Chase Sapphire Reserve", "Amex Platinum", "Citi Double Cash"][index] ?? `Card ${index + 1}`,
-                company: ["Chase", "American Express", "Citibank"][index] ?? "Issuer",
+                company: issuer.company,
+                brand: issuer.brand,
                 mask: String(4000 + index * 1111),
-                currentBalance: 1200 + index * 400,
-                creditLimit: 10000 + index * 2000,
-                availableCredit: 8800 - index * 400,
-                isOverdue: false,
+                currentBalance: balance,
+                creditLimit: limit,
+                availableCredit: limit - balance,
+                lastStatementBalance: balance,
+                minimumPaymentAmount: Math.max(25, Math.round(balance * 0.02)),
+                aprs: [{ aprPercentage: 19.99 + index * 0.5, aprType: "purchase_apr" }],
+                isOverdue: index === 2,
+                isLocked: false,
+                isActive: true,
                 nextPaymentDueDate: "2026-05-05",
                 statementClosingDay: 15 + index,
                 plaidItemId: `plaid:plaidItems:issuer-${index}`,
+                institutionName: issuer.company,
+                institutionPrimaryColor: issuer.color,
             };
         } else if (id.startsWith("promoRates:") && !result.promoRates?.[id]) {
             const promo = o.preview?.promos?.[index];

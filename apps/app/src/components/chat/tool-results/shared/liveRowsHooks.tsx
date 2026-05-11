@@ -58,13 +58,27 @@ type CreditCardRow = {
     displayName: string;
     company?: string | null;
     mask?: string | null;
+    brand?: "visa" | "mastercard" | "amex" | "discover" | "other" | null;
     currentBalance?: number | null; // Native credit-card top-level dollars.
     creditLimit?: number | null;
     availableCredit?: number | null;
     isOverdue?: boolean;
+    isLocked?: boolean;
+    isActive?: boolean;
+    lastStatementBalance?: number | null;
+    minimumPaymentAmount?: number | null;
+    aprs?: Array<{
+        aprPercentage: number;
+        aprType: string;
+        balanceSubjectToApr?: number | null;
+        interestChargeAmount?: number | null;
+    }> | null;
     nextPaymentDueDate?: string | null;
     statementClosingDay?: number | null;
     plaidItemId?: string | null;
+    institutionName?: string | null;
+    institutionLogoBase64?: string | null;
+    institutionPrimaryColor?: string | null;
 };
 
 type PlaidAccountRow = {
