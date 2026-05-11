@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { streamdownCursorPlugin } from "@/components/chat/streamdown-cursor-plugin";
+import { streamdownStripTablesPlugin } from "@/components/chat/streamdown-strip-tables-plugin";
 
 interface MarkdownContentProps {
     content: string;
@@ -14,6 +15,16 @@ interface MarkdownContentProps {
      * CSS on every non-final block (CROWDEV-391).
      */
     isStreaming?: boolean;
+    /**
+     * When `true`, any markdown `<table>` blocks are removed from the
+     * rendered HAST tree (CROWDEV-425). The chat surface renders tabular
+     * data exclusively through tool-result widgets, so any table the
+     * model emits in its prose is a duplicate — this strip is the
+     * deterministic backstop behind system-prompt rule 11. Defaults to
+     * `true` because every consumer in the chat surface wants this; opt
+     * out if a future surface legitimately wants raw markdown tables.
+     */
+    stripTables?: boolean;
 }
 
 type StreamdownProps = {
@@ -58,7 +69,11 @@ function loadStreamdown(): Promise<StreamdownExports> {
     return streamdownPromise;
 }
 
-export function MarkdownContent({ content, isStreaming = false }: MarkdownContentProps) {
+export function MarkdownContent({
+    content,
+    isStreaming = false,
+    stripTables = true,
+}: MarkdownContentProps) {
     const [streamdown, setStreamdown] = useState<StreamdownExports | null>(null);
 
     useEffect(() => {
@@ -83,8 +98,15 @@ export function MarkdownContent({ content, isStreaming = false }: MarkdownConten
     const rehypePlugins = useMemo(() => {
         if (!streamdown) return undefined;
         const defaults = Object.values(streamdown.defaultRehypePlugins);
-        return [...defaults, [streamdownCursorPlugin, { active: isStreaming }]];
-    }, [streamdown, isStreaming]);
+        return [
+            ...defaults,
+            // Run the strip-tables plugin BEFORE the cursor plugin so the
+            // streaming cursor never lands inside a `<table>` that is about
+            // to be removed (cursor would vanish with the table).
+            [streamdownStripTablesPlugin, { active: stripTables }],
+            [streamdownCursorPlugin, { active: isStreaming }],
+        ];
+    }, [streamdown, isStreaming, stripTables]);
 
     if (!streamdown) {
         return <p className="whitespace-pre-wrap">{content}</p>;
