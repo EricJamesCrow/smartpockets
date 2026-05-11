@@ -4,12 +4,11 @@ import { useState, useEffect } from "react";
 import type { Key } from "react-aria-components";
 import { parseDate } from "@internationalized/date";
 import type { DateValue } from "@internationalized/date";
-import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { ButtonUtility } from "@repo/ui/untitledui/base/buttons/button-utility";
 import { Select } from "@repo/ui/untitledui/base/select/select";
 import { DatePicker } from "@repo/ui/untitledui/application/date-picker/date-picker";
 import { TextArea } from "@repo/ui/untitledui/base/textarea/textarea";
-import { Check, Copy01, ScissorsCut01 } from "@untitledui/icons";
+import { Check, Copy01 } from "@untitledui/icons";
 import { InlineEditableField } from "@/components/credit-cards/details/InlineEditableField";
 import {
   TRANSACTION_CATEGORIES,
@@ -69,7 +68,7 @@ function formatTime12hr(time24: string | number | null | undefined): string {
  * Editable fields section of the transaction detail panel.
  *
  * Includes: original statement (copy), date picker, category dropdown,
- * split placeholder, and notes textarea.
+ * and notes textarea.
  */
 export function TransactionDetailFields({
   transaction,
@@ -215,29 +214,21 @@ export function TransactionDetailFields({
 
       {/* Category */}
       <div>
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold uppercase tracking-wider text-tertiary">
-            Category
-          </label>
-          <Button
-            color="tertiary"
+        <label className="text-xs font-semibold uppercase tracking-wider text-tertiary">
+          Category
+        </label>
+        <div className="mt-1">
+          <Select
+            items={categoryItems}
+            selectedKey={currentCategory}
+            onSelectionChange={handleCategoryChange}
+            placeholder="Select category"
             size="sm"
-            iconLeading={ScissorsCut01}
-            isDisabled
+            isDisabled={savingField === "userCategory"}
           >
-            Split
-          </Button>
+            {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
+          </Select>
         </div>
-        <Select
-          items={categoryItems}
-          selectedKey={currentCategory}
-          onSelectionChange={handleCategoryChange}
-          placeholder="Select category"
-          size="sm"
-          isDisabled={savingField === "userCategory"}
-        >
-          {(item) => <Select.Item id={item.id}>{item.label}</Select.Item>}
-        </Select>
       </div>
 
       {/* Notes */}
