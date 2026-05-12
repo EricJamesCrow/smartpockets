@@ -61,3 +61,6 @@ next-env.d.ts
 
 # CROWDEV-390: lighthouse audit output (per-run, reproducible)
 .audit-output/
+
+# superpowers brainstorming session artifacts (local-only)
+.superpowers/
