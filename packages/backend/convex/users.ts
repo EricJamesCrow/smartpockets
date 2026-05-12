@@ -134,7 +134,6 @@ export const deleteFromClerk = internalMutation({
         if (user !== null) {
             // Delete all child entities with ref: true edges
             const edgeNames = [
-                "members",
                 "creditCards",
                 "wallets",
                 "statementSnapshots",
@@ -185,7 +184,6 @@ export const countActivePlaidItems = internalQuery({
 export const search = query({
     args: {
         query: v.string(),
-        organizationId: v.optional(v.id("organizations")),
     },
     returns: v.array(
         v.object({
@@ -193,28 +191,11 @@ export const search = query({
             name: v.string(),
         }),
     ),
-    async handler(ctx, { query: searchQuery, organizationId }) {
+    async handler(ctx, { query: searchQuery }) {
         const viewer = ctx.viewer;
         if (!viewer) return [];
 
-        // If org is specified, only search within org members
-        if (organizationId) {
-            const org = await ctx.table("organizations").get(organizationId);
-            if (!org) return [];
-
-            const members = await org.edge("members");
-            const users = await Promise.all(members.map((m) => m.edge("user")));
-
-            return users
-                .filter((u) => u._id !== viewer._id && u.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                .slice(0, 10)
-                .map((u) => ({
-                    _id: u._id,
-                    name: u.name,
-                }));
-        }
-
-        // Otherwise search all users (limited for now)
+        // Search all users (limited for now)
         // In production, you'd want a search index
         const allUsers = await ctx.table("users");
         return allUsers
