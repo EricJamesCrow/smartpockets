@@ -47,7 +47,7 @@ export const outputError: ToolResultComponentProps<unknown, ToolOutput<Preview>>
     state: "output-error",
 };
 
-/** 75 synthetic IDs — exercises client-side pagination (50 per page) in `/dev/tool-results/list_transactions`. */
+/** 75 synthetic IDs - exercises client-side pagination (50 per page) in `/dev/tool-results/list_transactions`. */
 export const outputAvailableManyRows: ToolResultComponentProps<unknown, ToolOutput<Preview>> = {
     ...base,
     output: {

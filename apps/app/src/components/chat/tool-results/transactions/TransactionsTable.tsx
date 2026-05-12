@@ -22,7 +22,7 @@ type Preview = {
     summary?: string;
 };
 
-/** Matches `/transactions` page — client-side slice of hydrated live rows. */
+/** Matches `/transactions` page - client-side slice of hydrated live rows. */
 const PAGE_SIZE = 50;
 
 function formatDate(dateString: string): string {
@@ -88,6 +88,9 @@ export function TransactionsTable(props: ToolResultComponentProps<unknown, ToolO
     // React Aria's `Table.Body` collection requires each item to expose an `id` key.
     // Live rows use Plaid `transactionId` as `_id`; we mirror it in `id` for
     // React Aria collection bookkeeping.
+    // JUSTIFIED: shallow-spread of every row creates new object identities each
+    // render; memoizing keeps the Table.Body collection stable across renders
+    // and avoids React Aria re-keying the entire visible page on each paint.
     const visible = useMemo(() => {
         if (!rows) return [];
         const start = (currentPage - 1) * PAGE_SIZE;
