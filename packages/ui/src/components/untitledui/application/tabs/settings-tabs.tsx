@@ -9,7 +9,6 @@ const tabs = [
     { id: "profile", label: "Profile", href: "/settings" },
     { id: "password", label: "Password", href: "/settings/password" },
     { id: "appearance", label: "Appearance", href: "/settings/appearance" },
-    { id: "team", label: "Team", href: "/settings/team" },
     { id: "billing", label: "Billing", href: "/settings/billing" },
     { id: "email", label: "Email", href: "/settings/email" },
     { id: "institutions", label: "Institutions", href: "/settings/institutions" },
