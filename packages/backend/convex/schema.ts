@@ -19,7 +19,6 @@ const schema = defineEntSchema(
             ),
         })
             .field("externalId", v.string(), { unique: true }) // Clerk ID
-            .edges("members", { ref: true })
             .edges("creditCards", { ref: true })
             .edges("wallets", { ref: true })
             .edges("statementSnapshots", { ref: true })
@@ -38,24 +37,6 @@ const schema = defineEntSchema(
             .edges("anomalies", { ref: true })
             .edges("detectedSubscriptions", { ref: true })
             .edges("cashflowForecasts", { ref: true }),
-
-        // === ORG LAYER ===
-        organizations: defineEnt({
-            name: v.string(),
-        })
-            .field("slug", v.string(), { unique: true })
-            .edges("members", { ref: true })
-            .edges("roles", { ref: true }),
-
-        members: defineEnt({}).edge("organization").edge("user").edge("role").index("orgUser", ["organizationId", "userId"]),
-
-        roles: defineEnt({
-            name: v.string(), // "owner", "admin", "member", "viewer"
-            permissions: v.array(v.string()), // ["read", "write", "delete", "manage", "share"]
-        })
-            .edge("organization")
-            .edges("members", { ref: true })
-            .index("byOrgAndName", ["organizationId", "name"]),
 
         // === PAYMENT ATTEMPTS ===
         paymentAttempts: defineEnt(paymentAttemptSchemaValidator)
