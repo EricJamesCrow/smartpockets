@@ -141,6 +141,7 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
 
   return (
     <motion.div
+      data-testid="wallet-card"
       className="group relative cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
