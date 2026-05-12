@@ -78,7 +78,7 @@ export const Settings07 = () => {
     return (
         <div className="flex flex-col bg-primary lg:flex-row">
             <SidebarNavigationSlim
-                activeUrl="/settings/team"
+                activeUrl="/settings/profile"
                 items={[
                     {
                         label: "Home",
@@ -125,7 +125,6 @@ export const Settings07 = () => {
                             { label: "My details", href: "/settings/details", icon: Flag05 },
                             { label: "Profile", href: "/settings/profile", icon: UserSquare, badge: 10 },
                             { label: "Password", href: "/settings/password", icon: Passcode },
-                            { label: "Team", href: "/settings/team", icon: Users01 },
                             { label: "Billing", href: "/settings/billing", icon: CreditCard01 },
                             { label: "Notifications", href: "/settings/notifications", icon: NotificationBox },
                             { label: "Integrations", href: "/settings/integrations", icon: Toggle01Right },
