@@ -1,7 +1,7 @@
 "use client";
 
 import { type FC, useMemo, useState } from "react";
-import { AtSign, Bell01, Building07, CreditCard01, Lock01, Mail01, Mail02, Palette, SearchLg, User01, Users01 } from "@untitledui/icons";
+import { AtSign, Bell01, CreditCard01, Lock01, Mail02, Palette, SearchLg, User01 } from "@untitledui/icons";
 import { useRouter } from "next/navigation";
 import { Heading as AriaHeading, type Key } from "react-aria-components";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -37,11 +37,6 @@ const settingsItems: Record<string, SettingsItem[]> = {
             href: "/settings/appearance",
             section: "appearance",
         },
-    ],
-    team: [
-        { id: "team-orgs", label: "Organizations", description: "Manage your organizations", icon: Building07, href: "/settings/team", section: "team" },
-        { id: "team-members", label: "Team members", description: "View and manage members", icon: Users01, href: "/settings/team/members", section: "team" },
-        { id: "team-invitations", label: "Invitations", description: "Invite new members", icon: Mail01, href: "/settings/team/invitations", section: "team" },
     ],
     billing: [
         {
@@ -79,20 +74,18 @@ const sectionTitles: Record<string, string> = {
     profile: "Profile",
     password: "Password",
     appearance: "Appearance",
-    team: "Team",
     billing: "Billing",
     email: "Email",
     notifications: "Notifications",
 };
 
-const sectionOrder = ["profile", "password", "appearance", "team", "billing", "email", "notifications"];
+const sectionOrder = ["profile", "password", "appearance", "billing", "email", "notifications"];
 
 function getOrderedSections(currentPath: string): string[] {
     const pathToSection: Record<string, string> = {
         "/settings": "profile",
         "/settings/password": "password",
         "/settings/appearance": "appearance",
-        "/settings/team": "team",
         "/settings/billing": "billing",
         "/settings/email": "email",
         "/settings/notifications": "notifications",
