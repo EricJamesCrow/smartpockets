@@ -14,13 +14,28 @@ interface LiquidGlassHoverProps {
 }
 
 /**
- * Renders children inside `liquid-glass-react` ONLY when hovered AND
- * Chromium. Otherwise renders children directly (the parent GlassCard
- * already provides flat backdrop-filter blur).
+ * Architectural Glass hover-only displacement wrapper.
  *
- * This enforces the "one displacement instance max" rule from the spec:
- * because only the actively-hovered card mounts LiquidGlass, you can
- * never have more than one displacement filter active in the DOM.
+ * Renders the children (a `GlassCard` with the wallet UI) and — on
+ * hover, Chromium-only — overlays a `liquid-glass-react` instance as
+ * a `position: absolute; inset: 0; pointer-events: none` layer behind
+ * the children. That overlay's `backdrop-filter: url(#filter)` applies
+ * the `feDisplacementMap` + chromatic-aberration filter to what's
+ * directly underneath it (the page-level ambient color blobs), giving
+ * the hovered card the true Liquid-Glass visual without wrapping/
+ * reflowing the card content.
+ *
+ * Why not wrap the children directly?
+ * --------------------------------
+ * `liquid-glass-react` applies `position: relative; transform:
+ * translate(-50%, -50%)` plus an elasticity offset to whatever it
+ * wraps. Inside a CSS grid that anchors the visual content outside its
+ * grid cell — the card snaps up-left on hover and slides under the
+ * sidebar. Using LiquidGlass as a backdrop overlay sidesteps that:
+ * GlassCard owns layout, LiquidGlass owns the visual effect.
+ *
+ * "One displacement instance max" rule from the spec still holds:
+ * the overlay only mounts while a single card is hovered.
  */
 export function LiquidGlassHover({
   children,
@@ -34,20 +49,37 @@ export function LiquidGlassHover({
   // is unaffected by the heavy filter.
   if (isHovered && !hasEntered) setHasEntered(true);
 
-  if (!isChromium || !hasEntered) {
-    return <>{children}</>;
-  }
-
   return (
-    <LiquidGlass
-      displacementScale={isHovered ? 64 : 0}
-      blurAmount={0.1}
-      saturation={140}
-      aberrationIntensity={isHovered ? 2 : 0}
-      elasticity={0.35}
-      cornerRadius={cornerRadius}
-    >
+    <div className="relative">
+      {/* GlassCard owns the layout and pointer events */}
       {children}
-    </LiquidGlass>
+
+      {/* LiquidGlass overlay — applies `backdrop-filter: url(#filter)`
+       *  with feDisplacementMap to whatever is BEHIND this layer
+       *  (the page-level ambient color blobs), giving the hovered
+       *  card the true Liquid-Glass visual. `pointer-events: none`
+       *  keeps clicks flowing through to the GlassCard underneath. */}
+      {isChromium && hasEntered && (
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          style={{ borderRadius: cornerRadius }}
+          aria-hidden
+        >
+          <LiquidGlass
+            displacementScale={isHovered ? 64 : 0}
+            blurAmount={0.1}
+            saturation={140}
+            aberrationIntensity={isHovered ? 2 : 0}
+            elasticity={0}
+            cornerRadius={cornerRadius}
+            padding="0"
+          >
+            {/* Empty span — LiquidGlass applies its backdrop-filter
+             *  effect to what's behind it regardless of children. */}
+            <span style={{ display: "block", width: "100%", height: "100%" }} />
+          </LiquidGlass>
+        </div>
+      )}
+    </div>
   );
 }
