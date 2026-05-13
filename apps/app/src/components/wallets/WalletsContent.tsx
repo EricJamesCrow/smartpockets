@@ -22,7 +22,7 @@ import {
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Plus } from "@untitledui/icons";
 import { Toggle } from "@repo/ui/untitledui/base/toggle/toggle";
-import { SortableWalletCard, WalletCard } from "./WalletCard";
+import { SortableWalletCard } from "./variants/refined-glass/SortableWalletCard";
 import { CreateWalletModal } from "./CreateWalletModal";
 
 // =============================================================================
@@ -135,14 +135,30 @@ export function WalletsContent() {
               items={wallets.map((w) => w._id)}
               strategy={rectSortingStrategy}
             >
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {wallets.map((wallet) => (
-                  <SortableWalletCard
-                    key={wallet._id}
-                    wallet={wallet}
-                    isExtended={isExtended}
-                  />
-                ))}
+              <div className="relative">
+                {/* ambient color blobs — give the cards' glass something to refract */}
+                <div
+                  className="pointer-events-none absolute -inset-32 -z-10"
+                  style={{
+                    background:
+                      "radial-gradient(ellipse 600px 400px at 25% 30%, rgba(127,184,154,0.10), transparent 60%), radial-gradient(ellipse 500px 350px at 80% 70%, rgba(212,197,156,0.08), transparent 60%)",
+                  }}
+                  aria-hidden
+                />
+                {/* shared single backdrop-blur layer (not per card) */}
+                <div
+                  className="pointer-events-none absolute -inset-4 -z-10 backdrop-blur-xl"
+                  aria-hidden
+                />
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {wallets.map((wallet) => (
+                    <SortableWalletCard
+                      key={wallet._id}
+                      wallet={wallet}
+                      isExtended={isExtended}
+                    />
+                  ))}
+                </div>
               </div>
             </SortableContext>
           </DndContext>
