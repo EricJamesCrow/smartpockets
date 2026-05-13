@@ -22,7 +22,7 @@ import {
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Plus } from "@untitledui/icons";
 import { Toggle } from "@repo/ui/untitledui/base/toggle/toggle";
-import { SortableWalletCard, WalletCard } from "./WalletCard";
+import { SortableWalletCard } from "./variants/glass/SortableWalletCard";
 import { CreateWalletModal } from "./CreateWalletModal";
 
 // =============================================================================
@@ -135,14 +135,28 @@ export function WalletsContent() {
               items={wallets.map((w) => w._id)}
               strategy={rectSortingStrategy}
             >
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {wallets.map((wallet) => (
-                  <SortableWalletCard
-                    key={wallet._id}
-                    wallet={wallet}
-                    isExtended={isExtended}
-                  />
-                ))}
+              <div className="relative">
+                {/* stronger ambient blobs than Variant E — gives the glass real content to refract.
+                 *  NOTE: Variant D does NOT add a page-level `backdrop-blur-xl` parent (unlike E).
+                 *  Each GlassCard runs its own `backdrop-filter`, so nesting another blur layer
+                 *  here would break the displacement filter on the hovered card. */}
+                <div
+                  className="pointer-events-none absolute -inset-32 -z-10"
+                  style={{
+                    background:
+                      "radial-gradient(ellipse 700px 500px at 18% 28%, rgba(127,184,154,0.32), transparent 60%), radial-gradient(ellipse 600px 400px at 82% 72%, rgba(212,197,156,0.22), transparent 60%), radial-gradient(ellipse 400px 300px at 50% 50%, rgba(120,160,200,0.15), transparent 60%)",
+                  }}
+                  aria-hidden
+                />
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {wallets.map((wallet) => (
+                    <SortableWalletCard
+                      key={wallet._id}
+                      wallet={wallet}
+                      isExtended={isExtended}
+                    />
+                  ))}
+                </div>
               </div>
             </SortableContext>
           </DndContext>
