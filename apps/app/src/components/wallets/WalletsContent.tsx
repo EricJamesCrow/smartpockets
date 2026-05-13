@@ -22,7 +22,7 @@ import {
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { Plus } from "@untitledui/icons";
 import { Toggle } from "@repo/ui/untitledui/base/toggle/toggle";
-import { SortableWalletCard, WalletCard } from "./WalletCard";
+import { SortableWalletCard } from "./variants/refined/SortableWalletCard";
 import { CreateWalletModal } from "./CreateWalletModal";
 
 // =============================================================================
