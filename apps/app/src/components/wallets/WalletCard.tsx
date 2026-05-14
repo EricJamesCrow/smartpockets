@@ -1,49 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { Pin01, Edit03, Trash01, DotsGrid } from "@untitledui/icons";
 import { Dropdown } from "@repo/ui/untitledui/base/dropdown/dropdown";
 import { cx } from "@repo/ui/utils";
 import { formatMoneyFromDollars } from "@/utils/money";
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-interface WalletCardProps {
-  wallet: {
-    _id: Id<"wallets">;
-    name: string;
-    color?: string;
-    icon?: string;
-    cardCount: number;
-    isPinned: boolean;
-  };
-  isExtended: boolean;
-}
-
-// =============================================================================
-// BRAND COLORS
-// =============================================================================
-
-/**
- * Brand colors for mini card previews
- * Maps card network brand to gradient and accent colors
- */
-const brandColors: Record<string, { bg: string; accent: string }> = {
-  visa: { bg: "from-blue-600 to-blue-800", accent: "bg-yellow-400" },
-  mastercard: { bg: "from-red-500 to-orange-500", accent: "bg-yellow-500" },
-  amex: { bg: "from-slate-600 to-slate-800", accent: "bg-blue-400" },
-  discover: { bg: "from-orange-500 to-orange-600", accent: "bg-white" },
-  other: { bg: "from-gray-600 to-gray-800", accent: "bg-gray-400" },
-};
+import {
+  brandColors,
+  useWalletCard,
+  useWalletCardActions,
+  useSortableWallet,
+  type WalletCardProps,
+  type MiniCardPreviewProps,
+} from "./shared";
 
 // =============================================================================
 // COMPONENT
@@ -63,7 +33,6 @@ const brandColors: Record<string, { bg: string; accent: string }> = {
  * Click navigates to /credit-cards?wallet={walletId}
  */
 export function WalletCard({ wallet, isExtended }: WalletCardProps) {
-  const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [editName, setEditName] = useState(wallet.name);
@@ -77,28 +46,12 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
     }
   }, [isRenaming]);
 
-  // Fetch wallet with cards for preview
-  const walletWithCards = useQuery(api.wallets.queries.getWithCards, {
-    walletId: wallet._id,
-  });
-
-  // Mutations for dropdown actions
-  const togglePin = useMutation(api.wallets.mutations.togglePin);
-  const removeWallet = useMutation(api.wallets.mutations.remove);
-  const renameWallet = useMutation(api.wallets.mutations.rename);
-
-  // Get first 3 cards for stack preview
-  const previewCards = walletWithCards?.cards.slice(0, 3) ?? [];
-
-  // Fetch full stats when extended
-  const walletStats = useQuery(
-    api.wallets.queries.get,
-    isExtended ? { walletId: wallet._id } : "skip"
-  );
+  const { previewCards, walletStats } = useWalletCard(wallet._id, isExtended);
+  const actions = useWalletCardActions(wallet._id);
 
   const handleClick = () => {
     if (!isRenaming) {
-      router.push(`/credit-cards?wallet=${wallet._id}`);
+      actions.navigateToCards();
     }
   };
 
@@ -110,7 +63,7 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
   const handleRenameSubmit = async () => {
     const trimmedName = editName.trim();
     if (trimmedName && trimmedName !== wallet.name) {
-      await renameWallet({ walletId: wallet._id, name: trimmedName });
+      await actions.rename(trimmedName);
     }
     setIsRenaming(false);
   };
@@ -130,17 +83,18 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
   };
 
   const handleTogglePin = async () => {
-    await togglePin({ walletId: wallet._id });
+    await actions.togglePin();
   };
 
   const handleDelete = async () => {
     if (confirm(`Delete "${wallet.name}"? Cards will not be deleted.`)) {
-      await removeWallet({ walletId: wallet._id });
+      await actions.remove();
     }
   };
 
   return (
     <motion.div
+      data-testid="wallet-card"
       className="group relative cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -283,15 +237,6 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
 // MINI CREDIT CARD
 // =============================================================================
 
-interface MiniCreditCardProps {
-  brand: string;
-  lastFour?: string;
-  displayName: string;
-  index: number;
-  total: number;
-  isHovered: boolean;
-}
-
 /**
  * Mini credit card component for stack preview
  *
@@ -308,7 +253,7 @@ function MiniCreditCard({
   index,
   total,
   isHovered,
-}: MiniCreditCardProps) {
+}: MiniCardPreviewProps) {
   // Get brand colors with fallback to "other"
   const colors = brandColors[brand] || brandColors.other!;
 
@@ -373,19 +318,8 @@ function MiniCreditCard({
  * Shows a drag handle on hover for better discoverability.
  */
 export function SortableWalletCard(props: WalletCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: props.wallet._id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  const { attributes, listeners, setNodeRef, style, isDragging } =
+    useSortableWallet(props.wallet._id);
 
   return (
     <div
