@@ -13,6 +13,7 @@ import {
 import { MiniCardPreview } from "./MiniCardPreview";
 import { ExtendedStats } from "./ExtendedStats";
 import { TiltCard } from "./TiltCard";
+import { CardSpotlight } from "./CardSpotlight";
 
 /**
  * Variant C — Champagne Leather wallet card.
@@ -96,8 +97,9 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
       onClick={handleClick}
     >
       <TiltCard maxTilt={2}>
+        <CardSpotlight>
         <div
-          className="relative h-48 overflow-hidden rounded-2xl"
+          className="relative h-56 overflow-hidden rounded-2xl"
           style={{
             // Champagne leather: warm tonal gradient + leather PNG via
             // `background-blend-mode: overlay` to keep the grain subtle.
@@ -259,6 +261,7 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
             </span>
           </div>
         </div>
+        </CardSpotlight>
       </TiltCard>
 
       <ExtendedStats isExtended={isExtended} walletStats={walletStats} />
