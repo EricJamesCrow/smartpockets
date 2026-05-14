@@ -6,7 +6,7 @@ import { brandColors } from "../../shared";
 import { cx } from "@repo/ui/utils";
 
 interface PreviewProps {
-  /** Up to 2 cards from useWalletCard.previewCards, flattened to `.card` */
+  /** Cards from useWalletCard.previewCards (already flattened to .card). */
   cards: Array<{
     brand?: string;
     lastFour?: string;
@@ -17,12 +17,24 @@ interface PreviewProps {
 }
 
 /**
- * Champagne Leather mini-card preview: 2 cards visibly tucked into the
- * top of the wallet (one fewer than Variant A — more restrained). Same
- * fan-up-on-hover motion as A, with slightly reduced spread to match the
- * restrained champagne palette.
+ * Champagne Leather mini-card preview — centered hero slot (v2).
  *
- * Returns null when empty; the parent `WalletCard` renders the
+ * Showcases a single hero credit card centered in the wallet's upper
+ * half (200×120, credit-card aspect 1.667 matching UntitledUI's
+ * 316×190 stock). Two peek-edge lines sit above the hero card to
+ * suggest more cards stacked behind.
+ *
+ * Hover behavior:
+ *   - Hero card lifts ~4px and gains a touch of scale
+ *   - Peek lines spread upward to suggest the stack opening
+ *   - Aceternity-style cursor spotlight (in WalletCard) catches the
+ *     polished leather around the card
+ *
+ * Replaces the earlier "2 cards peeking from the top" pattern. The
+ * centered showcase pairs better with the leather wallet's
+ * "presenting one card to you" mental model.
+ *
+ * Returns null when empty; the parent WalletCard renders the
  * empty-wallet affordance directly on the chassis.
  */
 export function MiniCardPreview({ cards, isHovered }: PreviewProps) {
@@ -30,61 +42,78 @@ export function MiniCardPreview({ cards, isHovered }: PreviewProps) {
     return null;
   }
 
-  // Cap at 2 — one fewer than Variant A's 3, per spec §6 Variant C.
-  const previewCards = cards.slice(0, 2);
+  const heroCard = cards[0]!;
+  const colors = brandColors[heroCard.brand ?? "other"] ?? brandColors.other!;
 
   return (
-    <div className="pointer-events-none absolute -top-2 left-8 right-8 z-20">
-      {previewCards.map((card, index) => {
-        const colors =
-          brandColors[card.brand ?? "other"] ?? brandColors.other!;
-        const baseY = -index * 1;
-        const hoverY = -(index + 1) * 12;
-
-        return (
-          <motion.div
-            key={card._id}
-            className={cx(
-              "absolute left-0 right-0 rounded-md bg-gradient-to-br",
-              colors.bg,
-            )}
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-44">
+      {/* peek line 2 (further back, narrower) */}
+      <motion.div
+        className="absolute left-1/2 h-1 rounded-sm"
+        style={{
+          width: 160,
+          top: 10,
+          transform: "translateX(-50%)",
+          background:
+            "linear-gradient(180deg, rgba(80,65,30,0.32), transparent)",
+        }}
+        animate={{ y: isHovered ? -3 : 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      />
+      {/* peek line 1 (front of stack — just behind the hero card) */}
+      <motion.div
+        className="absolute left-1/2 h-1 rounded-sm"
+        style={{
+          width: 184,
+          top: 16,
+          transform: "translateX(-50%)",
+          background:
+            "linear-gradient(180deg, rgba(80,65,30,0.48), transparent)",
+        }}
+        animate={{ y: isHovered ? -2 : 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      />
+      {/* hero card slot — credit-card aspect ratio 200/120 ≈ 1.667 */}
+      <motion.div
+        className={cx(
+          "absolute left-1/2 rounded-2xl bg-gradient-to-br",
+          colors.bg,
+        )}
+        style={{
+          top: 24,
+          width: 200,
+          height: 120,
+          transform: "translateX(-50%)",
+          boxShadow:
+            "0 10px 24px rgba(40,30,15,0.55), 0 2px 6px rgba(40,30,15,0.4), inset 0 1px 0 rgba(255,245,215,0.5), inset 0 -1px 0 rgba(0,0,0,0.18)",
+        }}
+        animate={{
+          y: isHovered ? -4 : 0,
+          scale: isHovered ? 1.01 : 1,
+        }}
+        transition={{ type: "spring", stiffness: 280, damping: 24 }}
+      >
+        {/* chip — sized like UntitledUI's credit-card chip */}
+        <div
+          className={cx("absolute right-4 top-3 rounded-sm", colors.accent)}
+          style={{
+            width: 30,
+            height: 22,
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)",
+          }}
+        />
+        {/* last 4 */}
+        {heroCard.lastFour && (
+          <span
+            className="absolute bottom-3 right-4 text-[10px] tracking-wider text-white/75"
             style={{
-              top: index * 5,
-              height: 26,
-              zIndex: previewCards.length - index,
-              boxShadow:
-                "0 3px 6px rgba(40,30,15,0.4), inset 0 1px 0 rgba(255,255,255,0.18)",
+              fontFamily: "ui-sans-serif, system-ui, sans-serif",
             }}
-            initial={false}
-            animate={{
-              y: isHovered ? hoverY : baseY,
-              rotate: isHovered ? (index - 0.5) * 3 : 0,
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 24 }}
           >
-            <motion.div
-              className="flex h-full items-center justify-between px-3"
-              animate={{ opacity: isHovered ? 1 : 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <span
-                className={cx("h-1.5 w-6 rounded", colors.accent)}
-                style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.4)" }}
-              />
-              {card.lastFour && (
-                <span
-                  className="text-[9px] tracking-wider text-white/75"
-                  style={{
-                    fontFamily: "ui-sans-serif, system-ui, sans-serif",
-                  }}
-                >
-                  •••• {card.lastFour}
-                </span>
-              )}
-            </motion.div>
-          </motion.div>
-        );
-      })}
+            •••• {heroCard.lastFour}
+          </span>
+        )}
+      </motion.div>
     </div>
   );
 }
