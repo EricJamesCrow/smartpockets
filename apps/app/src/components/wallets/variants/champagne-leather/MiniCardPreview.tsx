@@ -46,13 +46,13 @@ export function MiniCardPreview({ cards, isHovered }: PreviewProps) {
   const colors = brandColors[heroCard.brand ?? "other"] ?? brandColors.other!;
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-44">
+    <div className="pointer-events-none relative h-44 w-full">
       {/* peek line 2 (further back, narrower) */}
       <motion.div
         className="absolute left-1/2 h-1 rounded-sm"
         style={{
           width: 160,
-          top: 10,
+          top: 14,
           transform: "translateX(-50%)",
           background:
             "linear-gradient(180deg, rgba(80,65,30,0.32), transparent)",
@@ -65,7 +65,7 @@ export function MiniCardPreview({ cards, isHovered }: PreviewProps) {
         className="absolute left-1/2 h-1 rounded-sm"
         style={{
           width: 184,
-          top: 16,
+          top: 20,
           transform: "translateX(-50%)",
           background:
             "linear-gradient(180deg, rgba(80,65,30,0.48), transparent)",
@@ -73,14 +73,16 @@ export function MiniCardPreview({ cards, isHovered }: PreviewProps) {
         animate={{ y: isHovered ? -2 : 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       />
-      {/* hero card slot — credit-card aspect ratio 200/120 ≈ 1.667 */}
+      {/* hero card slot — credit-card aspect ratio 200/120 ≈ 1.667
+          Centered in the h-44 (176px) container: top:28 + height:120 places
+          the card center at y=88, container center at y=88. Pixel-centered. */}
       <motion.div
         className={cx(
           "absolute left-1/2 rounded-2xl bg-gradient-to-br",
           colors.bg,
         )}
         style={{
-          top: 24,
+          top: 28,
           width: 200,
           height: 120,
           transform: "translateX(-50%)",

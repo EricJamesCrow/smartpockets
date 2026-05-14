@@ -99,7 +99,7 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
       <TiltCard maxTilt={2}>
         <CardSpotlight>
         <div
-          className="relative h-56 overflow-hidden rounded-2xl"
+          className="relative overflow-hidden rounded-2xl"
           style={{
             // Champagne leather: warm tonal gradient + leather PNG via
             // `background-blend-mode: overlay` to keep the grain subtle.
@@ -120,12 +120,34 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
             aria-hidden
           />
 
+          {/* Champagne metal-foil pin dot — lighter than A (more cream/pearl) */}
+          {wallet.isPinned && (
+            <span
+              className="pointer-events-none absolute right-6 top-6 z-30 h-2.5 w-2.5 rounded-full"
+              style={{
+                background:
+                  "radial-gradient(circle at 30% 30%, #fffaeb, #c4b287)",
+                boxShadow:
+                  "0 1px 3px rgba(50,40,20,0.4), inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.2)",
+              }}
+              aria-label="Pinned"
+            />
+          )}
+
+          {/* Mini-card preview area — flow-based, takes its natural h-44.
+              The hero slot inside is centered within this block (matches
+              Variant B's layout pattern). */}
           {!isEmpty && (
-            <MiniCardPreview cards={flatPreviewCards} isHovered={isHovered} />
+            <div className="relative">
+              <MiniCardPreview
+                cards={flatPreviewCards}
+                isHovered={isHovered}
+              />
+            </div>
           )}
 
           {isEmpty && (
-            <div className="absolute inset-6 flex items-center justify-center">
+            <div className="flex h-44 items-center justify-center">
               <span
                 className="text-sm italic"
                 style={{
@@ -139,22 +161,9 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
             </div>
           )}
 
-          {/* Champagne metal-foil pin dot — lighter than A (more cream/pearl) */}
-          {wallet.isPinned && (
-            <span
-              className="pointer-events-none absolute right-6 top-6 h-2.5 w-2.5 rounded-full"
-              style={{
-                background:
-                  "radial-gradient(circle at 30% 30%, #fffaeb, #c4b287)",
-                boxShadow:
-                  "0 1px 3px rgba(50,40,20,0.4), inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.2)",
-              }}
-              aria-label="Pinned"
-            />
-          )}
-
-          {/* Wallet name + count row — dark-ink Fraunces italic with foil-emboss text-shadow */}
-          <div className="absolute bottom-4 left-5 right-5 flex items-start justify-between">
+          {/* Wallet name + count row — flows naturally below the card.
+              Same pattern as Variant B (px-5 pb-4 pt-1 spacing). */}
+          <div className="relative z-10 flex items-start justify-between px-5 pb-4 pt-1">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 {wallet.icon && (
