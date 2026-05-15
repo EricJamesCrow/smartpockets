@@ -87,6 +87,9 @@ const creditCardValidator = v.object({
   isAutoPay: v.optional(v.boolean()),
   autoPayEnabledAt: v.optional(v.number()),
 
+  // Statement & issuer config
+  statementClosingDay: v.optional(v.number()),
+
   // State
   isActive: v.boolean(),
 });
