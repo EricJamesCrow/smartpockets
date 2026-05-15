@@ -101,9 +101,17 @@ function Stat({
         {label}
       </p>
       <p
-        className={cx("mt-0.5 font-medium", valueClassName)}
+        className={cx(
+          "mt-0.5 font-medium",
+          // Default ink only when the utilization tint isn't applied.
+          // `valueClassName` (text-emerald-800 / text-amber-800 / text-red-900)
+          // wins when present, so the utilization stat actually colorizes.
+          // Previously an inline `style={{ color: "#2a2218" }}` clobbered
+          // the conditional class — fixed per CodeRabbit on PR #260.
+          !valueClassName && "text-[#2a2218]",
+          valueClassName,
+        )}
         style={{
-          color: "#2a2218",
           fontFamily: "var(--font-fraunces), Georgia, serif",
           fontSize: 16,
         }}
