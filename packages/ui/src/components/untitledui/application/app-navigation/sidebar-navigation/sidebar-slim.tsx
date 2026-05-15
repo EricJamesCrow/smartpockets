@@ -2,8 +2,8 @@
 
 import type { FC } from "react";
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
-import { LifeBuoy01, LogOut01, Settings01 } from "@untitledui/icons";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { LogOut01, Settings01 } from "@untitledui/icons";
 import { AnimatePresence, motion } from "motion/react";
 import { Button as AriaButton, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover } from "react-aria-components";
 import { cx } from "../../../../../utils/cx";
@@ -35,6 +35,7 @@ interface SidebarNavigationSlimProps {
 export const SidebarSlimDesktop = ({ activeUrl, items, footerItems = [], hideBorder, hideRightBorder }: SidebarNavigationSlimProps) => {
     const activeItem = [...items, ...footerItems].find((item) => item.href === activeUrl || item.items?.some((subItem) => subItem.href === activeUrl));
     const { user } = useUser();
+    const { signOut } = useClerk();
     const [currentItem, setCurrentItem] = useState(activeItem || items[1]);
     const [isOpen, setIsOpen] = useState(false);
 
@@ -179,12 +180,25 @@ export const SidebarSlimDesktop = ({ activeUrl, items, footerItems = [], hideBor
                                 ))}
                             </ul>
                             <div className="border-secondary bg-primary sticky bottom-0 mt-auto flex justify-between border-t px-2 py-5">
-                                <div>
-                                    <p className="text-primary text-sm font-semibold">Olivia Rhye</p>
-                                    <p className="text-tertiary text-sm">olivia@untitledui.com</p>
-                                </div>
+                                {user ? (
+                                    <div>
+                                        <p className="text-primary text-sm font-semibold">{user.fullName ?? "User"}</p>
+                                        <p className="text-tertiary text-sm">{user.primaryEmailAddress?.emailAddress}</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-1">
+                                        <div className="bg-secondary h-4 w-24 animate-pulse rounded" />
+                                        <div className="bg-secondary h-3 w-32 animate-pulse rounded" />
+                                    </div>
+                                )}
                                 <div className="absolute right-0 top-2.5">
-                                    <ButtonUtility size="sm" color="tertiary" tooltip="Log out" icon={LogOut01} />
+                                    <ButtonUtility
+                                        size="sm"
+                                        color="tertiary"
+                                        tooltip="Log out"
+                                        icon={LogOut01}
+                                        onClick={() => signOut({ redirectUrl: "/" })}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -197,6 +211,8 @@ export const SidebarSlimDesktop = ({ activeUrl, items, footerItems = [], hideBor
 
 export const SidebarNavigationSlim = (props: SidebarNavigationSlimProps) => {
     const { items, activeUrl } = props;
+    const { user, isLoaded: isUserLoaded } = useUser();
+    const { signOut } = useClerk();
     const MAIN_SIDEBAR_WIDTH = 68;
     return (
         <>
@@ -224,22 +240,29 @@ export const SidebarNavigationSlim = (props: SidebarNavigationSlimProps) => {
 
                     <div className="mt-auto flex flex-col gap-5 px-2 py-4">
                         <div className="flex flex-col gap-2">
-                            <NavItemBase current={activeUrl === "/support"} type="link" href="/support" icon={LifeBuoy01}>
-                                Support
-                            </NavItemBase>
                             <NavItemBase current={activeUrl === "/settings"} type="link" href="/settings" icon={Settings01}>
                                 Settings
                             </NavItemBase>
                         </div>
 
                         <div className="border-secondary relative flex items-center gap-3 border-t pl-2 pr-8 pt-6">
-                            <AvatarLabelGroup
-                                status="online"
-                                size="md"
-                                src="https://www.untitledui.com/images/avatars/olivia-rhye?fm=webp&q=80"
-                                title="Olivia Rhye"
-                                subtitle="olivia@untitledui.com"
-                            />
+                            {isUserLoaded && user ? (
+                                <AvatarLabelGroup
+                                    status="online"
+                                    size="md"
+                                    src={user.imageUrl}
+                                    title={user.fullName ?? "User"}
+                                    subtitle={user.primaryEmailAddress?.emailAddress}
+                                />
+                            ) : (
+                                <div className="flex w-full items-center gap-3">
+                                    <div className="bg-secondary h-10 w-10 animate-pulse rounded-full" />
+                                    <div className="flex flex-1 flex-col gap-1">
+                                        <div className="bg-secondary h-4 w-24 animate-pulse rounded" />
+                                        <div className="bg-secondary h-3 w-32 animate-pulse rounded" />
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="absolute right-0 top-1/2 -translate-y-1/2">
                                 <Button
@@ -247,6 +270,7 @@ export const SidebarNavigationSlim = (props: SidebarNavigationSlimProps) => {
                                     color="tertiary"
                                     iconLeading={<LogOut01 className="text-fg-quaternary transition-inherit-all group-hover:text-fg-quaternary_hover size-5" />}
                                     className="p-1.5!"
+                                    onClick={() => signOut({ redirectUrl: "/" })}
                                 />
                             </div>
                         </div>
