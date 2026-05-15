@@ -22,7 +22,7 @@
     "clean": "turbo clean",
     "clean:workspaces": "git clean -xdf node_modules"
   },
-  "packageManager": "bun@1.1.42",
+  "packageManager": "bun@1.3.13",
   "trustedDependencies": [
     "@clerk/shared",
     "@tailwindcss/oxide",

@@ -109,7 +109,7 @@ SmartPockets is a **power tool**, not a lecture.
 **Prerequisites**
 
 - Node.js 18+
-- Bun 1.1+
+- Bun 1.3+
 - A Convex account (free tier works)
 - A Clerk account (free tier works)
 - Plaid API keys (sandbox for development)
