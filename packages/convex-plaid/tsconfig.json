@@ -6,6 +6,7 @@
 
     "target": "ESNext",
     "lib": ["ES2021", "dom", "DOM.Iterable"],
+    "types": ["node"],
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
     "noErrorTruncation": true,

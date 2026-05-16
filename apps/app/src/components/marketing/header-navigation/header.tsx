@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import { ChevronDown } from "@untitledui/icons";
 import { Button as AriaButton, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Popover as AriaPopover } from "react-aria-components";
-import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { SmartPocketsLogoWithBadge } from "@repo/ui/untitledui/foundations/logo";
 import { DropdownMenuSimple } from "@/components/marketing/header-navigation/dropdown-header-navigation";
@@ -80,7 +80,7 @@ const MobileFooter = () => {
                 </ul>
             </div>
             <div className="flex flex-col gap-3">
-                <SignedOut>
+                <Show when="signed-out">
                     <SignUpButton mode="modal">
                         <Button size="lg">Sign up</Button>
                     </SignUpButton>
@@ -89,12 +89,12 @@ const MobileFooter = () => {
                             Log in
                         </Button>
                     </SignInButton>
-                </SignedOut>
-                <SignedIn>
+                </Show>
+                <Show when="signed-in">
                     <Button href="/" size="lg">
                         Home
                     </Button>
-                </SignedIn>
+                </Show>
             </div>
         </div>
     );
@@ -187,7 +187,7 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                     </div>
 
                     <div className="hidden items-center gap-3 md:flex">
-                        <SignedOut>
+                        <Show when="signed-out">
                             <SignInButton mode="modal">
                                 <Button color="secondary" size={isFloating ? "md" : "lg"}>
                                     Log in
@@ -198,10 +198,10 @@ export const Header = ({ items = headerNavItems, isFullWidth, isFloating, classN
                                     Sign up
                                 </Button>
                             </SignUpButton>
-                        </SignedOut>
-                        <SignedIn>
-                            <UserButton afterSignOutUrl="/" />
-                        </SignedIn>
+                        </Show>
+                        <Show when="signed-in">
+                            <UserButton />
+                        </Show>
                     </div>
 
                     {/* Mobile menu and menu trigger */}

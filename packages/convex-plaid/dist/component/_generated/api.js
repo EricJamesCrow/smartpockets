@@ -1,5 +1,4 @@
 /* eslint-disable */
-// @ts-nocheck - Generated file has circular type references that TypeScript cannot resolve
 /**
  * Generated `api` utility.
  *

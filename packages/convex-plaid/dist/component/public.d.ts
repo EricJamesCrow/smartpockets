@@ -25,7 +25,7 @@ export declare const getItemsByUser: import("convex/server").RegisteredQuery<"pu
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -63,7 +63,7 @@ export declare const getItem: import("convex/server").RegisteredQuery<"public", 
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -102,7 +102,7 @@ export declare const getItemByPlaidItemId: import("convex/server").RegisteredQue
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -138,7 +138,7 @@ export declare const getAllActiveItems: import("convex/server").RegisteredQuery<
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
+    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -551,7 +551,7 @@ export declare const getMerchantEnrichment: import("convex/server").RegisteredQu
     categoryIconUrl: string | undefined;
     website: string | undefined;
     phoneNumber: string | undefined;
-    confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
+    confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
     lastEnriched: number;
 } | null>>;
 /**
@@ -596,8 +596,8 @@ export declare const togglePlaidItemActive: import("convex/server").RegisteredMu
  * before allowing this mutation.
  */
 export declare const setPlaidItemActive: import("convex/server").RegisteredMutation<"public", {
-    isActive: boolean;
     itemId: string;
+    isActive: boolean;
 }, Promise<null>>;
 /**
  * Get all recurring streams for a user.
@@ -753,11 +753,11 @@ export declare const getSyncLogsByItem: import("convex/server").RegisteredQuery<
     plaidItemId: string;
     userId: string;
     syncType: "transactions" | "liabilities" | "recurring" | "accounts" | "onboard";
-    trigger: "onboard" | "webhook" | "scheduled" | "manual";
+    trigger: "scheduled" | "onboard" | "webhook" | "manual";
     startedAt: number;
     completedAt: number | undefined;
     durationMs: number | undefined;
-    status: "started" | "success" | "error" | "rate_limited" | "circuit_open";
+    status: "error" | "started" | "success" | "rate_limited" | "circuit_open";
     result: {
         transactionsAdded?: number | undefined;
         transactionsModified?: number | undefined;
@@ -787,11 +787,11 @@ export declare const getSyncLogsByUser: import("convex/server").RegisteredQuery<
     plaidItemId: string;
     userId: string;
     syncType: "transactions" | "liabilities" | "recurring" | "accounts" | "onboard";
-    trigger: "onboard" | "webhook" | "scheduled" | "manual";
+    trigger: "scheduled" | "onboard" | "webhook" | "manual";
     startedAt: number;
     completedAt: number | undefined;
     durationMs: number | undefined;
-    status: "started" | "success" | "error" | "rate_limited" | "circuit_open";
+    status: "error" | "started" | "success" | "rate_limited" | "circuit_open";
     result: {
         transactionsAdded?: number | undefined;
         transactionsModified?: number | undefined;
@@ -878,8 +878,8 @@ export declare const markItemErrorDispatchedInternal: import("convex/server").Re
     plaidItemId: string;
 }, Promise<null>>;
 export declare const listErrorItemsInternal: import("convex/server").RegisteredQuery<"public", {
-    olderThanLastSyncedAt: number;
     dispatchedBefore: number;
+    olderThanLastSyncedAt: number;
 }, Promise<{
     plaidItemId: string;
     userId: string;
@@ -897,10 +897,10 @@ export declare const listErrorItemsInternal: import("convex/server").RegisteredQ
 export declare const recordWebhookReceived: import("convex/server").RegisteredMutation<"public", {
     dedupeWindowMs?: number | undefined;
     itemId: string;
-    webhookType: string;
-    webhookCode: string;
     bodyHash: string;
     receivedAt: number;
+    webhookCode: string;
+    webhookType: string;
 }, Promise<{
     webhookLogId: string;
     duplicate: boolean;

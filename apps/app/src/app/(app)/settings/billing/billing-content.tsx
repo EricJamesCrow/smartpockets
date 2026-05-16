@@ -44,12 +44,12 @@ export function BillingContent() {
     // Clerk Billing hooks
     const { data: plans, isLoading: plansLoading } = usePlans({ for: "user" });
     const { data: subscription } = useSubscription({ for: "user" });
-    const { checkout } = useCheckout({
+    const { checkout, fetchStatus } = useCheckout({
         planId: selectedPlanId ?? "",
         planPeriod: "month",
         for: "user",
     });
-    const checkoutLoading = checkout.fetchStatus === "fetching";
+    const checkoutLoading = fetchStatus === "fetching";
 
     // Get current subscription item and plan
     const currentSubscriptionItem = subscription?.subscriptionItems?.[0];

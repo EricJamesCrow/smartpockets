@@ -242,18 +242,17 @@ export declare class Plaid {
      * ```
      */
     get api(): {
+        clearErrorTrackingInternal: import("convex/server").FunctionReference<"mutation", "internal", {
+            plaidItemId: string;
+        }, null, string | undefined>;
+        clearNewAccountsAvailableInternal: import("convex/server").FunctionReference<"mutation", "internal", {
+            plaidItemId: string;
+        }, null, string | undefined>;
         deletePlaidItem: import("convex/server").FunctionReference<"mutation", "internal", {
             plaidItemId: string;
         }, {
-            deleted: {
-                accounts: number;
-                creditCardLiabilities: number;
-                items: number;
-                mortgageLiabilities: number;
-                recurringStreams: number;
-                studentLoanLiabilities: number;
-                transactions: number;
-            };
+            message: string;
+            status: "scheduled" | "not_found";
         }, string | undefined>;
         getAccountsByItem: import("convex/server").FunctionReference<"query", "internal", {
             plaidItemId: string;
@@ -319,6 +318,35 @@ export declare class Plaid {
             updatedAt: number;
             userId: string;
         }[], string | undefined>;
+        getAllActiveItems: import("convex/server").FunctionReference<"query", "internal", {}, {
+            _creationTime: number;
+            _id: string;
+            activatedAt?: number;
+            circuitState?: string;
+            consecutiveFailures?: number;
+            createdAt: number;
+            disconnectedAt?: number;
+            disconnectedReason?: string;
+            errorAt?: number;
+            errorCode?: string;
+            errorMessage?: string;
+            firstErrorAt?: number;
+            institutionId?: string;
+            institutionName?: string;
+            isActive?: boolean;
+            itemId: string;
+            lastDispatchedAt?: number;
+            lastFailureAt?: number;
+            lastSyncedAt?: number;
+            newAccountsAvailableAt?: number;
+            nextRetryAt?: number;
+            products: Array<string>;
+            reauthAt?: number;
+            reauthReason?: string;
+            status: string;
+            syncError?: string;
+            userId: string;
+        }[], string | undefined>;
         getAllInstitutions: import("convex/server").FunctionReference<"query", "internal", {}, {
             _id: string;
             institutionId: string;
@@ -344,8 +372,8 @@ export declare class Plaid {
         getItem: import("convex/server").FunctionReference<"query", "internal", {
             plaidItemId: string;
         }, {
-            _id: string;
             _creationTime: number;
+            _id: string;
             activatedAt?: number;
             circuitState?: string;
             consecutiveFailures?: number;
@@ -372,11 +400,11 @@ export declare class Plaid {
             syncError?: string;
             userId: string;
         } | null, string | undefined>;
-        getItemsByUser: import("convex/server").FunctionReference<"query", "internal", {
-            userId: string;
+        getItemByPlaidItemId: import("convex/server").FunctionReference<"query", "internal", {
+            itemId: string;
         }, {
-            _id: string;
             _creationTime: number;
+            _id: string;
             activatedAt?: number;
             circuitState?: string;
             consecutiveFailures?: number;
@@ -402,50 +430,81 @@ export declare class Plaid {
             status: string;
             syncError?: string;
             userId: string;
-        }[], string | undefined>;
+        } | null, string | undefined>;
         getItemHealth: import("convex/server").FunctionReference<"query", "internal", {
             plaidItemId: string;
         }, {
-            plaidItemId: string;
-            itemId: string;
-            state: "syncing" | "ready" | "error" | "re-consent-required";
-            recommendedAction: "reconnect" | "reconnect_for_new_accounts" | "wait" | "contact_support" | null;
-            reasonCode: "healthy" | "syncing_initial" | "syncing_incremental" | "auth_required_login" | "auth_required_expiration" | "transient_circuit_open" | "transient_institution_down" | "transient_rate_limited" | "permanent_invalid_token" | "permanent_item_not_found" | "permanent_no_accounts" | "permanent_access_not_granted" | "permanent_products_not_supported" | "permanent_institution_unsupported" | "permanent_revoked" | "permanent_unknown" | "new_accounts_available";
-            isActive: boolean;
-            institutionId: string | null;
-            institutionName: string | null;
-            institutionLogoBase64: string | null;
-            institutionPrimaryColor: string | null;
-            lastSyncedAt: number | null;
-            lastWebhookAt: number | null;
-            errorCode: string | null;
-            errorMessage: string | null;
             circuitState: "closed" | "open" | "half_open";
             consecutiveFailures: number;
-            nextRetryAt: number | null;
+            errorCode: string | null;
+            errorMessage: string | null;
+            institutionId: string | null;
+            institutionLogoBase64: string | null;
+            institutionName: string | null;
+            institutionPrimaryColor: string | null;
+            isActive: boolean;
+            itemId: string;
+            lastSyncedAt: number | null;
+            lastWebhookAt: number | null;
             newAccountsAvailableAt: number | null;
+            nextRetryAt: number | null;
+            plaidItemId: string;
+            reasonCode: "healthy" | "syncing_initial" | "syncing_incremental" | "auth_required_login" | "auth_required_expiration" | "transient_circuit_open" | "transient_institution_down" | "transient_rate_limited" | "permanent_invalid_token" | "permanent_item_not_found" | "permanent_no_accounts" | "permanent_access_not_granted" | "permanent_products_not_supported" | "permanent_institution_unsupported" | "permanent_revoked" | "permanent_unknown" | "new_accounts_available";
+            recommendedAction: "reconnect" | "reconnect_for_new_accounts" | "wait" | "contact_support" | null;
+            state: "syncing" | "ready" | "error" | "re-consent-required";
         }, string | undefined>;
         getItemHealthByUser: import("convex/server").FunctionReference<"query", "internal", {
             userId: string;
         }, {
-            plaidItemId: string;
-            itemId: string;
-            state: "syncing" | "ready" | "error" | "re-consent-required";
-            recommendedAction: "reconnect" | "reconnect_for_new_accounts" | "wait" | "contact_support" | null;
-            reasonCode: "healthy" | "syncing_initial" | "syncing_incremental" | "auth_required_login" | "auth_required_expiration" | "transient_circuit_open" | "transient_institution_down" | "transient_rate_limited" | "permanent_invalid_token" | "permanent_item_not_found" | "permanent_no_accounts" | "permanent_access_not_granted" | "permanent_products_not_supported" | "permanent_institution_unsupported" | "permanent_revoked" | "permanent_unknown" | "new_accounts_available";
-            isActive: boolean;
-            institutionId: string | null;
-            institutionName: string | null;
-            institutionLogoBase64: string | null;
-            institutionPrimaryColor: string | null;
-            lastSyncedAt: number | null;
-            lastWebhookAt: number | null;
-            errorCode: string | null;
-            errorMessage: string | null;
             circuitState: "closed" | "open" | "half_open";
             consecutiveFailures: number;
-            nextRetryAt: number | null;
+            errorCode: string | null;
+            errorMessage: string | null;
+            institutionId: string | null;
+            institutionLogoBase64: string | null;
+            institutionName: string | null;
+            institutionPrimaryColor: string | null;
+            isActive: boolean;
+            itemId: string;
+            lastSyncedAt: number | null;
+            lastWebhookAt: number | null;
             newAccountsAvailableAt: number | null;
+            nextRetryAt: number | null;
+            plaidItemId: string;
+            reasonCode: "healthy" | "syncing_initial" | "syncing_incremental" | "auth_required_login" | "auth_required_expiration" | "transient_circuit_open" | "transient_institution_down" | "transient_rate_limited" | "permanent_invalid_token" | "permanent_item_not_found" | "permanent_no_accounts" | "permanent_access_not_granted" | "permanent_products_not_supported" | "permanent_institution_unsupported" | "permanent_revoked" | "permanent_unknown" | "new_accounts_available";
+            recommendedAction: "reconnect" | "reconnect_for_new_accounts" | "wait" | "contact_support" | null;
+            state: "syncing" | "ready" | "error" | "re-consent-required";
+        }[], string | undefined>;
+        getItemsByUser: import("convex/server").FunctionReference<"query", "internal", {
+            userId: string;
+        }, {
+            _creationTime: number;
+            _id: string;
+            activatedAt?: number;
+            circuitState?: string;
+            consecutiveFailures?: number;
+            createdAt: number;
+            disconnectedAt?: number;
+            disconnectedReason?: string;
+            errorAt?: number;
+            errorCode?: string;
+            errorMessage?: string;
+            firstErrorAt?: number;
+            institutionId?: string;
+            institutionName?: string;
+            isActive?: boolean;
+            itemId: string;
+            lastDispatchedAt?: number;
+            lastFailureAt?: number;
+            lastSyncedAt?: number;
+            newAccountsAvailableAt?: number;
+            nextRetryAt?: number;
+            products: Array<string>;
+            reauthAt?: number;
+            reauthReason?: string;
+            status: string;
+            syncError?: string;
+            userId: string;
         }[], string | undefined>;
         getLiabilitiesByItem: import("convex/server").FunctionReference<"query", "internal", {
             plaidItemId: string;
@@ -832,9 +891,21 @@ export declare class Plaid {
             createdAt: number;
             date: string;
             datetime?: string;
+            enrichmentData?: {
+                counterpartyConfidence?: string;
+                counterpartyEntityId?: string;
+                counterpartyLogoUrl?: string;
+                counterpartyName?: string;
+                counterpartyPhoneNumber?: string;
+                counterpartyType?: string;
+                counterpartyWebsite?: string;
+                enrichedAt?: number;
+            };
             isoCurrencyCode: string;
+            merchantId?: string;
             merchantName?: string;
             name: string;
+            originalDescription?: string;
             pending: boolean;
             plaidItemId: string;
             transactionId: string;
@@ -854,14 +925,58 @@ export declare class Plaid {
             createdAt: number;
             date: string;
             datetime?: string;
+            enrichmentData?: {
+                counterpartyConfidence?: string;
+                counterpartyEntityId?: string;
+                counterpartyLogoUrl?: string;
+                counterpartyName?: string;
+                counterpartyPhoneNumber?: string;
+                counterpartyType?: string;
+                counterpartyWebsite?: string;
+                enrichedAt?: number;
+            };
             isoCurrencyCode: string;
+            merchantId?: string;
             merchantName?: string;
             name: string;
+            originalDescription?: string;
             pending: boolean;
             plaidItemId: string;
             transactionId: string;
             userId: string;
         }[], string | undefined>;
+        listErrorItemsInternal: import("convex/server").FunctionReference<"query", "internal", {
+            dispatchedBefore: number;
+            olderThanLastSyncedAt: number;
+        }, {
+            errorAt: number | null;
+            errorCode: string | null;
+            firstErrorAt: number | null;
+            institutionName: string | null;
+            plaidItemId: string;
+            userId: string;
+        }[], string | undefined>;
+        markFirstErrorAtInternal: import("convex/server").FunctionReference<"mutation", "internal", {
+            plaidItemId: string;
+        }, null, string | undefined>;
+        markItemErrorDispatchedInternal: import("convex/server").FunctionReference<"mutation", "internal", {
+            plaidItemId: string;
+        }, null, string | undefined>;
+        recordWebhookReceived: import("convex/server").FunctionReference<"mutation", "internal", {
+            bodyHash: string;
+            dedupeWindowMs?: number;
+            itemId: string;
+            receivedAt: number;
+            webhookCode: string;
+            webhookType: string;
+        }, {
+            duplicate: boolean;
+            duplicateOf?: string;
+            webhookLogId: string;
+        }, string | undefined>;
+        setNewAccountsAvailableInternal: import("convex/server").FunctionReference<"mutation", "internal", {
+            plaidItemId: string;
+        }, null, string | undefined>;
         setPlaidItemActive: import("convex/server").FunctionReference<"mutation", "internal", {
             isActive: boolean;
             itemId: string;
@@ -871,6 +986,13 @@ export declare class Plaid {
         }, {
             isActive: boolean;
         }, string | undefined>;
+        updateWebhookProcessingStatus: import("convex/server").FunctionReference<"mutation", "internal", {
+            errorMessage?: string;
+            processedAt?: number;
+            scheduledFunctionId?: string;
+            status: "received" | "processing" | "processed" | "duplicate" | "failed";
+            webhookLogId: string;
+        }, null, string | undefined>;
     };
 }
 /**
