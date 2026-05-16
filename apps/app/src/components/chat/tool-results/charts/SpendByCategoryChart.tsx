@@ -1,6 +1,7 @@
 "use client";
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import type { PieSectorDataItem } from "recharts";
 import { formatMoneyFromDollars, milliunitsToDollars } from "@/utils/money";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { useLiveTransactions } from "../shared/liveRowsHooks";
@@ -81,9 +82,10 @@ export function SpendByCategoryChart(props: ToolResultComponentProps<unknown, To
                                 innerRadius={40}
                                 outerRadius={70}
                                 paddingAngle={2}
-                                onClick={(entry: { category?: string }) => {
-                                    if (entry?.category) {
-                                        void hint.filterTransactionsByCategory(entry.category);
+                                onClick={(entry: PieSectorDataItem) => {
+                                    const category = (entry.payload as Partial<Bucket> | undefined)?.category;
+                                    if (category) {
+                                        void hint.filterTransactionsByCategory(category);
                                     }
                                 }}
                             >
