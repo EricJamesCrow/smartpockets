@@ -9,11 +9,11 @@ This file configures Claude Code behavior for SmartPockets.
 Follow the repository instructions in `AGENTS.md`. The most important rules:
 
 1. Before meaningful implementation work, find or create a Linear issue.
-2. Put the Linear issue ID in the branch name, PR title, and PR description.
-3. Use `Fixes <ISSUE-ID>` only when the PR fully completes the issue. Use `Refs <ISSUE-ID>` when partial, exploratory, documentation-only, or related.
-4. Post a Linear comment when starting work, when blocked, and when opening a PR.
+2. Put the Linear issue ID in the branch name. When a PR is explicitly requested/submitted, also put the issue ID in the PR title and PR description.
+3. Use `Fixes <ISSUE-ID>` only when an explicitly requested PR fully completes the issue. Use `Refs <ISSUE-ID>` when partial, exploratory, documentation-only, or related.
+4. Post a Linear comment when starting work, when blocked, and when explicitly opening a PR.
 5. Keep Linear state in sync with reality. The default path is `Fixes <ISSUE-ID>` in the PR body so the GitHub-Linear automation moves the issue to Done on merge — prefer that over manual updates. But when automation didn't fire (a `Refs` magic word was used, an issue bundled multiple PRs, the integration was offline, etc.) and the work is verifiably in `main`, it's fine — and expected — to manually move the issue to Done with a closing comment that cites the merged commit SHA + PR link. Don't mark Done speculatively ("should be done soon") or for partial work; only when the shipped state on `main` matches the issue's acceptance criteria.
-6. Do not merge PRs unless explicitly instructed.
+6. Do not submit, open, or merge PRs unless explicitly instructed. The default finish path is local verification plus local Linear-linked commits.
 7. If an issue blocks verification, merge, or deployment of another issue, add the Linear blocker relationship and comment on both issues with the evidence and PR links.
 8. When working a sub-issue, move its parent to In Progress if the parent is still To-do or Backlog, then comment with the active child issue.
 9. **After modifying any file in `packages/backend/convex/`** (schema, queries, mutations, actions, agent tools), push the updated functions to the dev deployment **before claiming the work is complete or asking the user to test it**. Either keep `bun dev:backend` running in a separate terminal, OR run `cd packages/backend && bunx convex dev --once` as a one-shot deploy. Without this step, the Vercel preview's Convex client (which points at `dev:canny-turtle-982`) will reference functions that don't exist in the deployed backend — surfacing as `Could not find public function for ...` errors at runtime even though the client bundle has the new references compiled in.
@@ -62,9 +62,8 @@ When finishing a session or completing significant work, review TODO.md to ensur
 - Read any file in the codebase
 - Run `bun dev`, `bun build`, `bun typecheck`, `bun lint`
 - Run `git status`, `git log`, `git diff`, `git branch`
-- Create/switch branches through Graphite when submitting work
+- Create/switch Linear-linked local branches
 - Stage and commit changes (with proper format)
-- Submit branches through Graphite (`gt submit`)
 - Run Convex dev commands
 
 ### Use Judgment
@@ -81,6 +80,7 @@ When finishing a session or completing significant work, review TODO.md to ensur
 
 - Delete database records
 - Changes affecting billing/payments
+- Submit branches through Graphite (`gt submit`) or open/update a PR
 - Actions that cannot be undone
 
 ## Git Workflow
@@ -128,11 +128,11 @@ Commit immediately after:
 
 ### Stacked PRs with Graphite
 
-Use Graphite (`gt`) for ALL branch and PR management on implementation tasks. Never use raw `git branch`/`git push` for feature work.
+Use Linear-linked branches for implementation tasks. Use Graphite (`gt`) for PR submission and stack management only when the user explicitly asks to submit/open a PR.
 
 Before creating a branch, confirm the relevant Linear issue ID. Use the Linear-generated branch name when available, or use `<issue-id>-short-description`.
 
-When given a task with multiple logical changes:
+When given a task with multiple logical changes, keep local commits atomic by default. If the user explicitly asks to submit/open PRs for the work:
 1. Break the work into independent, atomic changes that each pass CI on their own
 2. Create a Graphite stack where each PR builds on the previous one
 3. Each PR in the stack should be a single logical unit (one schema change, one component, one API route, etc.)
@@ -163,7 +163,7 @@ After opening or updating a PR, comment on the linked Linear issue with the Grap
 
 ### Preview Deployments
 
-Every Graphite PR should have a working Vercel preview for `apps/app` before handoff.
+Only submit/open Graphite PRs when the user explicitly asks for PR submission. Every submitted Graphite PR should have a working Vercel preview for `apps/app` before handoff.
 
 After `gt submit`, verify the PR checks and preview deployment:
 
@@ -190,7 +190,7 @@ For auth smoke tests, use the shared stable preview domains:
 - `preview.smartpockets.com` for `smartpockets-web`
 - `app.preview.smartpockets.com` for `smartpockets-app`
 
-At the end of an implementation, ask: "Do you want me to point the shared preview domains at this branch so you can manually test the changes?"
+After a PR/preview deployment exists, or when the user explicitly asks for preview-domain testing, ask: "Do you want me to point the shared preview domains at this branch so you can manually test the changes?"
 
 If the user says yes, inspect and report the current domain mappings first, then point only the shared preview domains at the selected branch/deployments. Prefer Vercel project domain `gitBranch` assignment; fall back to `vercel alias set <deployment-url> <domain> --scope crow-commerce`. Never change production domains or DNS records. After updating, verify project, branch/deployment, commit SHA, and the `preview.smartpockets.com` sign-in flow returning to `app.preview.smartpockets.com`.
 
@@ -265,7 +265,7 @@ Skip plan mode for:
 For tasks over 10 minutes:
 1. Break into smaller commits
 2. Commit working checkpoints
-3. Submit through Graphite when ready for review
+3. Stop after local verification and local commits unless the user explicitly asks for Graphite PR submission
 
 ### Code Style
 

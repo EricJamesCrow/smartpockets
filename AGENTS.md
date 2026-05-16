@@ -38,13 +38,13 @@ Created from AI coding session.
 
 The Linear issue ID must appear in:
 - Branch name: `<issue-id>-short-description` (for example, `crowdev-123-add-empty-state`)
-- PR title: `<ISSUE-ID> Short description`
-- PR body: use `Fixes <ISSUE-ID>` only when the PR fully completes the issue; use `Refs <ISSUE-ID>` when the PR is partial, exploratory, documentation-only, or has follow-up work.
+- When a PR is explicitly requested/submitted, PR title: `<ISSUE-ID> Short description`
+- When a PR is explicitly requested/submitted, PR body: use `Fixes <ISSUE-ID>` only when the PR fully completes the issue; use `Refs <ISSUE-ID>` when the PR is partial, exploratory, documentation-only, or has follow-up work.
 
 Post a Linear comment when:
 - Starting work: intended approach, key assumptions, and files likely to change.
 - Blocked: what is blocked, why, and what input or decision is needed.
-- Opening a PR: Graphite PR link, summary of changes, verification performed, known risks, and follow-up work.
+- Explicitly opening a PR: Graphite PR link, summary of changes, verification performed, known risks, and follow-up work.
 
 If an issue or PR reasonably blocks verification, merge, or deployment of another issue, update Linear before continuing: add the blocker relationship (`blocks` / `blocked by`) and comment on both issues with the evidence and the affected PR links. Do not leave blockers only in chat, PR comments, or local notes.
 
@@ -67,13 +67,19 @@ Do not create new Linear projects, labels, statuses, automations, or views witho
 When finishing any code-changing task, unless the user explicitly says not to:
 - Stage only the files changed for the task.
 - Commit with the Linear issue ID in the commit subject.
+- Run or report the appropriate local verification.
+- Stop before Graphite submission. Do not run `gt submit`, open a draft PR, push only to trigger Vercel, or post the PR handoff Linear comment unless the user explicitly asks to submit/open a PR.
+- If any step is blocked, do not silently stop; report the exact blocker and the command/output.
+
+When finishing local-only work, summarize the Linear issue used or created, branch name, local commit(s), files changed, verification performed, and remaining risks or follow-ups. Explicitly state `No PR submitted`.
+
+When the user explicitly asks to submit/open a PR, then:
 - Track the branch in Graphite if needed.
 - Submit a draft Graphite PR.
 - Update the PR title/body with the Linear issue, summary, verification, risks, and preview/check status.
+- Verify PR checks and preview status before handoff when possible.
 - Post the PR handoff comment on the Linear issue.
-- If any step is blocked, do not silently stop; report the exact blocker and the command/output.
-
-When finishing, summarize the Linear issue used or created, branch name, Graphite PR link, what changed, verification performed, and remaining risks or follow-ups.
+- Include the Graphite PR link and Vercel preview/deployment URL only after the PR actually exists.
 
 ## Investigation Discipline (Before Asking the User)
 
@@ -584,7 +590,7 @@ Do not present Graphite and GitHub links side by side. Graphite is the canonical
 
 ### Graphite PR Preview Verification
 
-Every Graphite branch/PR should have a working Vercel preview for `apps/app` before handoff.
+Only submit/open Graphite PRs when the user explicitly asks for PR submission. Every submitted Graphite PR should have a working Vercel preview for `apps/app` before handoff.
 
 After `gt submit`, verify checks:
 
@@ -616,7 +622,7 @@ For auth smoke tests, SmartPockets uses stable shared preview domains:
 | `preview.smartpockets.com` | `smartpockets-web` / `apps/web` |
 | `app.preview.smartpockets.com` | `smartpockets-app` / `apps/app` |
 
-At the end of an implementation, ask: "Do you want me to point the shared preview domains at this branch so you can manually test the changes?"
+After a PR/preview deployment exists, or when the user explicitly asks for preview-domain testing, ask: "Do you want me to point the shared preview domains at this branch so you can manually test the changes?"
 
 If the user says yes:
 - Identify the current implementation branch from `git branch --show-current`, Graphite metadata, or Vercel deployment metadata.
