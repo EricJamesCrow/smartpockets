@@ -4,6 +4,7 @@ import type { Id } from "../_generated/dataModel";
 import { internalAction } from "../_generated/server";
 import type { ActionCtx } from "../_generated/server";
 import { AGENT_DEFAULT_MODEL, getAnthropicModel } from "./config";
+import { logAgentRuntimeError } from "./logging";
 import { agentLimiter } from "./rateLimits";
 import { AGENT_TOOLS, isRegisteredToolName, isSideEffectfulTool, toolRequiresExplicitConfirmation } from "./registry";
 import { PROMPT_VERSION, renderSystemPrompt } from "./system";
@@ -335,11 +336,15 @@ function buildToolsForAgent({
     ctx,
     userId,
     threadId,
+    userMessageId,
+    modelId,
     latestUserText,
 }: {
     ctx: ActionCtx;
     userId: Id<"users">;
     threadId: Id<"agentThreads">;
+    userMessageId: Id<"agentMessages">;
+    modelId: string;
     latestUserText?: string;
 }) {
     const out: Record<string, unknown> = {};
@@ -396,7 +401,17 @@ function buildToolsForAgent({
                         };
                     }
                 } catch (err) {
-                    console.warn(`[agent.runtime] rate-limit check failed for ${toolName}:`, err);
+                    logAgentRuntimeError({
+                        event: "agent_tool_error",
+                        phase: "rate_limit",
+                        toolName,
+                        bucket: def.bucket,
+                        modelId,
+                        error: err,
+                        errorCode: "rate_limit_check_failed",
+                        retryable: true,
+                        correlationParts: [threadId, userMessageId],
+                    });
                     if (shouldFailClosedOnRateLimitError(def.bucket)) {
                         return {
                             ok: false as const,
@@ -454,7 +469,16 @@ function buildToolsForAgent({
                         },
                     };
                 } catch (err) {
-                    console.error(`[agent.runtime] tool ${toolName} failed:`, err);
+                    logAgentRuntimeError({
+                        event: "agent_tool_error",
+                        phase: "execute_tool",
+                        toolName,
+                        bucket: def.bucket,
+                        modelId,
+                        error: err,
+                        retryable: true,
+                        correlationParts: [threadId, userMessageId],
+                    });
                     return {
                         ok: false as const,
                         error: sanitizedToolError(err, { retryable: true }),
@@ -506,13 +530,15 @@ export const runAgentTurn = internalAction({
         // after the run completes. Pre-turn snapshot has exactly 1 message
         // (the user prompt just appended) on the first turn.
         const isFirstTurn = bootstrap.isFirstTurn;
+        const modelId = process.env.AGENT_MODEL_DEFAULT ?? AGENT_DEFAULT_MODEL;
         const tools = buildToolsForAgent({
             ctx,
             userId,
             threadId,
+            userMessageId,
+            modelId,
             latestUserText: latestUserMessage?.text,
         });
-        const modelId = process.env.AGENT_MODEL_DEFAULT ?? AGENT_DEFAULT_MODEL;
 
         // M12: deterministic tool-hint path. The last user message may carry a
         // `toolCallsJson` with `{ tool, args }`; surface it to the model as a
@@ -760,7 +786,14 @@ export const runAgentTurn = internalAction({
             if (cancelObserved || (err as { name?: string })?.name === "AbortError") {
                 // expected
             } else {
-                console.error("[agent.runtime] run failed:", err);
+                logAgentRuntimeError({
+                    event: "agent_runtime_error",
+                    phase: "stream",
+                    modelId,
+                    error: err,
+                    retryable: true,
+                    correlationParts: [threadId, userMessageId],
+                });
             }
         } finally {
             // CROWDEV-409: any streaming row still in flight here means the
@@ -773,14 +806,28 @@ export const runAgentTurn = internalAction({
                 try {
                     await flushStreamingText(true);
                 } catch (err) {
-                    console.warn("[agent.runtime] streaming flush failed:", err);
+                    logAgentRuntimeError({
+                        event: "agent_cleanup_error",
+                        phase: "streaming_flush",
+                        modelId,
+                        error: err,
+                        retryable: true,
+                        correlationParts: [threadId, userMessageId],
+                    });
                 }
                 try {
                     await ctx.runMutation(agent.threads.finalizeStrandedStreamingAssistantRow, {
                         messageId: streamingRowId,
                     });
                 } catch (err) {
-                    console.warn("[agent.runtime] finalize stranded streaming row failed:", err);
+                    logAgentRuntimeError({
+                        event: "agent_cleanup_error",
+                        phase: "finalize_stranded_streaming_row",
+                        modelId,
+                        error: err,
+                        retryable: true,
+                        correlationParts: [threadId, userMessageId],
+                    });
                 }
                 streamingRowId = null;
             }
@@ -796,17 +843,38 @@ export const runAgentTurn = internalAction({
             try {
                 await ctx.runMutation(agent.threads.finalizeUserTurnIfStranded, { threadId });
             } catch (err) {
-                console.warn("[agent.runtime] finalizeUserTurnIfStranded failed:", err);
+                logAgentRuntimeError({
+                    event: "agent_cleanup_error",
+                    phase: "finalize_user_turn",
+                    modelId,
+                    error: err,
+                    retryable: true,
+                    correlationParts: [threadId, userMessageId],
+                });
             }
             try {
                 await ctx.runMutation(agent.threads.finishActiveRun, { threadId, userMessageId });
             } catch (err) {
-                console.warn("[agent.runtime] finishActiveRun failed:", err);
+                logAgentRuntimeError({
+                    event: "agent_cleanup_error",
+                    phase: "finish_active_run",
+                    modelId,
+                    error: err,
+                    retryable: true,
+                    correlationParts: [threadId, userMessageId],
+                });
             }
             try {
                 await ctx.runAction(agent.compaction.maybeCompact, { threadId });
             } catch (err) {
-                console.warn("[agent.runtime] compaction skipped:", err);
+                logAgentRuntimeError({
+                    event: "agent_compaction_error",
+                    phase: "post_run_compaction",
+                    modelId,
+                    error: err,
+                    retryable: true,
+                    correlationParts: [threadId, userMessageId],
+                });
             }
             // CROWDEV-351: auto-title the thread after the first turn. Action
             // is best-effort and re-checks skip-if-set, so a no-op on aborts.
