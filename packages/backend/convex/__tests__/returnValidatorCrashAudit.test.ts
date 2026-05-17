@@ -112,6 +112,27 @@ async function seedPlaidTransaction(
   );
 }
 
+async function seedCreditCardForPlaidItem(
+  // biome-ignore lint/suspicious/noExplicitAny: convex-test ctx
+  t: any,
+  userId: any,
+  plaidItemId: string,
+) {
+  return await t.run(async (ctx: any) => {
+    return await ctx.db.insert("creditCards", {
+      userId,
+      plaidItemId,
+      accountId: `card_account_${plaidItemId}`,
+      accountName: "Test Credit Card",
+      displayName: "Test Credit Card",
+      isOverdue: false,
+      isLocked: false,
+      isAutoPay: false,
+      isActive: true,
+    });
+  });
+}
+
 describe("strict return-validator crash audit", () => {
   it("serializes Plaid component item rows before returning them to institution pages", async () => {
     const t = setup();
@@ -147,6 +168,71 @@ describe("strict return-validator crash audit", () => {
         userId: USER_B_IDENTITY.subject,
       }),
     ).rejects.toThrow(/Not authorized/);
+  });
+
+  it("rejects deleting another user's institution item", async () => {
+    const t = setup();
+    await seedUser(t, USER_A_IDENTITY.subject);
+    const userBId = await seedUser(t, USER_B_IDENTITY.subject);
+    const otherItemId = await seedPlaidItem(t, USER_B_IDENTITY.subject);
+    await seedCreditCardForPlaidItem(t, userBId, otherItemId);
+
+    await expect(
+      t.withIdentity(USER_A_IDENTITY).mutation(api.items.mutations.deletePlaidItem, {
+        plaidItemId: otherItemId,
+      }),
+    ).rejects.toThrow(/Plaid item not found/);
+
+    const remainingCards = await t.run(async (ctx: any) => {
+      return await ctx.db
+        .query("creditCards")
+        .withIndex("by_plaidItemId", (q: any) => q.eq("plaidItemId", otherItemId))
+        .collect();
+    });
+    const item = await t.query((components as any).plaid.public.getItem, {
+      plaidItemId: otherItemId,
+    });
+
+    expect(remainingCards).toHaveLength(1);
+    expect(item).toMatchObject({
+      userId: USER_B_IDENTITY.subject,
+      status: "active",
+    });
+  });
+
+  it("allows a viewer to delete their own institution item app data", async () => {
+    const t = setup();
+    const userAId = await seedUser(t, USER_A_IDENTITY.subject);
+    const ownItemId = await seedPlaidItem(t, USER_A_IDENTITY.subject);
+    await seedCreditCardForPlaidItem(t, userAId, ownItemId);
+
+    const result = await t
+      .withIdentity(USER_A_IDENTITY)
+      .mutation(api.items.mutations.deletePlaidItem, {
+        plaidItemId: ownItemId,
+      });
+
+    const remainingCards = await t.run(async (ctx: any) => {
+      return await ctx.db
+        .query("creditCards")
+        .withIndex("by_plaidItemId", (q: any) => q.eq("plaidItemId", ownItemId))
+        .collect();
+    });
+    const item = await t.query((components as any).plaid.public.getItem, {
+      plaidItemId: ownItemId,
+    });
+
+    expect(result).toEqual({
+      deleted: {
+        plaidItem: 1,
+        creditCards: 1,
+      },
+    });
+    expect(remainingCards).toHaveLength(0);
+    expect(item).toMatchObject({
+      userId: USER_A_IDENTITY.subject,
+      status: "deleting",
+    });
   });
 
   it("does not return accounts for another user's institution item", async () => {

@@ -20,8 +20,8 @@
  */
 
 import { v } from "convex/values";
-import { mutation } from "../_generated/server";
 import { components } from "../_generated/api";
+import { internalMutation, mutation } from "../functions";
 
 /**
  * Delete a plaidItem and all associated app-level data
@@ -43,12 +43,14 @@ export const deletePlaidItem = mutation({
     }),
   }),
   handler: async (ctx, args) => {
+    const viewer = ctx.viewerX();
+
     // Get the item from component to verify it exists and get userId
     const item = await ctx.runQuery(components.plaid.public.getItem, {
       plaidItemId: args.plaidItemId,
     });
 
-    if (!item) {
+    if (!item || item.userId !== viewer.externalId) {
       console.warn("[items.deletePlaidItem] Plaid item not found", {
         plaidItemId: args.plaidItemId,
       });
@@ -56,13 +58,12 @@ export const deletePlaidItem = mutation({
     }
 
     // Step 1: Delete app-specific data (creditCards table)
-    const creditCards = await ctx.db
-      .query("creditCards")
-      .withIndex("by_plaidItemId", (q) => q.eq("plaidItemId", args.plaidItemId))
-      .collect();
+    const creditCards = await ctx.table("creditCards", "by_plaidItemId", (q) =>
+      q.eq("plaidItemId", args.plaidItemId)
+    );
 
     for (const card of creditCards) {
-      await ctx.db.delete(card._id);
+      await card.delete();
     }
 
     console.warn("[items.deletePlaidItem] Deleted app-level credit cards", {
@@ -100,18 +101,17 @@ export const deletePlaidItem = mutation({
  *
  * @param plaidItemId - Component plaidItem ID (string)
  */
-export const deleteAppDataForPlaidItem = mutation({
+export const deleteAppDataForPlaidItem = internalMutation({
   args: { plaidItemId: v.string() },
   returns: v.object({ deletedCreditCards: v.number() }),
   handler: async (ctx, args) => {
     // Delete creditCards
-    const creditCards = await ctx.db
-      .query("creditCards")
-      .withIndex("by_plaidItemId", (q) => q.eq("plaidItemId", args.plaidItemId))
-      .collect();
+    const creditCards = await ctx.table("creditCards", "by_plaidItemId", (q) =>
+      q.eq("plaidItemId", args.plaidItemId)
+    );
 
     for (const card of creditCards) {
-      await ctx.db.delete(card._id);
+      await card.delete();
     }
 
     console.warn("[items.deleteAppDataForPlaidItem] Deleted app-level credit cards", {
