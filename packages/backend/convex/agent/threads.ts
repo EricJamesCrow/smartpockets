@@ -1,7 +1,122 @@
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "../functions";
+import type { Id } from "../_generated/dataModel";
+import { agentLimiter } from "./rateLimits";
 import { PROMPT_VERSION } from "./system";
+
+const DEFAULT_ACTIVE_RUN_TTL_MS = 10 * 60 * 1000;
+const ACTIVE_RUN_REAP_BATCH_SIZE = 100;
+const DEFAULT_CHAT_TURN_RETRY_AFTER_SECONDS = 60;
+
+function activeRunTtlMs(): number {
+  const configured = Number(process.env.AGENT_ACTIVE_RUN_TTL_MS ?? DEFAULT_ACTIVE_RUN_TTL_MS);
+  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_ACTIVE_RUN_TTL_MS;
+}
+
+function retryAfterSeconds(retryAfterMs: number | undefined): number {
+  return Math.max(1, Math.ceil((retryAfterMs ?? DEFAULT_CHAT_TURN_RETRY_AFTER_SECONDS * 1000) / 1000));
+}
+
+type ThreadWithActiveRun = {
+  activeRunUserMessageId?: Id<"agentMessages">;
+  activeRunStartedAt?: number;
+  activeRunExpiresAt?: number;
+};
+
+function activeRunExpiresAt(thread: ThreadWithActiveRun): number | undefined {
+  if (typeof thread.activeRunExpiresAt === "number") return thread.activeRunExpiresAt;
+  if (typeof thread.activeRunStartedAt === "number") return thread.activeRunStartedAt + activeRunTtlMs();
+  return undefined;
+}
+
+async function applyChatTurnRateLimit(ctx: any, userId: Id<"users">): Promise<void> {
+  try {
+    const rl = await (agentLimiter as any).limit(ctx as unknown, "chat_turn", { key: userId });
+    if (!rl.ok) {
+      throw new Error(`rate_limited:${retryAfterSeconds(rl.retryAfter)}`);
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("rate_limited:")) throw err;
+    throw new Error(`rate_limited:${DEFAULT_CHAT_TURN_RETRY_AFTER_SECONDS}`);
+  }
+}
+
+async function clearExpiredActiveRun(ctx: any, thread: ThreadWithActiveRun & { _id: Id<"agentThreads"> }, now: number): Promise<boolean> {
+  if (!thread.activeRunUserMessageId) return false;
+  const expiresAt = activeRunExpiresAt(thread);
+  if (typeof expiresAt === "number" && expiresAt > now) {
+    throw new Error("run_in_progress");
+  }
+  const writable = await ctx.table("agentThreads").getX(thread._id);
+  await writable.patch({
+    activeRunUserMessageId: undefined,
+    activeRunStartedAt: undefined,
+    activeRunExpiresAt: undefined,
+  });
+  return true;
+}
+
+async function startUserTurn(
+  ctx: any,
+  args: {
+    userId: Id<"users">;
+    threadId?: Id<"agentThreads">;
+    prompt: string;
+    toolHint?: string;
+  },
+): Promise<{ threadId: Id<"agentThreads">; messageId: Id<"agentMessages"> }> {
+  const now = Date.now();
+  const expiresAt = now + activeRunTtlMs();
+  let targetThreadId = args.threadId;
+
+  if (targetThreadId) {
+    const thread = await ctx.table("agentThreads").getX(targetThreadId);
+    if (thread.userId !== args.userId) throw new Error("Not authorized");
+    await clearExpiredActiveRun(ctx, thread, now);
+  }
+
+  await applyChatTurnRateLimit(ctx, args.userId);
+
+  if (!targetThreadId) {
+    targetThreadId = await ctx.table("agentThreads").insert({
+      userId: args.userId,
+      title: undefined,
+      isArchived: false,
+      lastTurnAt: now,
+      promptVersion: PROMPT_VERSION,
+      summaryText: undefined,
+      summaryUpToMessageId: undefined,
+      componentThreadId: `ct_${Math.random().toString(36).slice(2, 14)}`,
+      readCallCount: 0,
+      cancelledAtTurn: undefined,
+      activeRunUserMessageId: undefined,
+      activeRunStartedAt: undefined,
+      activeRunExpiresAt: undefined,
+    });
+  }
+  const finalThreadId = targetThreadId as Id<"agentThreads">;
+
+  const messageId = await ctx.table("agentMessages").insert({
+    agentThreadId: finalThreadId,
+    role: "user",
+    text: args.prompt,
+    toolCallsJson: args.toolHint ? JSON.stringify({ hint: args.toolHint }) : undefined,
+    createdAt: now,
+    isStreaming: true,
+  });
+
+  const thread = await ctx.table("agentThreads").getX(finalThreadId);
+  await thread.patch({
+    lastTurnAt: now,
+    cancelledAtTurn: undefined,
+    activeRunUserMessageId: messageId,
+    activeRunStartedAt: now,
+    activeRunExpiresAt: expiresAt,
+  });
+
+  return { threadId: finalThreadId, messageId };
+}
 
 // Public query consumed by W1 for the reactive message stream.
 export const listMessages = query({
@@ -15,7 +130,41 @@ export const listMessages = query({
   },
 });
 
+export const getRunState = query({
+  args: { threadId: v.id("agentThreads") },
+  returns: v.object({
+    activeRunUserMessageId: v.optional(v.id("agentMessages")),
+    activeRunStartedAt: v.optional(v.number()),
+    activeRunExpiresAt: v.optional(v.number()),
+  }),
+  handler: async (ctx, { threadId }) => {
+    const viewer = ctx.viewerX();
+    const thread = await ctx.table("agentThreads").getX(threadId);
+    if (thread.userId !== viewer._id) throw new Error("Not authorized");
+    return {
+      activeRunUserMessageId: thread.activeRunUserMessageId,
+      activeRunStartedAt: thread.activeRunStartedAt,
+      activeRunExpiresAt: thread.activeRunExpiresAt,
+    };
+  },
+});
+
 // Internal: called by POST /api/agent/send after Clerk identity verification.
+export const startUserTurnInternal = internalMutation({
+  args: {
+    userId: v.id("users"),
+    threadId: v.optional(v.id("agentThreads")),
+    prompt: v.string(),
+    toolHint: v.optional(v.string()),
+  },
+  returns: v.object({
+    threadId: v.id("agentThreads"),
+    messageId: v.id("agentMessages"),
+  }),
+  handler: async (ctx, args) => startUserTurn(ctx, args),
+});
+
+// Backward-compatible internal alias for older callers/tests.
 export const appendUserTurn = internalMutation({
   args: {
     userId: v.id("users"),
@@ -27,43 +176,7 @@ export const appendUserTurn = internalMutation({
     threadId: v.id("agentThreads"),
     messageId: v.id("agentMessages"),
   }),
-  handler: async (ctx, { userId, threadId, prompt, toolHint }) => {
-    const now = Date.now();
-    let targetThreadId = threadId;
-
-    if (!targetThreadId) {
-      targetThreadId = await ctx.table("agentThreads").insert({
-        userId,
-        title: undefined,
-        isArchived: false,
-        lastTurnAt: now,
-        promptVersion: PROMPT_VERSION,
-        summaryText: undefined,
-        summaryUpToMessageId: undefined,
-        componentThreadId: `ct_${Math.random().toString(36).slice(2, 14)}`,
-        readCallCount: 0,
-        cancelledAtTurn: undefined,
-      });
-    } else {
-      const thread = await ctx.table("agentThreads").getX(targetThreadId);
-      if (thread.userId !== userId) throw new Error("Not authorized");
-      // CROWDEV-342: clear the cancellation flag at the start of each new
-      // turn so a stale flag from a prior aborted turn doesn't pre-cancel
-      // this one.
-      await thread.patch({ lastTurnAt: now, cancelledAtTurn: undefined });
-    }
-
-    const messageId = await ctx.table("agentMessages").insert({
-      agentThreadId: targetThreadId,
-      role: "user",
-      text: prompt,
-      toolCallsJson: toolHint ? JSON.stringify({ hint: toolHint }) : undefined,
-      createdAt: now,
-      isStreaming: true,
-    });
-
-    return { threadId: targetThreadId, messageId };
-  },
+  handler: async (ctx, args) => startUserTurn(ctx, args),
 });
 
 /**
@@ -114,6 +227,7 @@ export const editAndResendUserTurn = mutation({
 
     const thread = await ctx.table("agentThreads").getX(target.agentThreadId);
     if (thread.userId !== viewer._id) throw new Error("Not authorized");
+    await clearExpiredActiveRun(ctx, thread, Date.now());
 
     const budget = await ctx.runQuery(internal.agent.budgets.checkHeadroom, {
       userId: viewer._id,
@@ -122,6 +236,7 @@ export const editAndResendUserTurn = mutation({
     if (!budget.ok) {
       throw new Error(`budget_exhausted:${budget.reason ?? "unknown"}`);
     }
+    await applyChatTurnRateLimit(ctx, viewer._id);
 
     // Truncate every message strictly after the target. Range query on
     // `by_thread_createdAt` gives us only the rows we need, and matches the
@@ -146,7 +261,13 @@ export const editAndResendUserTurn = mutation({
     });
 
     const now = Date.now();
-    await thread.patch({ lastTurnAt: now, cancelledAtTurn: undefined });
+    await thread.patch({
+      lastTurnAt: now,
+      cancelledAtTurn: undefined,
+      activeRunUserMessageId: messageId,
+      activeRunStartedAt: now,
+      activeRunExpiresAt: now + activeRunTtlMs(),
+    });
 
     // CROWDEV-343: capture schedule timestamp BEFORE `runAfter` so the
     // runtime's cancel-flag comparison covers any Stop click that lands
@@ -550,6 +671,49 @@ export const getCancelFlag = internalQuery({
   },
 });
 
+export const finishActiveRun = internalMutation({
+  args: {
+    threadId: v.id("agentThreads"),
+    userMessageId: v.id("agentMessages"),
+  },
+  returns: v.null(),
+  handler: async (ctx, { threadId, userMessageId }) => {
+    const thread = await ctx.table("agentThreads").get(threadId);
+    if (!thread) return null;
+    if (thread.activeRunUserMessageId !== userMessageId) return null;
+    const writable = await ctx.table("agentThreads").getX(threadId);
+    await writable.patch({
+      activeRunUserMessageId: undefined,
+      activeRunStartedAt: undefined,
+      activeRunExpiresAt: undefined,
+    });
+    return null;
+  },
+});
+
+export const reapExpiredActiveRunsInternal = internalMutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    const now = Date.now();
+    const expired = await ctx
+      .table("agentThreads", "by_activeRunExpiresAt", (q) => q.lt("activeRunExpiresAt", now))
+      .take(ACTIVE_RUN_REAP_BATCH_SIZE);
+    let count = 0;
+    for (const thread of expired) {
+      if (!thread.activeRunUserMessageId) continue;
+      const writable = await ctx.table("agentThreads").getX(thread._id);
+      await writable.patch({
+        activeRunUserMessageId: undefined,
+        activeRunStartedAt: undefined,
+        activeRunExpiresAt: undefined,
+      });
+      count += 1;
+    }
+    return count;
+  },
+});
+
 /**
  * CROWDEV-367: defensive cleanup called from `runAgentTurn`'s `finally`.
  *
@@ -675,6 +839,9 @@ export const createTestThread = mutation({
       componentThreadId: `ct_test_${Math.random().toString(36).slice(2, 14)}`,
       readCallCount: 0,
       cancelledAtTurn: undefined,
+      activeRunUserMessageId: undefined,
+      activeRunStartedAt: undefined,
+      activeRunExpiresAt: undefined,
     });
   },
 });

@@ -795,6 +795,11 @@ export const runAgentTurn = internalAction({
                 console.warn("[agent.runtime] finalizeUserTurnIfStranded failed:", err);
             }
             try {
+                await ctx.runMutation(agent.threads.finishActiveRun, { threadId, userMessageId });
+            } catch (err) {
+                console.warn("[agent.runtime] finishActiveRun failed:", err);
+            }
+            try {
                 await ctx.runAction(agent.compaction.maybeCompact, { threadId });
             } catch (err) {
                 console.warn("[agent.runtime] compaction skipped:", err);

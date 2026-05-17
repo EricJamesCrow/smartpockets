@@ -57,6 +57,7 @@ function translateError(err: unknown): AgentError | null {
   if (data?.kind === "first_turn_guard") return { kind: "first_turn_guard" };
   if (data?.kind === "proposal_timed_out") return { kind: "proposal_timed_out" };
   if (data?.kind === "proposal_invalid_state") return { kind: "proposal_invalid_state" };
+  if (data?.kind === "run_in_progress") return { kind: "run_in_progress" };
   return null;
 }
 
@@ -134,6 +135,11 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     api.agent.threads.listMessages,
     threadId ? { threadId } : "skip",
   ) as AgentMessage[] | undefined;
+  const runState = useQuery(
+    api.agent.threads.getRunState,
+    threadId ? { threadId } : "skip",
+  ) as { activeRunUserMessageId?: Id<"agentMessages"> } | undefined;
+  const hasActiveRun = Boolean(runState?.activeRunUserMessageId);
 
   // Streaming detection. The user-turn marker is inserted with
   // `isStreaming: true`, and the run is "in flight" until either an assistant
@@ -213,7 +219,7 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     return !messages.some((m) => m.role === "user" && m.text?.trim() === trimmed);
   }, [pendingPrompt, messages]);
 
-  const showAssistantTypingIndicator = pendingPromptInFlight || isStreaming;
+  const showAssistantTypingIndicator = pendingPromptInFlight || isStreaming || hasActiveRun;
 
   // Stable React key for the synthesized bubble across an indicator session.
   // The synthesized bubble's key must NOT change between renders of the same
@@ -246,6 +252,7 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     switch (typed.kind) {
       case "rate_limited":
       case "budget_exhausted":
+      case "run_in_progress":
       case "llm_down":
         setBanner(typed);
         return true;
@@ -263,6 +270,10 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
   const handleSend = async (prompt: string) => {
     const trimmed = prompt.trim();
     if (!trimmed) return;
+    if (isLoading || isRetrying || pendingPrompt || hasActiveRun) {
+      setBanner({ kind: "run_in_progress" });
+      return;
+    }
     setIsLoading(true);
     setPendingPrompt(trimmed);
     setBanner(null);
@@ -286,6 +297,10 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
 
   const handleRetryFailedSend = useCallback(async () => {
     if (!lastFailedMessage || isRetrying) return;
+    if (isLoading || pendingPrompt || hasActiveRun) {
+      setBanner({ kind: "run_in_progress" });
+      return;
+    }
     setIsRetrying(true);
     setPendingPrompt(lastFailedMessage);
     setBanner(null);
@@ -306,7 +321,7 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     } finally {
       setIsRetrying(false);
     }
-  }, [lastFailedMessage, isRetrying, sendMessage]);
+  }, [lastFailedMessage, isRetrying, isLoading, pendingPrompt, hasActiveRun, sendMessage]);
 
   const handleMessagesLoaded = useCallback(() => {
     setPendingPrompt(null);
@@ -338,7 +353,8 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
         onSend={handleSend}
         onStop={handleStop}
         isLoading={isLoading || isRetrying}
-        isStreaming={isStreaming}
+        isStreaming={isStreaming || hasActiveRun}
+        submitDisabled={Boolean(pendingPrompt) || hasActiveRun}
       />
       {reconsent && (
         <ReconsentModal

@@ -6,6 +6,7 @@ import { AlertCircle, Clock, XClose, Zap } from "@untitledui/icons";
 export type ChatBannerState =
   | { kind: "rate_limited"; retryAfterSeconds: number }
   | { kind: "budget_exhausted"; reason?: string }
+  | { kind: "run_in_progress" }
   | { kind: "llm_down" };
 
 interface ChatBannerProps {
@@ -27,6 +28,12 @@ export function ChatBanner({ state, onDismiss }: ChatBannerProps) {
           icon: <AlertCircle className="size-4" />,
           text: state.reason ?? "Monthly budget reached.",
           link: { href: "/settings/billing", label: "Upgrade in Settings" },
+        };
+      case "run_in_progress":
+        return {
+          icon: <Clock className="size-4" />,
+          text: "Assistant is still responding.",
+          link: null,
         };
       case "llm_down":
         return {

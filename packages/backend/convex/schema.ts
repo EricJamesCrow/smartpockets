@@ -365,11 +365,18 @@ const schema = defineEntSchema(
             // start of each new user turn (`appendUserTurn`). Optional ⇒
             // existing rows unaffected (migration-safe).
             cancelledAtTurn: v.optional(v.number()),
+            // CROWDEV-436: authoritative single-flight marker for an active
+            // model run in this thread. Set atomically with user-turn insert,
+            // cleared by runtime finalization or stale-run reaping.
+            activeRunUserMessageId: v.optional(v.id("agentMessages")),
+            activeRunStartedAt: v.optional(v.number()),
+            activeRunExpiresAt: v.optional(v.number()),
         })
             .edge("user")
             .edges("agentMessages", { ref: true })
             .edges("agentProposals", { ref: true })
             .index("by_user_lastTurnAt", ["userId", "lastTurnAt"])
+            .index("by_activeRunExpiresAt", ["activeRunExpiresAt"])
             .index("by_componentThreadId", ["componentThreadId"]),
 
         // === AGENT MESSAGES (W2) ===
