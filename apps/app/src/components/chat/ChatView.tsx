@@ -62,6 +62,15 @@ function translateError(err: unknown): AgentError | null {
   return null;
 }
 
+function shouldOfferRetryForTypedError(err: unknown): boolean {
+  const typed = translateError(err);
+  return (
+    typed?.kind === "rate_limited" ||
+    typed?.kind === "run_in_progress" ||
+    typed?.kind === "llm_down"
+  );
+}
+
 /**
  * Build a synthesized user-role row that satisfies `Doc<"agentMessages">`'s
  * shape closely enough for `MessageBubble` to render it. The cast is local —
@@ -317,12 +326,14 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
     try {
       await sendMessage({ text: trimmed });
     } catch (err) {
+      const shouldOfferRetry = shouldOfferRetryForTypedError(err);
       const handled = routeError(err);
       setPendingPrompt(null);
-      if (!handled) {
+      if (!handled || shouldOfferRetry) {
         // HTTP-level / transport failure: store the prompt so the user can
-        // re-send it via the inline chip without retyping. Typed errors
-        // already have their own surfaces and don't need this affordance.
+        // re-send it via the inline chip without retyping. Retryable typed
+        // errors (rate limit, in-progress race, provider outage) keep the
+        // same affordance even though they also surface through the banner.
         setLastFailedMessage(trimmed);
       }
     } finally {
@@ -345,11 +356,12 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
       // catch up via the user-row landing).
       setLastFailedMessage(null);
     } catch (err) {
+      const shouldOfferRetry = shouldOfferRetryForTypedError(err);
       const handled = routeError(err);
       setPendingPrompt(null);
-      if (handled) {
-        // Typed error took over (e.g. rate-limited banner). Clear the chip so
-        // we don't double-surface the failure.
+      if (handled && !shouldOfferRetry) {
+        // Non-retryable typed error took over (e.g. budget exhausted). Clear
+        // the chip so we don't double-surface the failure.
         setLastFailedMessage(null);
       }
       // If unhandled, keep `lastFailedMessage` so the chip stays mounted.

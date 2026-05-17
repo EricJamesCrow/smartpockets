@@ -70,6 +70,16 @@ async function seedProposal(
 }
 
 describe("agent index hygiene (CROWDEV-440/CROWDEV-441)", () => {
+    it("declares indexes used by bounded chat follow-up reads", () => {
+        const schemaSource = readFileSync(resolve(__dirname, "../schema.ts"), "utf8");
+        const threadsSource = readFileSync(resolve(__dirname, "../agent/threads.ts"), "utf8");
+
+        expect(schemaSource).toContain('.index("by_user_archived_lastTurnAt", ["userId", "isArchived", "lastTurnAt"])');
+        expect(schemaSource).toContain('.index("by_thread_role_createdAt", ["agentThreadId", "role", "createdAt"])');
+        expect(threadsSource).toContain('table("agentThreads", "by_user_archived_lastTurnAt"');
+        expect(threadsSource).toContain('table("agentMessages", "by_thread_role_createdAt"');
+    });
+
     it("declares and uses promoRates.by_user_active for active promo reads", () => {
         const schemaSource = readFileSync(resolve(__dirname, "../schema.ts"), "utf8");
         const contextSource = readFileSync(resolve(__dirname, "../agent/context.ts"), "utf8");

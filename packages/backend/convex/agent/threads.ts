@@ -9,6 +9,7 @@ import { internalMutation, internalQuery, mutation, query } from "../functions";
 import type { Id } from "../_generated/dataModel";
 import { agentLimiter } from "./rateLimits";
 import { PROMPT_VERSION } from "./system";
+import { logAgentRuntimeError } from "./logging";
 
 const DEFAULT_ACTIVE_RUN_TTL_MS = 10 * 60 * 1000;
 const ACTIVE_RUN_REAP_BATCH_SIZE = 100;
@@ -19,6 +20,8 @@ const MESSAGE_PAGE_MAX_BYTES_READ = 256_000;
 const LATEST_MESSAGE_HEAD_LIMIT = 50;
 const MODEL_HISTORY_SCAN_LIMIT = 200;
 const MODEL_HISTORY_MESSAGE_LIMIT = 80;
+const COMPACTION_MESSAGE_SCAN_LIMIT = 200;
+const ABORT_RECENT_MESSAGE_LIMIT = 32;
 
 const agentMessageDtoValidator = v.object({
   _id: v.id("agentMessages"),
@@ -85,6 +88,15 @@ async function applyChatTurnRateLimit(ctx: any, userId: Id<"users">): Promise<vo
     }
   } catch (err) {
     if (err instanceof Error && err.message.startsWith("rate_limited:")) throw err;
+    logAgentRuntimeError({
+      event: "agent_runtime_error",
+      phase: "chat_turn_rate_limit",
+      bucket: "chat_turn",
+      error: err,
+      errorCode: "chat_turn_rate_limit_unavailable",
+      retryable: true,
+      correlationParts: [userId],
+    });
     throw new Error(`rate_limited:${DEFAULT_CHAT_TURN_RETRY_AFTER_SECONDS}`);
   }
 }
@@ -349,14 +361,20 @@ export const editAndResendUserTurn = mutation({
     }
     await applyChatTurnRateLimit(ctx, viewer._id);
 
-    // Truncate every message strictly after the target. Range query on
-    // `by_thread_createdAt` gives us only the rows we need, and matches the
-    // sort order the chat UI renders in. Matching `createdAt > target` (not
-    // `>=`) preserves the target row itself — we patch it below.
-    const downstream = await ctx
+    // Truncate every message strictly after the target. `createdAt` is only
+    // millisecond precision, so pair it with `_creationTime` for same-tick
+    // assistant/tool rows that were inserted immediately after the user row.
+    const downstreamAfterTick = await ctx
       .table("agentMessages", "by_thread_createdAt", (q) =>
         q.eq("agentThreadId", thread._id).gt("createdAt", target.createdAt),
       );
+    const downstreamSameTick = await ctx.table("agentMessages", "by_thread_createdAt", (q) =>
+      q.eq("agentThreadId", thread._id).eq("createdAt", target.createdAt),
+    );
+    const downstream = [
+      ...downstreamAfterTick,
+      ...downstreamSameTick.filter((msg) => msg._creationTime > target._creationTime),
+    ];
     for (const msg of downstream) {
       const writable = await ctx.table("agentMessages").getX(msg._id);
       await writable.delete();
@@ -695,7 +713,8 @@ export const getForCompaction = internalQuery({
           .table("agentMessages", "by_thread_createdAt", (q) =>
             q.eq("agentThreadId", threadId).gt("createdAt", summaryMarker.createdAt),
           )
-          .order("asc");
+          .order("asc")
+          .take(COMPACTION_MESSAGE_SCAN_LIMIT);
         return {
           summaryText: thread.summaryText,
           messages: tail,
@@ -705,7 +724,8 @@ export const getForCompaction = internalQuery({
 
     const messages = await ctx
       .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
-      .order("asc");
+      .order("asc")
+      .take(COMPACTION_MESSAGE_SCAN_LIMIT);
     return { messages };
   },
 });
@@ -739,11 +759,12 @@ export const listForUser = query({
     const viewer = ctx.viewerX();
     const cap = Math.min(limit ?? 50, 100);
     const rows = await ctx
-      .table("agentThreads", "by_user_lastTurnAt", (q) => q.eq("userId", viewer._id))
-      .order("desc");
+      .table("agentThreads", "by_user_archived_lastTurnAt", (q) =>
+        q.eq("userId", viewer._id).eq("isArchived", false),
+      )
+      .order("desc")
+      .take(cap);
     return rows
-      .filter((t) => !t.isArchived)
-      .slice(0, cap)
       .map((t) => ({
         threadId: t._id,
         title: t.title,
@@ -818,12 +839,22 @@ export const abortRun = mutation({
     const thread = await ctx.table("agentThreads").getX(threadId);
     if (thread.userId !== viewer._id) throw new Error("Not authorized");
 
-    const messages = await thread.edge("agentMessages").order("asc");
+    const recentMessages = await ctx
+      .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
+      .order("desc")
+      .take(ABORT_RECENT_MESSAGE_LIMIT);
 
     let flippedCount = 0;
-    for (const msg of messages) {
-      if (msg.role === "user" && msg.isStreaming === true) {
-        const writable = await ctx.table("agentMessages").getX(msg._id);
+    const candidateIds = new Set<Id<"agentMessages">>();
+    if (thread.activeRunUserMessageId) candidateIds.add(thread.activeRunUserMessageId);
+    for (const msg of recentMessages) {
+      if (msg.role === "user" && msg.isStreaming === true) candidateIds.add(msg._id);
+    }
+
+    for (const messageId of candidateIds) {
+      const msg = await ctx.table("agentMessages").get(messageId);
+      if (msg?.agentThreadId === threadId && msg.role === "user" && msg.isStreaming === true) {
+        const writable = await ctx.table("agentMessages").getX(messageId);
         await writable.patch({ isStreaming: false });
         flippedCount += 1;
       }
@@ -836,7 +867,7 @@ export const abortRun = mutation({
     // call. Read by `getCancelFlag`; cleared by `appendUserTurn`.
     await thread.patch({ cancelledAtTurn: Date.now() });
 
-    const lastMessage = messages[messages.length - 1];
+    const lastMessage = recentMessages[0];
     const lastIsStopTombstone =
       lastMessage?.role === "system" &&
       typeof lastMessage.text === "string" &&
@@ -954,29 +985,35 @@ export const finalizeUserTurnIfStranded = internalMutation({
   handler: async (ctx, { threadId }) => {
     const thread = await ctx.table("agentThreads").get(threadId);
     if (!thread) return null;
-    const messages = await thread.edge("agentMessages").order("asc");
-    if (messages.length === 0) return null;
-
-    // Find the most-recent user row.
-    let lastUser:
-      | { _id: import("../_generated/dataModel").Id<"agentMessages">; _creationTime: number; isStreaming?: boolean }
-      | undefined;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const m = messages[i];
-      if (m && m.role === "user") {
-        lastUser = m as typeof lastUser;
-        break;
-      }
-    }
+    const [lastUser] = await ctx
+      .table("agentMessages", "by_thread_role_createdAt", (q) =>
+        q.eq("agentThreadId", threadId).eq("role", "user"),
+      )
+      .order("desc")
+      .take(1);
     if (!lastUser) return null;
     if (lastUser.isStreaming !== true) return null;
 
     // Any assistant row created strictly after the user row means a reply
     // landed and the run completed; don't touch the flag in that case.
-    const userCreationTime = lastUser._creationTime;
-    const hasAssistantAfter = messages.some(
-      (m) => m.role === "assistant" && (m._creationTime ?? 0) > userCreationTime,
-    );
+    const laterAssistant = await ctx
+      .table("agentMessages", "by_thread_role_createdAt", (q) =>
+        q
+          .eq("agentThreadId", threadId)
+          .eq("role", "assistant")
+          .gt("createdAt", lastUser.createdAt),
+      )
+      .take(1);
+    const sameTickMessages = await ctx
+      .table("agentMessages", "by_thread_createdAt", (q) =>
+        q.eq("agentThreadId", threadId).eq("createdAt", lastUser.createdAt),
+      )
+      .take(ABORT_RECENT_MESSAGE_LIMIT);
+    const hasAssistantAfter =
+      laterAssistant.length > 0 ||
+      sameTickMessages.some(
+        (m) => m.role === "assistant" && (m._creationTime ?? 0) > lastUser._creationTime,
+      );
     if (hasAssistantAfter) return null;
 
     const writable = await ctx.table("agentMessages").getX(lastUser._id);
