@@ -697,6 +697,8 @@ Generated Vercel preview URLs are for build/check verification. They are not Cle
 
 ### Shared Preview Domain Manual Testing
 
+Manual preview testing must use the shared preview domains below. Do not hand off branch-specific aliases such as `agentic-chat.preview.smartpockets.com` for app auth testing; point the branch's `smartpockets-web` deployment at `preview.smartpockets.com` and `smartpockets-app` deployment at `app.preview.smartpockets.com` first, or Clerk/auth redirects can bounce the user back to the wrong host.
+
 For auth smoke tests, SmartPockets uses stable shared preview domains:
 
 | Domain | Project |
