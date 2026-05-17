@@ -524,17 +524,27 @@ http.route({
       );
     } catch (error) {
       console.error("[Webhook] Processing error:", error instanceof Error ? error.name : "unknown");
-      await updatePlaidWebhookLog(ctx, {
-        webhookLogId,
-        status: "failed",
-        errorMessage: "processing_failed",
-        scheduledFunctionIds,
-      });
+      try {
+        await updatePlaidWebhookLog(ctx, {
+          webhookLogId,
+          status: "failed",
+          errorMessage: "processing_failed",
+          scheduledFunctionIds,
+        });
+      } catch (logError) {
+        console.error(
+          "[Webhook] Failed to mark Plaid webhook processing failed:",
+          logError instanceof Error ? logError.name : "unknown",
+        );
+      }
 
-      // Still return 200 to prevent Plaid from retrying
       return new Response(
-        JSON.stringify({ received: true, error: "Processing failed" }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          received: false,
+          error: "processing_failed",
+          retryable: true,
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
   }),
