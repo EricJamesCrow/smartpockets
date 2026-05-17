@@ -299,4 +299,30 @@ describe("loadForStream (CROWDEV-355)", () => {
             { role: "user", content: "tell me a joke" },
         ]);
     });
+
+    it("caps model-eligible history at the newest 80 rows", async () => {
+        const t = setup();
+        const { threadId } = await seedUserAndThread(t, "user_lfs_f");
+        await t.run(async (ctx: any) => {
+            const now = Date.now();
+            for (let i = 0; i < 90; i++) {
+                await ctx.db.insert("agentMessages", {
+                    agentThreadId: threadId,
+                    role: i % 2 === 0 ? "user" : "assistant",
+                    text: `eligible ${i}`,
+                    createdAt: now + i,
+                    isStreaming: false,
+                });
+            }
+        });
+
+        const result = (await t.query(
+            (internal as any).agent.threads.loadForStream,
+            { threadId },
+        )) as Array<{ role: string; content: string }>;
+
+        expect(result).toHaveLength(80);
+        expect(result[0]?.content).toBe("eligible 10");
+        expect(result[79]?.content).toBe("eligible 89");
+    });
 });

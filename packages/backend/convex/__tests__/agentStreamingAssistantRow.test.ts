@@ -232,7 +232,7 @@ describe("streaming assistant row lifecycle (CROWDEV-409)", () => {
         ]);
     });
 
-    it("listMessages surfaces the streaming row to the UI before finalization", async () => {
+    it("listLatestMessages surfaces the streaming row to the UI before finalization", async () => {
         const t = setup();
         const externalId = "user_stream_g";
         const { threadId } = await seedUserAndThread(t, externalId);
@@ -246,11 +246,11 @@ describe("streaming assistant row lifecycle (CROWDEV-409)", () => {
             { messageId: rowId, text: "stream..." },
         );
 
-        // listMessages is viewer-scoped (uses `ctx.viewerX()` which looks up
+        // listLatestMessages is viewer-scoped (uses `ctx.viewerX()` which looks up
         // the `users` row by `externalId == identity.subject`).
         const authed = t.withIdentity({ subject: externalId, issuer: "test" });
         const messages = await authed.query(
-            api.agent.threads.listMessages,
+            api.agent.threads.listLatestMessages,
             { threadId: threadId as any },
         );
 

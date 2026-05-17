@@ -488,20 +488,24 @@ export const runAgentTurn = internalAction({
     returns: v.null(),
     handler: async (ctx, { userId, threadId, userMessageId, turnScheduledAt }) => {
         const thread: { promptVersion?: string } = await ctx.runQuery(agent.threads.getForRun, { threadId });
-        const [context, msgs] = await Promise.all([
+        const [context, bootstrap] = await Promise.all([
             ctx.runQuery(agent.context.compose, {
                 userId,
                 threadId,
             }) as Promise<string>,
-            ctx.runQuery(agent.threads.listMessagesInternal, {
+            ctx.runQuery(agent.threads.getRunBootstrap, {
                 threadId,
-            }) as Promise<Array<{ _id: string; role: string; text?: string; toolCallsJson?: string }>>,
+                userMessageId,
+            }) as Promise<{
+                latestUserMessage: { text?: string; toolCallsJson?: string } | null;
+                isFirstTurn: boolean;
+            }>,
         ]);
-        const latestUserMessage = msgs.find((m) => m._id === (userMessageId as unknown as string));
+        const latestUserMessage = bootstrap.latestUserMessage;
         // CROWDEV-351: capture first-turn marker so we can schedule auto-titling
         // after the run completes. Pre-turn snapshot has exactly 1 message
         // (the user prompt just appended) on the first turn.
-        const isFirstTurn = msgs.length === 1;
+        const isFirstTurn = bootstrap.isFirstTurn;
         const tools = buildToolsForAgent({
             ctx,
             userId,
