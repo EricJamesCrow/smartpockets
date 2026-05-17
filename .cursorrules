@@ -4,9 +4,9 @@ Read AGENTS.md for full project context including architecture, patterns, and se
 
 ## Quick Rules
 
-- Package manager: bun (pinned to 1.1.42)
+- Package manager: Bun (version governed by root package.json#packageManager)
 - UI: UntitledUI components only (never create custom duplicates)
-- Backend: Convex-first (no Next.js API routes)
+- Backend: Convex-first (no Next.js Route Handlers for app data)
 - Imports: query/mutation from ./functions, NOT ./_generated/server
 - Auth: Always derive userId from ctx.viewerX(), never from args
 - Commits: Atomic, conventional format, one logical change each
@@ -20,7 +20,7 @@ Read AGENTS.md for full project context including architecture, patterns, and se
 
 ## Do Not
 
-- Use export const dynamic = "force-dynamic"
+- Use export const dynamic = "force-dynamic" in production app pages/layouts
 - Accept userId from function arguments
 - Create components that duplicate UntitledUI
 - Mutate edge-traversed entities (fetch writable via ctx.table().getX())

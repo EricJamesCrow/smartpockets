@@ -117,7 +117,7 @@ Secret hygiene when pulling secret-bearing data (e.g. `vercel env pull`): write 
 | Bank Data | Plaid | Latest |
 | Components | UntitledUI | Paid library |
 | Styling | Tailwind CSS | 4 |
-| Package Manager | bun | 1.1.42 |
+| Package Manager | bun | See root `package.json#packageManager` |
 | Monorepo | Turborepo | Latest |
 
 ## Monorepo Structure
@@ -174,7 +174,8 @@ Secret hygiene when pulling secret-bearing data (e.g. `vercel env pull`): write 
 | Command | Purpose |
 |---------|---------|
 | `cd packages/backend && bunx convex dev` | Keep dev deployment in sync continuously (auto-pushes on save) |
-| `cd packages/backend && bunx convex dev --once` | **One-shot push of backend functions to dev deployment** — run this after editing any file in `packages/backend/convex/` if you don't have `bun dev:backend` running |
+| `cd packages/backend && bunx convex dev --once` | **One-shot push of backend functions to a normal dev deployment** — run this after editing any file in `packages/backend/convex/` if you don't have `bun dev:backend` running |
+| `cd packages/backend && bunx convex deploy --preview-name main --yes` | **One-shot push when `CONVEX_DEPLOY_KEY` is a preview deploy key** — verify the printed Convex URL matches `NEXT_PUBLIC_CONVEX_URL` before testing |
 | `cd packages/backend && bunx convex deploy` | Deploy to production (use judgment — typically only via merge to main) |
 | `cd packages/convex-plaid && bun run build` | Rebuild local Plaid component after changes |
 
@@ -187,7 +188,7 @@ Symptoms of forgetting this step:
 - Tools, mutations, or queries returning stale results because the old version is still serving.
 - Schema fields referenced by new code being missing at runtime (`undefined` reads, `validator failed` errors, etc.).
 
-**The workflow:** finish editing → run `cd packages/backend && bunx convex dev --once` → THEN test in the preview / report to the user. Or keep `bun dev:backend` (which runs `bunx convex dev` in watch mode) running in a separate terminal so deploys happen automatically on save.
+**The workflow:** finish editing → push the function bundle → THEN test in the preview / report to the user. For a normal dev deployment, run `cd packages/backend && bunx convex dev --once` or keep `bun dev:backend` running in watch mode. If `CONVEX_DEPLOY_KEY` is a `preview:` key, `convex dev --once` will fail; run `cd packages/backend && bunx convex deploy --preview-name main --yes` and verify the printed deployment URL matches `NEXT_PUBLIC_CONVEX_URL`.
 
 For sub-agents implementing backend work: this is part of the verification step, not optional. A "DONE" report on backend work that hasn't been deployed is a false positive — the user will hit `Could not find public function` errors as soon as they test.
 
@@ -197,6 +198,30 @@ For sub-agents implementing backend work: this is part of the verification step,
 |-------|------|
 | `@/*` | `./src/*` (in apps/app) |
 | `@convex/*` | `./convex/*` (in packages/backend) |
+
+## Next.js + React Architecture Standards
+
+### App Router Boundaries
+
+Default pages and layouts in `apps/app/src/app/` to Server Components. Add `'use client'` only at the smallest component boundary that needs state, effects, browser APIs, event handlers, or Convex React hooks.
+
+Keep data loading and auth-sensitive decisions on the server whenever possible. Client Components should receive the minimum serializable props they need and should not import server-only modules, Convex server functions, secrets, or Node-only SDKs.
+
+### Request Interception
+
+For new Next.js 16 request interception work, use `apps/app/src/proxy.ts`. Do not create new `middleware.ts` files. If touching the existing `apps/app/src/middleware.ts`, migrate it to `proxy.ts` in a dedicated Linear issue and update the Clerk/auth comments and tests at the same time.
+
+### React Compiler
+
+`apps/app/next.config.mjs` enables React Compiler. Avoid adding `memo`, `useMemo`, or `useCallback` by default. Use them only when profiling or a concrete compiler limitation shows they are needed, and leave a short comment explaining why.
+
+### Dynamic Rendering
+
+Do not add `export const dynamic = "force-dynamic"` to production app pages or layouts. Investigate the root cause instead. Test-only exceptions must be non-production guarded, documented in the file, and tied to a Linear issue. For Route Handlers, choose documented caching/runtime behavior deliberately.
+
+### Route Handlers
+
+SmartPockets is Convex-first. Do not create app data API routes for normal product reads/writes. Route Handlers are acceptable for external protocols that require HTTP endpoints, such as MCP, webhooks, file uploads, or streaming integrations, and must still enforce auth/ownership and return minimal DTOs.
 
 ## Convex Ents — Custom Context
 
@@ -287,6 +312,26 @@ export const myQuery = query({
 });
 ```
 
+## Convex Data + API Standards
+
+### Query Scale
+
+Queries over user-growing tables must use a specific index range plus `.take(n)`, `.paginate(...)`, `.first()`, or `.unique()`. Avoid unbounded scans or broad `.filter(...)` over growing tables unless the table is provably small and the reason is documented near the query.
+
+When adding a query pattern that filters by user, account, card, wallet, status, date, or sort order, add or reuse a matching schema index. Prefer index-backed narrowing before in-memory filtering.
+
+### Public Return Shapes
+
+Public Convex functions must return DTOs, not raw Ent/component/provider documents. Never return Plaid access tokens, raw Clerk objects, secrets, raw provider errors, or fields not needed by the UI/tool. Shape the result for the caller and include only user-authorized data.
+
+### Validators and `v.any()`
+
+Use precise validators for public function args and returns. Avoid `v.any()` in public functions unless the payload is intentionally schemaless, provider-owned, or already validated elsewhere; document that reason inline. Internal compatibility boundaries can use `v.any()` sparingly, but should normalize into typed DTOs before reaching UI or agent tool outputs.
+
+### Actions and Side Effects
+
+Default to mutations that schedule actions for external side effects. Direct client `useAction` is allowed only for approved interactive Plaid flows or manual sync operations, must derive auth server-side, verify ownership, be idempotent or safe to retry, and return only minimal status needed by the UI.
+
 ## Plaid Architecture
 
 The Plaid integration uses `@crowdevelopment/convex-plaid` component with a **denormalized data model**.
@@ -350,6 +395,18 @@ cd packages/convex-plaid && bun run build
 Cards and transactions are queried separately (supports future transactions page):
 - `creditCards.accountId` links to `plaid:plaidTransactions.accountId`
 - Card detail fetches card first, then transactions on demand
+
+### Plaid Sync and Webhooks
+
+Plaid webhook handlers must verify `Plaid-Verification` using the raw body hash, reject invalid or expired signatures, and make processing idempotent for duplicate or out-of-order events.
+
+New transaction sync work must use `/transactions/sync` cursor semantics through the local Plaid component. Do not build new flows on `/transactions/get` unless there is a documented Plaid limitation and a Linear issue explains the exception.
+
+### Money and Date Semantics
+
+Every new amount field must document unit, sign convention, and display convention at the schema/tool boundary. User- or model-facing payloads should include preformatted strings when values may be echoed in prose, markdown, charts, or external MCP responses.
+
+Every new date field must document whether it is an ISO date string, timestamp milliseconds, provider-local date, or UTC instant. Do not mix display dates and sortable instants in the same field.
 
 ## Security Requirements
 
@@ -439,6 +496,12 @@ SmartPockets uses **UntitledUI's paid React component library**. All UI must use
 | `cx()` | `@/utils/cx` | Tailwind-merge wrapper for class merging |
 | `sortCx()` | `@/utils/cx` | Organize Tailwind class objects |
 
+### Tailwind CSS 4
+
+Use Tailwind v4 CSS-first tokens and repo-defined utilities. Define theme values through top-level `@theme` where relevant, register external class sources with `@source` when Tailwind needs to scan package code, and avoid ad hoc CSS overrides unless the component API cannot express the design.
+
+Never construct Tailwind class names dynamically (for example, `text-${color}-600`). Map variants to complete static class strings and merge them with `cx()` so Tailwind can detect every class at build time.
+
 ### Avoid AI Slop Patterns
 
 **Overuse of cards/boxes:**
@@ -492,17 +555,36 @@ Things AI agents frequently get wrong in this codebase.
 | Mutate edge-traversed entities | Fetch writable entity via `ctx.table().getX()` |
 | Accept `userId` in function args | Derive from `ctx.viewerX()` |
 | Omit return validator | Always include `returns: v.something()` |
-| Use `useMutation` directly | Use cached `useQuery` from `convex-helpers/react/cache/hooks` |
-| Call actions from browser | Trigger via mutation that schedules the action |
+| Use `useMutation` for reads | Use `useQuery`; prefer `convex-helpers/react/cache/hooks` where the cache provider is available |
+| Call actions from browser for routine side effects | Trigger via mutation that schedules the action; direct `useAction` is only for approved interactive Plaid/manual sync flows |
+| Return raw Ent/component/provider docs from public functions | Return minimal DTOs with only authorized fields |
+| Scan growing tables without an index/window | Use a matching index plus `.take`, `.paginate`, `.first`, or `.unique` |
 
 ### Next.js Mistakes
 
 | Mistake | Correct Approach |
 |---------|------------------|
-| Use `export const dynamic = "force-dynamic"` | **NEVER** — investigate root cause instead |
+| Add new request interception in `middleware.ts` | Use Next.js 16 `proxy.ts`; migrate existing middleware in a dedicated issue |
+| Use `export const dynamic = "force-dynamic"` in production pages/layouts | Investigate root cause; test-only exceptions need guards and documentation |
 | Missing `'use client'` directive | Add to files with hooks/interactivity |
-| Over-using client components | Keep most components as RSC |
-| Creating API routes | Use Convex functions instead (Convex-first) |
+| Over-using client components | Keep pages/layouts as Server Components and push client boundaries down |
+| Creating API routes for app data | Use Convex functions instead; reserve Route Handlers for external HTTP protocols |
+
+### React Mistakes
+
+| Mistake | Correct Approach |
+|---------|------------------|
+| Add `memo`, `useMemo`, or `useCallback` preemptively | Rely on React Compiler unless profiling proves a need |
+| Sync derived state in `useEffect` | Derive values during render or from existing state |
+| Use index keys for reorderable lists | Use stable IDs from Convex/Plaid/domain data |
+
+### Tailwind / Turborepo / Bun Mistakes
+
+| Mistake | Correct Approach |
+|---------|------------------|
+| Build Tailwind class names dynamically | Map variants to complete static class strings |
+| Add scripts/env vars without updating Turbo config | Update `turbo.json` `dependsOn`, `inputs`, `env`, `outputs`, or `cache:false` as needed |
+| Add npm/pnpm/yarn lockfiles | Use Bun only; root `package.json#packageManager` governs the version |
 
 ### File Path Mistakes
 
@@ -787,7 +869,7 @@ Provides: stacked PR creation, branch management, stack submission and navigatio
 
 ### Environment bootstrap
 
-The update script (`install` in `.cursor/environment.json`) runs `scripts/cursor-env-install.sh`, which installs Bun 1.1.42 via the official installer if it is not on `PATH`, then runs `bun install`. After it completes, all workspace dependencies are ready. `.env.local` files must exist with valid Clerk + Convex credentials before starting any service — see below.
+The update script (`install` in `.cursor/environment.json`) runs `scripts/cursor-env-install.sh`, which installs Bun via the official installer if it is not on `PATH`, then runs `bun install`. The required Bun version is governed by root `package.json#packageManager`; if the script and `package.json` disagree, update the script before relying on cloud-agent installs. After it completes, all workspace dependencies are ready. `.env.local` files must exist with valid Clerk + Convex credentials before starting any service — see below.
 
 ### Required secrets and `.env.local` bootstrap
 
@@ -852,7 +934,7 @@ This Python approach is necessary because secret values are redacted by the Clou
 
 ### Gotchas
 
-- **bun.lock version mismatch**: bun 1.1.42 warns `Unknown lockfile version` and ignores the lockfile. This is harmless for local dev — it resolves fresh. However, **do not commit the regenerated `bun.lock`** because Vercel uses bun 1.3.6 and the lockfile format change causes different dependency resolutions, which can introduce type errors in the Vercel build. If `bun.lock` is modified by `bun install`, revert it before committing: `git checkout -- bun.lock`.
+- **bun.lock version mismatch**: if a local or cloud Bun version cannot read the committed `bun.lock`, it may warn `Unknown lockfile version` and regenerate dependency resolution. Do not commit a regenerated `bun.lock` unless the task is explicitly updating the package manager/lockfile and Vercel/local Bun versions have been verified together. If `bun.lock` is modified accidentally, revert it before committing: `git checkout -- bun.lock`.
 - **Pre-existing typecheck error**: `apps/app/src/components/chat/tool-results/charts/SpendByCategoryChart.tsx` has a type error on `main` related to `recharts` `Pie` component callback types. This is not a setup issue.
 - **Turbo lockfile warning**: Turborepo may warn about `Could not resolve workspaces` from `bun.lock` format. This does not affect task execution.
 - **Convex deploy key is `preview:` type**: The `CONVEX_DEPLOY_KEY` secret is a preview deploy key, which means `bunx convex dev` and `bunx convex dev --once` will **not work** (they error with "Use `npx convex deploy` to use preview deployments"). Instead, push backend changes with: `cd packages/backend && bunx convex deploy --preview-name main --yes`. This creates/reuses a preview deployment. The preview deployment URL (printed at the end of the deploy output) must match `NEXT_PUBLIC_CONVEX_URL` in `.env.local` for the app to connect. If the URLs don't match, update `.env.local` and restart the app.
