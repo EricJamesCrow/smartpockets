@@ -11,7 +11,7 @@ This document provides a high-level overview of the SmartPockets application arc
 | **Auth** | Clerk (users, orgs, billing sync) |
 | **UI** | UntitledUI components + Tailwind CSS v4 |
 | **Banking** | Plaid via `@crowdevelopment/convex-plaid` |
-| **AI** | OpenAI gpt-4o-mini via `@convex-dev/agent` |
+| **AI** | Anthropic via custom Convex agent runtime |
 | **Email** | Resend (migration to `@convex-dev/resend` pending) |
 
 ## Directory Structure
@@ -72,18 +72,22 @@ Uses `@crowdevelopment/convex-plaid` component with denormalized data:
 
 ### 3. AI Chat
 
-Uses `@convex-dev/agent` component:
+SmartPockets currently uses a custom Convex agent runtime for chat turns. The
+`@convex-dev/agent` component is registered in `packages/backend/convex/convex.config.ts`,
+but the primary thread/message/runtime flow is owned by SmartPockets tables and
+functions. CROWDEV-458 tracks the follow-up decision to keep this custom runtime,
+migrate to the component runtime, or remove the unused registration.
 
-- **Model**: OpenAI gpt-4o-mini
-- **Tools**: 11 tools (getProfile, listProjects, createOrganization, etc.)
-- **Real-time**: `useUIMessages` + `useSmoothText` hooks
-- **Token tracking**: Automatic via `usageHandler`
+- **Model**: Anthropic through Vercel AI SDK `streamText`
+- **Tools**: SmartPockets read/propose/execute tools under `packages/backend/convex/agent/tools/`
+- **Real-time**: persisted `agentMessages` rows plus incremental streaming assistant rows
+- **Token tracking**: `agentUsage` and budget helpers under `packages/backend/convex/agent/`
 
 **Key Files**:
-- `convex/ai/agent.ts` - Agent definition
-- `convex/ai/tools.ts` - Tool definitions
-- `convex/ai/chat.ts` - Chat actions (send, regenerate, delete)
-- `src/components/chat/` - UI components
+- `packages/backend/convex/agent/runtime.ts` - LLM turn runner and tool dispatch
+- `packages/backend/convex/agent/threads.ts` - threads, messages, streaming rows, cancellation
+- `packages/backend/convex/agent/context.ts` - system-prompt context composer
+- `apps/app/src/components/chat/` - chat UI components
 
 ### 4. Email Infrastructure
 
