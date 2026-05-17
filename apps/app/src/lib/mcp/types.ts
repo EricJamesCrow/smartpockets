@@ -75,7 +75,10 @@ export interface MCPCreditCardStats {
 /**
  * Transaction data sent to external MCP clients (Claude Desktop etc.).
  *
- * **Two amount fields, two conventions:**
+ * `date` is Plaid's provider-local ISO calendar date (`YYYY-MM-DD`), not a
+ * UTC instant or display-formatted date.
+ *
+ * **Three amount fields, two conventions:**
  * - `amount` — Plaid convention: positive = outflow (purchase, payment,
  *   transfer out), negative = inflow (refund, income, deposit). Useful
  *   for filtering/arithmetic that mirrors the in-app aggregation tools.
@@ -83,15 +86,25 @@ export interface MCPCreditCardStats {
  *   income, transfers in), negative = money out (purchases, payments,
  *   transfers out). External clients should use this when echoing the
  *   amount back to the end user.
+ * - `amountFormatted` — pre-formatted human-convention string. External
+ *   clients should copy this verbatim in user-facing text.
+ *
+ * `direction` carries the same human convention as a label so callers do not
+ * infer purchase/refund wording from merchant names.
  */
 export interface MCPTransaction {
     id: string;
+    /** Provider-local ISO date (`YYYY-MM-DD`). */
     date: string;
     merchant: string;
     /** Plaid convention: positive = outflow, negative = inflow (dollars). */
     amount: number;
     /** Human convention: positive = money in, negative = money out (dollars). Use this in user-facing text. */
     displayAmount: number;
+    /** Pre-formatted human-convention amount, e.g. "+$550.47" or "-$117.87". Copy verbatim in user-facing text. */
+    amountFormatted: string;
+    /** Human direction label for selecting prose verbs without re-inferring sign semantics. */
+    direction: "inflow" | "outflow";
     category: string | null;
     pending: boolean;
 }
