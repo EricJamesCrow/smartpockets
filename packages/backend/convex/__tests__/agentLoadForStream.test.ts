@@ -325,4 +325,62 @@ describe("loadForStream (CROWDEV-355)", () => {
         expect(result[0]?.content).toBe("eligible 10");
         expect(result[79]?.content).toBe("eligible 89");
     });
+
+    it("injects summary once and trims rows at summaryUpToMessageId", async () => {
+        const t = setup();
+        const { threadId } = await seedUserAndThread(t, "user_lfs_g");
+        await t.run(async (ctx: any) => {
+            const now = Date.now();
+            await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "old prompt",
+                createdAt: now,
+                isStreaming: false,
+            });
+            const markerId = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "assistant",
+                text: "old reply",
+                createdAt: now + 1,
+                isStreaming: false,
+            });
+            await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "new prompt",
+                createdAt: now + 2,
+                isStreaming: false,
+            });
+            await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "assistant",
+                text: "new reply",
+                createdAt: now + 3,
+                isStreaming: false,
+            });
+            await ctx.db.patch(threadId, {
+                summaryText: "The user asked an old question and got an old reply.",
+                summaryUpToMessageId: markerId,
+            });
+        });
+
+        const result = (await t.query(
+            (internal as any).agent.threads.loadForStream,
+            { threadId },
+        )) as Array<{ role: string; content: string }>;
+
+        expect(result).toEqual([
+            {
+                role: "system",
+                content:
+                    "Earlier conversation summary:\nThe user asked an old question and got an old reply.",
+            },
+            { role: "user", content: "new prompt" },
+            { role: "assistant", content: "new reply" },
+        ]);
+        for (const m of result) {
+            expect(modelMessageSchema.safeParse(m).success).toBe(true);
+        }
+    });
 });
