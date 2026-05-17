@@ -57,6 +57,18 @@ crons.cron(
   (internal as any).agent.proposals.expireStaleInternal
 );
 
+/**
+ * Agent Active Run Reaper (CROWDEV-436)
+ * Clears stale single-flight locks if a scheduled runtime action never reaches
+ * its `finally` block. Admission also lazily reaps the same thread before
+ * rejecting, but the cron prevents abandoned locks from sitting forever.
+ */
+crons.cron(
+  "Reap stale agent runs",
+  "*/5 * * * *",
+  (internal as any).agent.threads.reapExpiredActiveRunsInternal
+);
+
 // =============================================================================
 // W4 Plaid crons
 // =============================================================================

@@ -74,6 +74,7 @@ export class ChatHttpError extends Error {
 export type AgentError =
     | { kind: "rate_limited"; retryAfterSeconds: number }
     | { kind: "budget_exhausted"; reason: string }
+    | { kind: "run_in_progress" }
     | { kind: "llm_down" }
     | { kind: "reconsent_required"; plaidItemId: string }
     | { kind: "first_turn_guard" }
@@ -162,6 +163,12 @@ export function ChatInteractionProvider({ threadId, onThreadIdChange, children, 
                     });
                 }
             }
+            if (res.status === 409 && payload && typeof payload === "object") {
+                const err = payload as { error?: string };
+                if (err.error === "run_in_progress") {
+                    throw new TypedAgentError({ kind: "run_in_progress" });
+                }
+            }
             throw new ChatHttpError(res.status, payload);
         }
 
@@ -194,6 +201,16 @@ export function ChatInteractionProvider({ threadId, onThreadIdChange, children, 
                     kind: "budget_exhausted",
                     reason: budgetMatch[1] ?? "Monthly budget reached.",
                 });
+            }
+            const rateLimitMatch = message.match(/rate_limited:(\d+)/);
+            if (rateLimitMatch) {
+                throw new TypedAgentError({
+                    kind: "rate_limited",
+                    retryAfterSeconds: Number(rateLimitMatch[1] ?? "30"),
+                });
+            }
+            if (message.includes("run_in_progress")) {
+                throw new TypedAgentError({ kind: "run_in_progress" });
             }
             throw err;
         }

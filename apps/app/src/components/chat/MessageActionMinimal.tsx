@@ -10,6 +10,7 @@ interface MessageActionMinimalProps {
   onStop?: () => void;
   isLoading?: boolean;
   isStreaming?: boolean;
+  submitDisabled?: boolean;
   disabled?: boolean;
   className?: string;
 }
@@ -19,13 +20,14 @@ export function MessageActionMinimal({
   onStop,
   isLoading,
   isStreaming,
+  submitDisabled,
   disabled,
   className,
 }: MessageActionMinimalProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const canSubmit = Boolean(value.trim()) && !isLoading && !disabled;
+  const canSubmit = Boolean(value.trim()) && !isLoading && !isStreaming && !submitDisabled && !disabled;
   const showStop = Boolean(isStreaming && onStop);
 
   const submit = () => {

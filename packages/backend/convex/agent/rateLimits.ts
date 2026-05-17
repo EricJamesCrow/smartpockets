@@ -5,6 +5,7 @@ import { components } from "../_generated/api";
 // registers the component added to convex.config.ts. The cast is temporary and
 // becomes unnecessary once the dev deployment regenerates `_generated/api.d.ts`.
 export const agentLimiter = new RateLimiter((components as any).rateLimiter, {
+  chat_turn: { kind: "token bucket", rate: 6, period: MINUTE, capacity: 8 },
   read_cheap: { kind: "token bucket", rate: 60, period: MINUTE, capacity: 75 },
   read_moderate: {
     kind: "token bucket",
@@ -36,6 +37,7 @@ export const agentLimiter = new RateLimiter((components as any).rateLimiter, {
 });
 
 export type BucketName =
+  | "chat_turn"
   | "read_cheap"
   | "read_moderate"
   | "write_single"

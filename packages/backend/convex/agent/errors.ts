@@ -34,6 +34,7 @@ export type ProposalToolOutput = {
 export type AgentError =
   | { kind: "rate_limited"; retryAfterSeconds: number }
   | { kind: "budget_exhausted"; reason: string }
+  | { kind: "run_in_progress" }
   | { kind: "llm_down" }
   | { kind: "reconsent_required"; plaidItemId: string }
   | { kind: "first_turn_guard" }

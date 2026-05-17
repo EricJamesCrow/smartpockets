@@ -707,17 +707,34 @@ http.route({
       );
     }
 
-    const { threadId, messageId } = await ctx.runMutation(
-      agentApi.threads.appendUserTurn,
-      {
-        userId: viewer._id,
-        threadId: body.threadId,
-        prompt: body.prompt,
-        toolHint: body.toolHint
-          ? JSON.stringify(body.toolHint)
-          : undefined,
-      },
-    );
+    let turn: { threadId: Id<"agentThreads">; messageId: Id<"agentMessages"> };
+    try {
+      turn = await ctx.runMutation(agentApi.threads.startUserTurnInternal, {
+          userId: viewer._id,
+          threadId: body.threadId,
+          prompt: body.prompt,
+          toolHint: body.toolHint
+            ? JSON.stringify(body.toolHint)
+            : undefined,
+        });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("run_in_progress")) {
+        return Response.json(
+          { error: "run_in_progress" },
+          { status: 409, headers: cors },
+        );
+      }
+      const rateLimitMatch = message.match(/rate_limited:(\d+)/);
+      if (rateLimitMatch) {
+        return Response.json(
+          { error: "rate_limited", retryAfterSeconds: Number(rateLimitMatch[1] ?? "60") },
+          { status: 429, headers: cors },
+        );
+      }
+      throw err;
+    }
+    const { threadId, messageId } = turn;
 
     // CROWDEV-343: capture the schedule timestamp BEFORE `runAfter` so the
     // runtime's cancel-flag comparison (`cancelledAtTurn >= turnStartedAt`)

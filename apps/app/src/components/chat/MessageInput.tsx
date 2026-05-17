@@ -7,6 +7,7 @@ interface MessageInputProps {
   onStop?: () => void;
   isLoading?: boolean;
   isStreaming?: boolean;
+  submitDisabled?: boolean;
   disabled?: boolean;
 }
 
@@ -15,6 +16,7 @@ export function MessageInput({
   onStop,
   isLoading,
   isStreaming,
+  submitDisabled,
   disabled,
 }: MessageInputProps) {
   return (
@@ -25,6 +27,7 @@ export function MessageInput({
           onStop={onStop}
           isLoading={isLoading}
           isStreaming={isStreaming}
+          submitDisabled={submitDisabled}
           disabled={disabled}
           className="w-full"
         />
