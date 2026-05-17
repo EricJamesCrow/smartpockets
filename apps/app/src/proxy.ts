@@ -20,7 +20,7 @@ const isE2eBootstrapRoute = createRouteMatcher(["/e2e-bootstrap"]);
 //
 // CROWDEV-422: `NEXT_PUBLIC_*` values are baked into the JS bundle at build
 // time, so accidentally setting `NEXT_PUBLIC_A11Y_AUDIT=1` in Vercel's
-// Production env vars would simultaneously activate this middleware bypass
+// Production env vars would simultaneously activate this proxy bypass
 // AND make every audit page render unauthenticated. We add a defensive
 // `VERCEL_ENV !== "production"` server-side check below so that even a
 // misconfigured public flag can't open audit routes on a production

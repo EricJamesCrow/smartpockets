@@ -58,7 +58,7 @@ export default defineConfig({
         command: "bun run dev",
         // Use `port` instead of `url` so Playwright probes the TCP socket
         // directly. The default URL probe follows redirects, and `apps/app`'s
-        // Clerk middleware redirects unauthenticated `/` to the marketing
+        // Clerk proxy redirects unauthenticated `/` to the marketing
         // site (`localhost:3001` in dev), which yields ECONNREFUSED and
         // makes Playwright think the server is down even when it's running.
         port: PORT,

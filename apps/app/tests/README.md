@@ -14,7 +14,7 @@ configured in `apps/app/.env.local`.
 apps/app/
   playwright.config.ts        ← test config + webServer + project deps
   src/app/e2e-bootstrap/      ← non-prod-only public landing page used by auth.ts
-  src/middleware.ts           ← bypasses redirect for `/e2e-bootstrap`
+  src/proxy.ts                 ← bypasses redirect for `/e2e-bootstrap`
   tests/
     global.setup.ts           ← clerkSetup() (runs once per `bun test:e2e`)
     sidebar-rename-delete.spec.ts
@@ -31,7 +31,7 @@ apps/app/
 
   The helper then navigates to `/e2e-bootstrap` — a minimal public route in
   `apps/app` whose only job is to load `<ClerkProvider>` so `window.Clerk` is
-  available before sign-in. The route is permitted through middleware only
+  available before sign-in. The route is permitted through proxy only
   when `NODE_ENV !== "production"`. Without it, every `apps/app` URL would
   redirect unauthenticated visitors to the marketing site
   (`localhost:3001`), which Playwright's `webServer` block doesn't boot —
@@ -46,7 +46,7 @@ apps/app/
   **Org-selection note.** Clerk's `force_organization_selection` is `true`
   on the dev instance. The dev test user must be an active member of an
   organization or `clerk.signIn` returns a session in `pending` status with
-  task `choose-organization`, and the app middleware will redirect the
+  task `choose-organization`, and the app proxy will redirect the
   resulting page as if the user were unauthenticated. Add the test user as
   a member via the Clerk Dashboard (or the Backend API) once during
   provisioning.

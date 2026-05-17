@@ -30,7 +30,7 @@ import type { Page } from "@playwright/test";
  * ## Why we navigate to `/e2e-bootstrap` first
  *
  * `clerk.signIn` waits for `window.Clerk` to be defined before running its
- * `signIn.create` call. The app's middleware (`apps/app/src/middleware.ts`)
+ * `signIn.create` call. The app's proxy (`apps/app/src/proxy.ts`)
  * redirects every unauthenticated, non-API route to the marketing site
  * (`localhost:3001` in dev), which Playwright's `webServer` block does not
  * boot — yielding `ECONNREFUSED` on every nav. The dedicated
@@ -71,7 +71,7 @@ export async function signInTestUser(page: Page): Promise<void> {
     await setupClerkTestingToken({ page });
 
     // Land on the public bootstrap route — see file-level docstring for why
-    // this is preferable to navigating to `/` (middleware-redirected) or
+    // this is preferable to navigating to `/` (proxy-redirected) or
     // `/sign-in` (only exists in apps/web). The page renders
     // `<ClerkProvider>` from the root layout, so `window.Clerk` is loaded
     // by the time the next call runs.
