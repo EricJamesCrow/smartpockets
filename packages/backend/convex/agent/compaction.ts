@@ -12,10 +12,14 @@ export const maybeCompact = internalAction({
   args: { threadId: v.id("agentThreads") },
   returns: v.null(),
   handler: async (ctx, { threadId }) => {
-    const messages: Array<{ _id: string }> = await ctx.runQuery(
-      (internal as any).agent.threads.listMessagesInternal,
+    const snapshot: {
+      summaryText?: string;
+      messages: Array<{ _id: string; role: string; text?: string }>;
+    } = await ctx.runQuery(
+      (internal as any).agent.threads.getForCompaction,
       { threadId },
     );
+    const { messages } = snapshot;
     const messageThreshold = Number(
       process.env.AGENT_COMPACTION_MESSAGE_THRESHOLD ?? 40,
     );
@@ -37,10 +41,21 @@ export const maybeCompact = internalAction({
 
     const halfIdx = Math.floor(messages.length / 2);
     if (halfIdx < 1) return null;
+    const toSummarize = messages.slice(0, halfIdx);
+    const classifierMessages = snapshot.summaryText
+      ? [
+          {
+            _id: "prior_summary",
+            role: "system",
+            text: `Previous cumulative summary:\n${snapshot.summaryText}`,
+          },
+          ...toSummarize,
+        ]
+      : toSummarize;
 
     const summaryText: string = await ctx.runAction(
       (internal as any).agent.compaction.runClassifierInternal,
-      { messages: messages.slice(0, halfIdx) },
+      { messages: classifierMessages },
     );
 
     if (summaryText) {
@@ -78,10 +93,16 @@ export const runClassifierInternal = internalAction({
         model: getAnthropicModel(modelId) as any,
         system:
           "Summarise the conversation so far in under 800 tokens. Preserve names, dates, amounts.",
-        messages: messages.map((m: { role: string; text?: string }) => ({
-          role: m.role,
-          content: m.text ?? "",
-        })),
+        messages: messages
+          .filter((m: { role: string; text?: string }) =>
+            (m.role === "user" || m.role === "assistant" || m.role === "system") &&
+            typeof m.text === "string" &&
+            m.text.length > 0,
+          )
+          .map((m: { role: string; text?: string }) => ({
+            role: m.role,
+            content: m.text ?? "",
+          })),
       } as any);
       return (result as any).text ?? "";
     } catch (err) {

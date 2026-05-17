@@ -15,7 +15,7 @@ export const compose = internalQuery({
   returns: v.string(),
   handler: async (ctx, { userId, threadId }) => {
     const user = await ctx.table("users").getX(userId);
-    const [accounts, cards, activePromos, openProposals, thread] =
+    const [accounts, cards, activePromos, openProposals] =
       await Promise.all([
         ctx.runQuery(internal.plaidComponent.getAccountsByTrustedUserId, {
           userId: user.externalId,
@@ -32,7 +32,6 @@ export const compose = internalQuery({
           (internal as any).agent.proposals.countOpenForThreadInternal,
           { threadId },
         ) as Promise<number>,
-        ctx.table("agentThreads").getX(threadId),
       ]);
 
     const lines: string[] = [];
@@ -41,9 +40,6 @@ export const compose = internalQuery({
     lines.push(`Credit cards: ${cards.length}`);
     lines.push(`Active deferred-interest promos: ${activePromos.length}`);
     lines.push(`Open proposals awaiting confirmation: ${openProposals}`);
-    if (thread.summaryText) {
-      lines.push(`Prior thread summary: ${thread.summaryText}`);
-    }
     return lines.join("\n");
   },
 });

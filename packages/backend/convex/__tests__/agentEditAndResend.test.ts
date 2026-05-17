@@ -14,11 +14,12 @@
  *   - Reject empty / overlong text.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../schema";
 import { api } from "../_generated/api";
 import { PROMPT_VERSION } from "../agent/system";
+import { agentLimiter } from "../agent/rateLimits";
 
 const modules = import.meta.glob("../**/*.ts");
 
@@ -71,6 +72,14 @@ async function getThread(t: ReturnType<typeof setup>, threadId: string) {
 }
 
 describe("editAndResendUserTurn (CROWDEV-395)", () => {
+    beforeEach(() => {
+        vi.spyOn(agentLimiter as any, "limit").mockResolvedValue({ ok: true });
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("replaces text, deletes downstream messages, and reflags isStreaming", async () => {
         const t = setup();
         const { threadId } = await seedUserAndThread(t, USER_A.subject);
@@ -279,5 +288,122 @@ describe("editAndResendUserTurn (CROWDEV-395)", () => {
         expect(messages[2]?._id).toBe(secondUserId);
         expect(messages[2]?.text).toBe("edited second prompt");
         expect(messages[2]?.isStreaming).toBe(true);
+    });
+
+    it("keeps a summary whose marker is before the edited message", async () => {
+        const t = setup();
+        const { threadId } = await seedUserAndThread(t, USER_A.subject);
+
+        const { summaryMarkerId, secondUserId } = await t.run(async (ctx: any) => {
+            const now = Date.now();
+            await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "first prompt",
+                createdAt: now,
+                isStreaming: false,
+            });
+            const markerId = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "assistant",
+                text: "first reply",
+                createdAt: now + 1,
+                isStreaming: false,
+            });
+            const second = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "second prompt",
+                createdAt: now + 2,
+                isStreaming: false,
+            });
+            await ctx.db.patch(threadId, {
+                summaryText: "Summary through the first turn.",
+                summaryUpToMessageId: markerId,
+            });
+            return { summaryMarkerId: markerId, secondUserId: second };
+        });
+
+        await t
+            .withIdentity(USER_A)
+            .mutation(api.agent.threads.editAndResendUserTurn, {
+                messageId: secondUserId,
+                newText: "edited second prompt",
+            });
+
+        const thread = await getThread(t, threadId);
+        expect(thread?.summaryText).toBe("Summary through the first turn.");
+        expect(thread?.summaryUpToMessageId).toBe(summaryMarkerId);
+    });
+
+    it("clears a summary whose marker is the edited message", async () => {
+        const t = setup();
+        const { threadId } = await seedUserAndThread(t, USER_A.subject);
+
+        const targetUserId = await t.run(async (ctx: any) => {
+            const now = Date.now();
+            const target = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "summarized prompt",
+                createdAt: now,
+                isStreaming: false,
+            });
+            await ctx.db.patch(threadId, {
+                summaryText: "Summary includes the target user message.",
+                summaryUpToMessageId: target,
+            });
+            return target;
+        });
+
+        await t
+            .withIdentity(USER_A)
+            .mutation(api.agent.threads.editAndResendUserTurn, {
+                messageId: targetUserId,
+                newText: "edited summarized prompt",
+            });
+
+        const thread = await getThread(t, threadId);
+        expect(thread?.summaryText).toBeUndefined();
+        expect(thread?.summaryUpToMessageId).toBeUndefined();
+    });
+
+    it("clears a summary whose marker follows the edited message", async () => {
+        const t = setup();
+        const { threadId } = await seedUserAndThread(t, USER_A.subject);
+
+        const targetUserId = await t.run(async (ctx: any) => {
+            const now = Date.now();
+            const target = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "first prompt",
+                createdAt: now,
+                isStreaming: false,
+            });
+            const marker = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "assistant",
+                text: "first reply",
+                createdAt: now + 1,
+                isStreaming: false,
+            });
+            await ctx.db.patch(threadId, {
+                summaryText: "Summary includes the first reply.",
+                summaryUpToMessageId: marker,
+            });
+            return target;
+        });
+
+        await t
+            .withIdentity(USER_A)
+            .mutation(api.agent.threads.editAndResendUserTurn, {
+                messageId: targetUserId,
+                newText: "edited first prompt",
+            });
+
+        const thread = await getThread(t, threadId);
+        expect(thread?.summaryText).toBeUndefined();
+        expect(thread?.summaryUpToMessageId).toBeUndefined();
     });
 });

@@ -320,6 +320,25 @@ export const editAndResendUserTurn = mutation({
     const thread = await ctx.table("agentThreads").getX(target.agentThreadId);
     if (thread.userId !== viewer._id) throw new Error("Not authorized");
     await clearExpiredActiveRun(ctx, thread, Date.now());
+    const summaryPatch: {
+      summaryText?: undefined;
+      summaryUpToMessageId?: undefined;
+    } = {};
+    if (thread.summaryUpToMessageId) {
+      const summaryMarker = await ctx.table("agentMessages").get(thread.summaryUpToMessageId);
+      const markerSort = [
+        summaryMarker?.createdAt ?? Number.POSITIVE_INFINITY,
+        summaryMarker?._creationTime ?? Number.POSITIVE_INFINITY,
+      ] as const;
+      const targetSort = [target.createdAt, target._creationTime] as const;
+      const summaryIncludesTarget =
+        markerSort[0] > targetSort[0] ||
+        (markerSort[0] === targetSort[0] && markerSort[1] >= targetSort[1]);
+      if (!summaryMarker || summaryMarker.agentThreadId !== thread._id || summaryIncludesTarget) {
+        summaryPatch.summaryText = undefined;
+        summaryPatch.summaryUpToMessageId = undefined;
+      }
+    }
 
     const budget = await ctx.runQuery(internal.agent.budgets.checkHeadroom, {
       userId: viewer._id,
@@ -359,6 +378,7 @@ export const editAndResendUserTurn = mutation({
       activeRunUserMessageId: messageId,
       activeRunStartedAt: now,
       activeRunExpiresAt: now + activeRunTtlMs(),
+      ...summaryPatch,
     });
 
     // CROWDEV-343: capture schedule timestamp BEFORE `runAfter` so the
@@ -608,14 +628,30 @@ export const loadForStream = internalQuery({
   args: { threadId: v.id("agentThreads") },
   returns: v.array(v.any()),
   handler: async (ctx, { threadId }) => {
-    await ctx.table("agentThreads").getX(threadId);
+    const thread = await ctx.table("agentThreads").getX(threadId);
+    let summaryText: string | undefined;
+    let summaryMarkerCreatedAt: number | undefined;
+    if (thread.summaryText && thread.summaryUpToMessageId) {
+      const summaryMarker = await ctx.table("agentMessages").get(thread.summaryUpToMessageId);
+      if (summaryMarker?.agentThreadId === threadId) {
+        summaryText = thread.summaryText;
+        summaryMarkerCreatedAt = summaryMarker.createdAt;
+      }
+    }
     const messages = (
-      await ctx
-        .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
-        .order("desc")
-        .take(MODEL_HISTORY_SCAN_LIMIT)
+      summaryMarkerCreatedAt === undefined
+        ? await ctx
+            .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
+            .order("desc")
+            .take(MODEL_HISTORY_SCAN_LIMIT)
+        : await ctx
+            .table("agentMessages", "by_thread_createdAt", (q) =>
+              q.eq("agentThreadId", threadId).gt("createdAt", summaryMarkerCreatedAt),
+            )
+            .order("desc")
+            .take(MODEL_HISTORY_SCAN_LIMIT)
     ).reverse();
-    const out: Array<{ role: "user" | "assistant"; content: string }> = [];
+    const out: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
     for (const m of messages as Array<{ role: string; text?: string; isStreaming?: boolean }>) {
       if (m.role !== "user" && m.role !== "assistant") continue;
       if (m.role === "assistant" && m.isStreaming === true) continue;
@@ -623,7 +659,15 @@ export const loadForStream = internalQuery({
       if (typeof text !== "string" || text.length === 0) continue;
       out.push({ role: m.role, content: text });
     }
-    return out.slice(-MODEL_HISTORY_MESSAGE_LIMIT);
+    const tail = out.slice(-MODEL_HISTORY_MESSAGE_LIMIT);
+    if (!summaryText) return tail;
+    return [
+      {
+        role: "system",
+        content: `Earlier conversation summary:\n${summaryText}`,
+      },
+      ...tail,
+    ];
   },
 });
 
@@ -633,6 +677,36 @@ export const listMessagesInternal = internalQuery({
   handler: async (ctx, { threadId }) => {
     const thread = await ctx.table("agentThreads").getX(threadId);
     return await thread.edge("agentMessages").order("asc");
+  },
+});
+
+export const getForCompaction = internalQuery({
+  args: { threadId: v.id("agentThreads") },
+  returns: v.object({
+    summaryText: v.optional(v.string()),
+    messages: v.array(agentMessageDtoValidator),
+  }),
+  handler: async (ctx, { threadId }) => {
+    const thread = await ctx.table("agentThreads").getX(threadId);
+    if (thread.summaryText && thread.summaryUpToMessageId) {
+      const summaryMarker = await ctx.table("agentMessages").get(thread.summaryUpToMessageId);
+      if (summaryMarker?.agentThreadId === threadId) {
+        const tail = await ctx
+          .table("agentMessages", "by_thread_createdAt", (q) =>
+            q.eq("agentThreadId", threadId).gt("createdAt", summaryMarker.createdAt),
+          )
+          .order("asc");
+        return {
+          summaryText: thread.summaryText,
+          messages: tail,
+        };
+      }
+    }
+
+    const messages = await ctx
+      .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
+      .order("asc");
+    return { messages };
   },
 });
 
