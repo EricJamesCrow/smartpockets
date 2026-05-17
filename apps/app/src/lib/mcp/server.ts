@@ -45,7 +45,8 @@ const TOOLS = [
   },
   {
     name: "list_transactions",
-    description: "List recent transactions for a credit card. Defaults to last 30 days.",
+    description:
+      "List recent transactions for a credit card. Defaults to last 30 days. Returns provider-local ISO dates (`YYYY-MM-DD`) plus `amount` (Plaid convention dollars), `displayAmount` (human convention dollars), `amountFormatted` (copy verbatim), and `direction` (`inflow` or `outflow`).",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -55,10 +56,12 @@ const TOOLS = [
         },
         startDate: {
           type: "string",
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$",
           description: "Start date (YYYY-MM-DD). Defaults to 30 days ago.",
         },
         endDate: {
           type: "string",
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$",
           description: "End date (YYYY-MM-DD). Defaults to today.",
         },
       },

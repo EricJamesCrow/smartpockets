@@ -166,6 +166,7 @@ export default defineSchema({
     .index("by_account", ["accountId"])
     .index("by_account_date", ["accountId", "date"])
     .index("by_transaction_id", ["transactionId"])
+    .index("by_user_transaction_id", ["userId", "transactionId"])
     .index("by_date", ["userId", "date"])
     .index("by_plaid_item", ["plaidItemId"])
     .index("by_merchant", ["merchantId"]),
@@ -260,9 +261,18 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
+    .index("by_user_updated_at", ["userId", "updatedAt"])
     .index("by_stream_id", ["streamId"])
     .index("by_plaid_item", ["plaidItemId"])
-    .index("by_status", ["userId", "status", "isActive"]),
+    .index("by_plaid_item_updated_at", ["plaidItemId", "updatedAt"])
+    .index("by_status", ["userId", "status", "isActive"])
+    .index("by_user_status_active_type_updated_at", [
+      "userId",
+      "status",
+      "isActive",
+      "type",
+      "updatedAt",
+    ]),
 
   /**
    * Plaid Mortgage Liabilities - Mortgage loan details
@@ -508,6 +518,7 @@ export default defineSchema({
     .index("by_plaid_item", ["plaidItemId"])
     .index("by_plaid_item_startedAt", ["plaidItemId", "startedAt"])
     .index("by_user", ["userId"])
+    .index("by_user_startedAt", ["userId", "startedAt"])
     .index("by_status", ["status"])
     .index("by_started_at", ["startedAt"])
     .index("by_trigger", ["trigger"]),

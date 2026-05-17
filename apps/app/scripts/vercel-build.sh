@@ -166,7 +166,7 @@ validate_plaid_env() {
 # the client bundle and is the primary feature gate, but a Vercel
 # misconfiguration could flip it to "1" on Production. This build-time block
 # trips the deploy before the bundle ever ships. Layered with the
-# middleware bypass + per-page notFound() guards (which also key on
+# proxy bypass + per-page notFound() guards (which also key on
 # VERCEL_ENV).
 validate_a11y_audit_env() {
   if [[ "${NEXT_PUBLIC_A11Y_AUDIT:-}" == "1" && "${VERCEL_ENV_VALUE}" == "production" ]]; then

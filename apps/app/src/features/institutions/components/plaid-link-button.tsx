@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { usePlaidLink } from "react-plaid-link";
-import { useAction } from "convex/react";
-import { useUser } from "@clerk/nextjs";
+import { useAction, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { toast } from "sonner";
 import { Plus } from "@untitledui/icons";
@@ -62,7 +61,7 @@ export function PlaidLinkButton({
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  const { user } = useUser();
+  const { isAuthenticated } = useConvexAuth();
   const createLinkToken = useAction(api.plaidComponent.createLinkTokenAction);
   const onboardConnection = useAction(
     api.plaidComponent.onboardNewConnectionAction
@@ -71,14 +70,13 @@ export function PlaidLinkButton({
   // Fetch link token on component mount
   useEffect(() => {
     const initializePlaidLink = async () => {
-      if (!user?.id) return;
+      if (!isAuthenticated) return;
 
       try {
         const linkTokenArgs: {
-          userId: string;
           products?: string[];
           accountFilters?: unknown;
-        } = { userId: user.id };
+        } = {};
 
         if (products) {
           linkTokenArgs.products = products;
@@ -98,12 +96,12 @@ export function PlaidLinkButton({
     };
 
     initializePlaidLink();
-  }, [user?.id, createLinkToken, products, accountFilters]);
+  }, [isAuthenticated, createLinkToken, products, accountFilters]);
 
   // Handle successful account connection
   const onSuccess = useCallback(
     async (publicToken: string) => {
-      if (!user?.id) {
+      if (!isAuthenticated) {
         toast.error("Authentication required", {
           description: "Please sign in to connect a bank account.",
         });
@@ -120,7 +118,6 @@ export function PlaidLinkButton({
         // Call Convex action directly (orchestrates full onboarding flow)
         const result = await onboardConnection({
           publicToken,
-          userId: user.id,
         });
 
         toast.success("Bank connected!", {
@@ -141,7 +138,7 @@ export function PlaidLinkButton({
         setIsConnecting(false);
       }
     },
-    [user?.id, onboardConnection, onSuccessCallback]
+    [isAuthenticated, onboardConnection, onSuccessCallback]
   );
 
   // Initialize Plaid Link hook

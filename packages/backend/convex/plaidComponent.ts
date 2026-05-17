@@ -13,12 +13,14 @@
  * App-specific logic (like credit card denormalization) remains in the host app.
  */
 
-import { action, query, mutation, internalAction, internalMutation } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery } from "./_generated/server";
+import type { ActionCtx } from "./_generated/server";
 import { mutation as viewerMutation, query as viewerQuery } from "./functions";
 import { v } from "convex/values";
 import { Plaid } from "@crowdevelopment/convex-plaid";
 import { components } from "./_generated/api";
 import { api, internal } from "./_generated/api";
+import { plaidLimiter, type PlaidRateLimitBucket } from "./plaid/rateLimits";
 import {
   mapAccountTypeForEnrich,
   pickEnrichDescription,
@@ -34,6 +36,7 @@ import {
  * Environment variables are only available at runtime, not during code bundling.
  */
 let _plaid: Plaid | null = null;
+const DEFAULT_RETRY_AFTER_MS = 60_000;
 
 function getPlaid(): Plaid {
   if (!_plaid) {
@@ -49,6 +52,53 @@ function getPlaid(): Plaid {
   return _plaid;
 }
 
+async function requireActionUserId(ctx: ActionCtx): Promise<string> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Authentication required");
+  }
+  return identity.subject;
+}
+
+async function assertActionOwnsPlaidItem(
+  ctx: ActionCtx,
+  userId: string,
+  plaidItemId: string,
+) {
+  const item = await ctx.runQuery(components.plaid.public.getItem, {
+    plaidItemId,
+  });
+  if (!item || item.userId !== userId) {
+    throw new Error("Plaid item not found or unauthorized");
+  }
+  return item;
+}
+
+function retryAfterSeconds(retryAfterMs: number | undefined): number {
+  return Math.max(1, Math.ceil((retryAfterMs ?? DEFAULT_RETRY_AFTER_MS) / 1000));
+}
+
+async function enforcePlaidRateLimit(
+  ctx: ActionCtx,
+  bucket: PlaidRateLimitBucket,
+  key: string,
+) {
+  try {
+    const rl = await (plaidLimiter as any).limit(ctx, bucket, { key });
+    if (!rl.ok) {
+      throw new Error(
+        `rate_limited: retry in ${retryAfterSeconds(rl.retryAfter)}s`,
+      );
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("rate_limited:")) {
+      throw error;
+    }
+    console.warn(`[plaidComponent] rate-limit check failed for ${bucket}:`, error);
+    throw new Error("rate_limit_unavailable");
+  }
+}
+
 // =============================================================================
 // LINK FLOW ACTIONS
 // =============================================================================
@@ -60,7 +110,6 @@ function getPlaid(): Plaid {
  */
 export const createLinkTokenAction = action({
   args: {
-    userId: v.string(),
     products: v.optional(v.array(v.string())),
     accountFilters: v.optional(v.any()),
   },
@@ -68,8 +117,11 @@ export const createLinkTokenAction = action({
     linkToken: v.string(),
   }),
   handler: async (ctx, args) => {
+    const userId = await requireActionUserId(ctx);
+    await enforcePlaidRateLimit(ctx, "link_token", userId);
+
     return await getPlaid().createLinkToken(ctx, {
-      userId: args.userId,
+      userId,
       // Default to both products for credit card functionality
       products: args.products ?? ["transactions", "liabilities"],
       accountFilters: args.accountFilters,
@@ -92,7 +144,6 @@ export const createLinkTokenAction = action({
 export const exchangePublicTokenAction = action({
   args: {
     publicToken: v.string(),
-    userId: v.string(),
   },
   returns: v.object({
     success: v.boolean(),
@@ -100,7 +151,13 @@ export const exchangePublicTokenAction = action({
     plaidItemId: v.string(),
   }),
   handler: async (ctx, args) => {
-    return await getPlaid().exchangePublicToken(ctx, args);
+    const userId = await requireActionUserId(ctx);
+    await enforcePlaidRateLimit(ctx, "token_exchange", userId);
+
+    return await getPlaid().exchangePublicToken(ctx, {
+      publicToken: args.publicToken,
+      userId,
+    });
   },
 });
 
@@ -119,6 +176,10 @@ export const fetchAccountsAction = action({
     accountCount: v.number(),
   }),
   handler: async (ctx, args) => {
+    const userId = await requireActionUserId(ctx);
+    await assertActionOwnsPlaidItem(ctx, userId, args.plaidItemId);
+    await enforcePlaidRateLimit(ctx, "item_sync", `${userId}:${args.plaidItemId}`);
+
     return await getPlaid().fetchAccounts(ctx, args);
   },
 });
@@ -143,6 +204,10 @@ export const syncTransactionsAction = action({
     skipReason: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    const userId = await requireActionUserId(ctx);
+    await assertActionOwnsPlaidItem(ctx, userId, args.plaidItemId);
+    await enforcePlaidRateLimit(ctx, "item_sync", `${userId}:${args.plaidItemId}`);
+
     return await getPlaid().syncTransactions(ctx, args);
   },
 });
@@ -160,6 +225,10 @@ export const fetchLiabilitiesAction = action({
     studentLoans: v.number(),
   }),
   handler: async (ctx, args) => {
+    const userId = await requireActionUserId(ctx);
+    await assertActionOwnsPlaidItem(ctx, userId, args.plaidItemId);
+    await enforcePlaidRateLimit(ctx, "item_sync", `${userId}:${args.plaidItemId}`);
+
     return await getPlaid().fetchLiabilities(ctx, args);
   },
 });
@@ -186,6 +255,10 @@ export const createUpdateLinkTokenAction = action({
     linkToken: v.string(),
   }),
   handler: async (ctx, args) => {
+    const userId = await requireActionUserId(ctx);
+    await assertActionOwnsPlaidItem(ctx, userId, args.plaidItemId);
+    await enforcePlaidRateLimit(ctx, "update_link_token", `${userId}:${args.plaidItemId}`);
+
     return await getPlaid().createUpdateLinkToken(ctx, args);
   },
 });
@@ -207,6 +280,10 @@ export const completeReauthAction = action({
     success: v.boolean(),
   }),
   handler: async (ctx, args) => {
+    const userId = await requireActionUserId(ctx);
+    await assertActionOwnsPlaidItem(ctx, userId, args.plaidItemId);
+    await enforcePlaidRateLimit(ctx, "item_sync", `${userId}:${args.plaidItemId}`);
+
     const result = await getPlaid().completeReauth(ctx, args);
     await ctx.runMutation(
       components.plaid.public.clearErrorTrackingInternal,
@@ -251,13 +328,21 @@ export const togglePlaidItemActive = viewerMutation({
 /**
  * Explicitly set the isActive state of a plaidItem.
  */
-export const setPlaidItemActive = mutation({
+export const setPlaidItemActive = viewerMutation({
   args: {
     itemId: v.string(),
     isActive: v.boolean(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const viewer = ctx.viewerX();
+    const item = await ctx.runQuery(components.plaid.public.getItemByPlaidItemId, {
+      itemId: args.itemId,
+    });
+    if (!item || item.userId !== viewer.externalId) {
+      throw new Error("Institution not found or unauthorized");
+    }
+
     return await ctx.runMutation(
       getPlaid().api.setPlaidItemActive,
       { itemId: args.itemId, isActive: args.isActive }
@@ -282,7 +367,6 @@ export const setPlaidItemActive = mutation({
 export const onboardNewConnectionAction = action({
   args: {
     publicToken: v.string(),
-    userId: v.string(),
   },
   returns: v.object({
     success: v.boolean(),
@@ -308,8 +392,11 @@ export const onboardNewConnectionAction = action({
       studentLoans: number;
     };
   }> => {
+    const userId = await requireActionUserId(ctx);
+    await enforcePlaidRateLimit(ctx, "token_exchange", userId);
+
     console.log("\n=== PLAID ONBOARDING ORCHESTRATOR ===");
-    console.log("User ID:", args.userId);
+    console.log("User ID:", userId);
     console.log("=====================================\n");
 
     try {
@@ -317,7 +404,7 @@ export const onboardNewConnectionAction = action({
       console.log("📍 Step 1/4.5: Exchange token");
       const exchangeResult = await getPlaid().exchangePublicToken(ctx, {
         publicToken: args.publicToken,
-        userId: args.userId,
+        userId,
       });
 
       const { plaidItemId, itemId } = exchangeResult;
@@ -333,7 +420,7 @@ export const onboardNewConnectionAction = action({
         });
         const priorLinkCount = await ctx.runQuery(
           internal.users.countActivePlaidItems,
-          { userId: args.userId },
+          { userId },
         );
         const isFirstLinkEver =
           priorLinkCount === 1 &&
@@ -342,7 +429,7 @@ export const onboardNewConnectionAction = action({
         if (isFirstLinkEver) {
           const institutionName = newItem.institutionName ?? "your bank";
           const nativeUser = await ctx.runQuery(internal.users.getByExternalId, {
-            externalId: args.userId,
+            externalId: userId,
           });
           if (!nativeUser) {
             console.warn("[onboardNewConnectionAction] welcome dispatch skipped: missing native user");
@@ -677,6 +764,8 @@ export const enrichMyUnenrichedTransactionsAction = action({
     if (!identity) {
       throw new Error("Authentication required");
     }
+    await enforcePlaidRateLimit(ctx, "enrichment_backfill", identity.subject);
+
     return await ctx.runAction(internal.plaidComponent.enrichUnenrichedTransactionsForUser, {
       userId: identity.subject,
       maxTransactions: args.maxTransactions,
@@ -775,6 +864,10 @@ export const fetchRecurringStreamsAction = action({
     outflows: v.number(),
   }),
   handler: async (ctx, args) => {
+    const userId = await requireActionUserId(ctx);
+    await assertActionOwnsPlaidItem(ctx, userId, args.plaidItemId);
+    await enforcePlaidRateLimit(ctx, "item_sync", `${userId}:${args.plaidItemId}`);
+
     console.log(`🔄 Fetching recurring streams for ${args.plaidItemId} (${args.trigger ?? "manual"})`);
     const result = await getPlaid().fetchRecurringStreams(ctx, {
       plaidItemId: args.plaidItemId,
@@ -1030,10 +1123,30 @@ const plaidAccountReturnValidator = v.object({
   createdAt: v.number(),
 });
 
-export const getAccountsByPlaidItemId = query({
+async function getViewerPlaidItem(
+  ctx: { runQuery: ActionCtx["runQuery"] },
+  userId: string,
+  plaidItemId: string,
+) {
+  const item = await ctx.runQuery(components.plaid.public.getItem, {
+    plaidItemId,
+  });
+  if (!item || item.userId !== userId) {
+    return null;
+  }
+  return item;
+}
+
+export const getAccountsByPlaidItemId = viewerQuery({
   args: { plaidItemId: v.string() },
   returns: v.array(plaidAccountReturnValidator),
   handler: async (ctx, args) => {
+    const viewer = ctx.viewerX();
+    const item = await getViewerPlaidItem(ctx, viewer.externalId, args.plaidItemId);
+    if (!item) {
+      return [];
+    }
+
     return await ctx.runQuery(
       components.plaid.public.getAccountsByItem,
       { plaidItemId: args.plaidItemId }
@@ -1049,11 +1162,8 @@ export const getAccountsForViewerItem = viewerQuery({
   returns: v.array(plaidAccountReturnValidator),
   handler: async (ctx, args) => {
     const viewer = ctx.viewerX();
-    const item = await ctx.runQuery(components.plaid.public.getItem, {
-      plaidItemId: args.plaidItemId,
-    });
-
-    if (!item || item.userId !== viewer.externalId) {
+    const item = await getViewerPlaidItem(ctx, viewer.externalId, args.plaidItemId);
+    if (!item) {
       return [];
     }
 
@@ -1065,9 +1175,28 @@ export const getAccountsForViewerItem = viewerQuery({
 });
 
 /**
- * Get accounts for a user.
+ * Get accounts for the authenticated viewer.
+ *
+ * The optional userId arg is accepted only for legacy callers and must match
+ * the active viewer. New browser callers should omit it.
  */
-export const getAccountsByUserId = query({
+export const getAccountsByUserId = viewerQuery({
+  args: { userId: v.optional(v.string()) },
+  returns: v.array(plaidAccountReturnValidator),
+  handler: async (ctx, args) => {
+    const viewer = ctx.viewerX();
+    if (args.userId !== undefined && args.userId !== viewer.externalId) {
+      throw new Error("Not authorized to view accounts for this user");
+    }
+
+    return await ctx.runQuery(
+      components.plaid.public.getAccountsByUser,
+      { userId: viewer.externalId }
+    );
+  },
+});
+
+export const getAccountsByTrustedUserId = internalQuery({
   args: { userId: v.string() },
   returns: v.array(plaidAccountReturnValidator),
   handler: async (ctx, args) => {
@@ -1079,10 +1208,13 @@ export const getAccountsByUserId = query({
 });
 
 /**
- * Get credit card liabilities for a user.
+ * Get credit card liabilities for the authenticated viewer.
+ *
+ * The optional userId arg is accepted only for legacy callers and must match
+ * the active viewer. New browser callers should omit it.
  */
-export const getLiabilitiesByUserId = query({
-  args: { userId: v.string() },
+export const getLiabilitiesByUserId = viewerQuery({
+  args: { userId: v.optional(v.string()) },
   returns: v.array(
     v.object({
       _id: v.string(),
@@ -1109,9 +1241,14 @@ export const getLiabilitiesByUserId = query({
     })
   ),
   handler: async (ctx, args) => {
+    const viewer = ctx.viewerX();
+    if (args.userId !== undefined && args.userId !== viewer.externalId) {
+      throw new Error("Not authorized to view liabilities for this user");
+    }
+
     return await ctx.runQuery(
       components.plaid.public.getLiabilitiesByUser,
-      { userId: args.userId }
+      { userId: viewer.externalId }
     );
   },
 });

@@ -30,9 +30,9 @@ export async function listTransactions(token: string, cardId: string, startDate?
     const transactions = await fetchQuery(api.transactions.queries.getTransactionsByAccountId, { accountId: card.accountId }, { token });
 
     // Filter by date range and map to MCP format. Each transaction carries
-    // both Plaid-convention (`amount`) and human-convention (`displayAmount`)
-    // fields so external MCP clients can echo human-convention amounts to
-    // their end users without having to know Plaid's inverted sign rule. See
+    // Plaid-convention (`amount`), human-convention (`displayAmount`), a
+    // verbatim `amountFormatted`, and `direction` so external MCP clients can
+    // echo amounts without reasoning through Plaid's inverted sign rule. See
     // MCPTransaction docstring in `../types.ts`.
     const mappedTransactions: MCPTransaction[] = transactions
         .filter((tx) => {
@@ -41,12 +41,15 @@ export async function listTransactions(token: string, cardId: string, startDate?
         })
         .map((tx) => {
             const amount = milliunitsToDollars(tx.amount);
+            const displayAmount = amount === 0 ? 0 : -amount;
             return {
                 id: tx._id,
                 date: tx.date,
                 merchant: tx.merchantName ?? tx.name ?? "Unknown",
                 amount,
-                displayAmount: -amount,
+                displayAmount,
+                amountFormatted: formatHumanAmount(displayAmount),
+                direction: displayAmount >= 0 ? "inflow" : "outflow",
                 category: tx.categoryPrimary ?? null,
                 pending: tx.pending ?? false,
             };
@@ -71,4 +74,9 @@ export async function listTransactions(token: string, cardId: string, startDate?
         data: mappedTransactions,
         summary,
     };
+}
+
+function formatHumanAmount(displayAmount: number): string {
+    const sign = displayAmount < 0 ? "-" : "+";
+    return `${sign}${formatMoneyFromDollars(Math.abs(displayAmount))}`;
 }

@@ -6,7 +6,7 @@ import { ChatHome } from "@/components/chat/ChatHome";
 import { MessageInput } from "@/components/chat/MessageInput";
 
 export default function ChatHomeLightAuditPage() {
-    // CROWDEV-422: layered with middleware + vercel-build.sh — see middleware.ts for rationale.
+    // CROWDEV-422: layered with proxy + vercel-build.sh — see proxy.ts for rationale.
     if (
         process.env.NEXT_PUBLIC_A11Y_AUDIT !== "1" ||
         process.env.VERCEL_ENV === "production"

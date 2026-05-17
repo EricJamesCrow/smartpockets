@@ -11,7 +11,7 @@ type Preview = {
 const base = {
     toolName: "get_spend_over_time" as const,
     threadId: THREAD_ID,
-    input: { window: { from: "2026-03-01", to: "2026-04-20", granularity: "week" } },
+    input: { dateFrom: "2026-03-01", dateTo: "2026-04-20", bucket: "week" },
 };
 
 export const inputStreaming: ToolResultComponentProps<unknown, ToolOutput<Preview>> = {

@@ -258,7 +258,7 @@ user with at least one chat thread and one rendered tool result:
 - `apps/app/src/app/(app)/settings/layout.tsx` — converted inner `<main>`
   to `<div>` to avoid duplicate-main; lifted same `dark:text-stone-500`
   kicker fallback for parity.
-- `apps/app/src/middleware.ts` — env-gated bypass for `/a11y-audit/*`,
+- `apps/app/src/proxy.ts` — env-gated bypass for `/a11y-audit/*`,
   forwards `x-pathname` request header so the root layout can pick the
   right mode-class for audit pages.
 - `apps/app/src/app/layout.tsx` — reads `x-pathname` to apply

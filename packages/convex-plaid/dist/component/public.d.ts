@@ -25,7 +25,7 @@ export declare const getItemsByUser: import("convex/server").RegisteredQuery<"pu
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
+    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -63,7 +63,7 @@ export declare const getItem: import("convex/server").RegisteredQuery<"public", 
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
+    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -102,7 +102,7 @@ export declare const getItemByPlaidItemId: import("convex/server").RegisteredQue
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
+    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -138,7 +138,7 @@ export declare const getAllActiveItems: import("convex/server").RegisteredQuery<
     institutionName: string | undefined;
     products: string[];
     isActive: boolean | undefined;
-    status: "syncing" | "error" | "pending" | "active" | "needs_reauth" | "deleting";
+    status: "error" | "pending" | "syncing" | "active" | "needs_reauth" | "deleting";
     syncError: string | undefined;
     createdAt: number;
     lastSyncedAt: number | undefined;
@@ -213,9 +213,6 @@ export declare const getAccountsByItem: import("convex/server").RegisteredQuery<
 /**
  * Get transactions for a specific account.
  * Returns most recent first.
- */
-/**
- * Get transactions for a specific account.
  *
  * @security Components cannot access ctx.auth. Host apps must verify ownership
  * of the account before calling this query.
@@ -237,8 +234,10 @@ export declare const getTransactionsByAccount: import("convex/server").Registere
     merchantName: string | undefined;
     originalDescription: string | undefined;
     pending: boolean;
+    pendingTransactionId: string | undefined;
     categoryPrimary: string | undefined;
     categoryDetailed: string | undefined;
+    paymentChannel: string | undefined;
     enrichmentData: {
         counterpartyName?: string | undefined;
         counterpartyType?: string | undefined;
@@ -251,6 +250,7 @@ export declare const getTransactionsByAccount: import("convex/server").Registere
     } | undefined;
     merchantId: string | undefined;
     createdAt: number;
+    updatedAt: number | undefined;
 }[]>>;
 /**
  * Get transactions for a user with date range filtering.
@@ -262,6 +262,7 @@ export declare const getTransactionsByUser: import("convex/server").RegisteredQu
     limit?: number | undefined;
     endDate?: string | undefined;
     startDate?: string | undefined;
+    transactionIds?: string[] | undefined;
     userId: string;
 }, Promise<{
     _id: string;
@@ -277,8 +278,10 @@ export declare const getTransactionsByUser: import("convex/server").RegisteredQu
     merchantName: string | undefined;
     originalDescription: string | undefined;
     pending: boolean;
+    pendingTransactionId: string | undefined;
     categoryPrimary: string | undefined;
     categoryDetailed: string | undefined;
+    paymentChannel: string | undefined;
     enrichmentData: {
         counterpartyName?: string | undefined;
         counterpartyType?: string | undefined;
@@ -291,6 +294,7 @@ export declare const getTransactionsByUser: import("convex/server").RegisteredQu
     } | undefined;
     merchantId: string | undefined;
     createdAt: number;
+    updatedAt: number | undefined;
 }[]>>;
 /**
  * Get credit card liabilities for a specific plaidItem.
@@ -551,7 +555,7 @@ export declare const getMerchantEnrichment: import("convex/server").RegisteredQu
     categoryIconUrl: string | undefined;
     website: string | undefined;
     phoneNumber: string | undefined;
-    confidenceLevel: "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+    confidenceLevel: "UNKNOWN" | "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW";
     lastEnriched: number;
 } | null>>;
 /**
@@ -606,6 +610,7 @@ export declare const setPlaidItemActive: import("convex/server").RegisteredMutat
  * before calling this query.
  */
 export declare const getRecurringStreamsByUser: import("convex/server").RegisteredQuery<"public", {
+    limit?: number | undefined;
     userId: string;
 }, Promise<{
     _id: string;
@@ -619,7 +624,7 @@ export declare const getRecurringStreamsByUser: import("convex/server").Register
     lastAmount: number;
     isoCurrencyCode: string;
     frequency: string;
-    status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
+    status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
     isActive: boolean;
     type: "inflow" | "outflow";
     category: string | undefined;
@@ -636,6 +641,7 @@ export declare const getRecurringStreamsByUser: import("convex/server").Register
  * of the plaidItem before calling this query.
  */
 export declare const getRecurringStreamsByItem: import("convex/server").RegisteredQuery<"public", {
+    limit?: number | undefined;
     plaidItemId: string;
 }, Promise<{
     _id: string;
@@ -649,7 +655,7 @@ export declare const getRecurringStreamsByItem: import("convex/server").Register
     lastAmount: number;
     isoCurrencyCode: string;
     frequency: string;
-    status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
+    status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
     isActive: boolean;
     type: "inflow" | "outflow";
     category: string | undefined;
@@ -667,6 +673,7 @@ export declare const getRecurringStreamsByItem: import("convex/server").Register
  * before calling this query.
  */
 export declare const getActiveSubscriptions: import("convex/server").RegisteredQuery<"public", {
+    limit?: number | undefined;
     userId: string;
 }, Promise<{
     _id: string;
@@ -680,7 +687,7 @@ export declare const getActiveSubscriptions: import("convex/server").RegisteredQ
     lastAmount: number;
     isoCurrencyCode: string;
     frequency: string;
-    status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
+    status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
     isActive: boolean;
     type: "inflow" | "outflow";
     category: string | undefined;
@@ -698,6 +705,7 @@ export declare const getActiveSubscriptions: import("convex/server").RegisteredQ
  * before calling this query.
  */
 export declare const getRecurringIncome: import("convex/server").RegisteredQuery<"public", {
+    limit?: number | undefined;
     userId: string;
 }, Promise<{
     _id: string;
@@ -711,7 +719,7 @@ export declare const getRecurringIncome: import("convex/server").RegisteredQuery
     lastAmount: number;
     isoCurrencyCode: string;
     frequency: string;
-    status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
+    status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
     isActive: boolean;
     type: "inflow" | "outflow";
     category: string | undefined;
@@ -753,11 +761,11 @@ export declare const getSyncLogsByItem: import("convex/server").RegisteredQuery<
     plaidItemId: string;
     userId: string;
     syncType: "transactions" | "liabilities" | "recurring" | "accounts" | "onboard";
-    trigger: "scheduled" | "onboard" | "webhook" | "manual";
+    trigger: "onboard" | "webhook" | "scheduled" | "manual";
     startedAt: number;
     completedAt: number | undefined;
     durationMs: number | undefined;
-    status: "error" | "started" | "success" | "rate_limited" | "circuit_open";
+    status: "started" | "success" | "error" | "rate_limited" | "circuit_open";
     result: {
         transactionsAdded?: number | undefined;
         transactionsModified?: number | undefined;
@@ -787,11 +795,11 @@ export declare const getSyncLogsByUser: import("convex/server").RegisteredQuery<
     plaidItemId: string;
     userId: string;
     syncType: "transactions" | "liabilities" | "recurring" | "accounts" | "onboard";
-    trigger: "scheduled" | "onboard" | "webhook" | "manual";
+    trigger: "onboard" | "webhook" | "scheduled" | "manual";
     startedAt: number;
     completedAt: number | undefined;
     durationMs: number | undefined;
-    status: "error" | "started" | "success" | "rate_limited" | "circuit_open";
+    status: "started" | "success" | "error" | "rate_limited" | "circuit_open";
     result: {
         transactionsAdded?: number | undefined;
         transactionsModified?: number | undefined;

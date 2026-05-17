@@ -9,18 +9,18 @@ import { notFound } from "next/navigation";
  *
  * Why a dedicated route?
  *
- * The app's middleware (`apps/app/src/middleware.ts`) redirects every
+ * The app's proxy (`apps/app/src/proxy.ts`) redirects every
  * unauthenticated, non-API request to the marketing site (port 3001 in dev).
  * That marketing server is not booted by Playwright's `webServer` block, so
  * the redirect lands on `ECONNREFUSED`. The helper used to navigate to
  * `/sign-in` — a route that exists in `apps/web` but not in `apps/app` — and
  * suffered exactly this. We now bypass that redirect for this single path
- * (see the matcher in `middleware.ts`) so the test runner has somewhere to
+ * (see the matcher in `proxy.ts`) so the test runner has somewhere to
  * land that loads Clerk's client-side JS.
  *
  * Safety:
  *
- *   - The middleware matcher only opens this path when `NODE_ENV !==
+ *   - The proxy matcher only opens this path when `NODE_ENV !==
  *     "production"`. In production this file `notFound()`s before any HTML is
  *     rendered, so even a misconfigured deploy can't expose a sign-in entry.
  *   - The page renders no interactive surface — it's a blank `<main>` so
@@ -38,7 +38,7 @@ import { notFound } from "next/navigation";
  *   - It's a test-only Clerk-sign-in entry point. Real users never reach
  *     it; only Playwright's `signInTestUser` helper (see
  *     `apps/app/tests/helpers/auth.ts`) navigates here.
- *   - `apps/app/src/middleware.ts` bypasses the unauthenticated-redirect
+ *   - `apps/app/src/proxy.ts` bypasses the unauthenticated-redirect
  *     ONLY when `NODE_ENV !== "production"`. In production the route
  *     follows the normal redirect-to-marketing path.
  *   - The page body itself calls `notFound()` in production before any

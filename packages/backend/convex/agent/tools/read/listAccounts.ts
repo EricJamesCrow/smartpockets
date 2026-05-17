@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { api } from "../../../_generated/api";
+import { internal } from "../../../_generated/api";
 import { agentQuery } from "../../functions";
 import { accountPreviewForModel } from "./moneyPreview";
 
@@ -10,7 +10,7 @@ export const listAccounts = agentQuery({
     returns: v.any(),
     handler: async (ctx, { type }) => {
         const viewer = ctx.viewerX();
-        const accounts = (await ctx.runQuery(api.plaidComponent.getAccountsByUserId, { userId: viewer.externalId })) as Array<{
+        const accounts = (await ctx.runQuery(internal.plaidComponent.getAccountsByTrustedUserId, { userId: viewer.externalId })) as Array<{
             accountId: string;
             type: string;
         }>;

@@ -1,6 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+// Next.js proxy files run as Node.js proxy functions by default. Keep this
+// default unless a dedicated issue verifies Clerk/auth redirects under Edge.
+
 // API routes should not redirect (they return 401 instead)
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 
@@ -20,7 +23,7 @@ const isE2eBootstrapRoute = createRouteMatcher(["/e2e-bootstrap"]);
 //
 // CROWDEV-422: `NEXT_PUBLIC_*` values are baked into the JS bundle at build
 // time, so accidentally setting `NEXT_PUBLIC_A11Y_AUDIT=1` in Vercel's
-// Production env vars would simultaneously activate this middleware bypass
+// Production env vars would simultaneously activate this proxy bypass
 // AND make every audit page render unauthenticated. We add a defensive
 // `VERCEL_ENV !== "production"` server-side check below so that even a
 // misconfigured public flag can't open audit routes on a production

@@ -209,7 +209,7 @@ Keep data loading and auth-sensitive decisions on the server whenever possible. 
 
 ### Request Interception
 
-For new Next.js 16 request interception work, use `apps/app/src/proxy.ts`. Do not create new `middleware.ts` files. If touching the existing `apps/app/src/middleware.ts`, migrate it to `proxy.ts` in a dedicated Linear issue and update the Clerk/auth comments and tests at the same time.
+For Next.js 16 request interception work, use `apps/app/src/proxy.ts`. Do not create new `middleware.ts` files. Next.js proxy files run as Node.js proxy functions by default; keep that default unless a dedicated Linear issue documents why an Edge runtime is required and verifies Clerk/auth redirect behavior under that runtime.
 
 ### React Compiler
 
@@ -564,7 +564,7 @@ Things AI agents frequently get wrong in this codebase.
 
 | Mistake | Correct Approach |
 |---------|------------------|
-| Add new request interception in `middleware.ts` | Use Next.js 16 `proxy.ts`; migrate existing middleware in a dedicated issue |
+| Add request interception in `middleware.ts` | Use `apps/app/src/proxy.ts`; do not create new `middleware.ts` files |
 | Use `export const dynamic = "force-dynamic"` in production pages/layouts | Investigate root cause; test-only exceptions need guards and documentation |
 | Missing `'use client'` directive | Add to files with hooks/interactivity |
 | Over-using client components | Keep pages/layouts as Server Components and push client boundaries down |

@@ -104,6 +104,7 @@ import type * as paymentAttemptTypes from "../paymentAttemptTypes.js";
 import type * as paymentAttempts from "../paymentAttempts.js";
 import type * as plaid_errorTaxonomy from "../plaid/errorTaxonomy.js";
 import type * as plaid_persistentError from "../plaid/persistentError.js";
+import type * as plaid_rateLimits from "../plaid/rateLimits.js";
 import type * as plaidComponent from "../plaidComponent.js";
 import type * as promoRates_mutations from "../promoRates/mutations.js";
 import type * as promoRates_queries from "../promoRates/queries.js";
@@ -230,6 +231,7 @@ declare const fullApi: ApiFromModules<{
   paymentAttempts: typeof paymentAttempts;
   "plaid/errorTaxonomy": typeof plaid_errorTaxonomy;
   "plaid/persistentError": typeof plaid_persistentError;
+  "plaid/rateLimits": typeof plaid_rateLimits;
   plaidComponent: typeof plaidComponent;
   "promoRates/mutations": typeof promoRates_mutations;
   "promoRates/queries": typeof promoRates_queries;

@@ -80,11 +80,11 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     list_transactions: {
         description:
-            "List transactions, optionally filtered by account, date range, and limit. Each row carries `amount` (Plaid convention), `displayAmount` (human convention number), `amountFormatted` (pre-formatted string like `+$550.47` or `-$117.87`), and `direction` (`inflow` or `outflow`). When echoing the amount to the user, copy `amountFormatted` VERBATIM and use `direction` to pick the verb (refund vs purchase) — never infer direction from merchant name.",
+            "List transactions, optionally filtered by account, date range, and limit. Dates are provider-local ISO dates (`YYYY-MM-DD`). Each row carries `amount` (Plaid convention dollars), `displayAmount` (human convention dollars), `amountFormatted` (pre-formatted string like `+$550.47` or `-$117.87`), and `direction` (`inflow` or `outflow`). When echoing the amount to the user, copy `amountFormatted` VERBATIM and use `direction` to pick the verb (refund vs purchase) — never infer direction from merchant name.",
         llmInputSchema: z.object({
             accountId: z.string().optional(),
-            dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
-            dateTo: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
+            dateFrom: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
+            dateTo: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
             limit: z.number().int().max(500).optional(),
             presentation: z
                 .enum(["widget", "inline"])
@@ -103,7 +103,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     get_transaction_detail: {
         description:
-            "Get a single transaction's full detail including any user overlay. The `row` field carries `amount` (Plaid convention), `displayAmount` (human convention number), `amountFormatted` (pre-formatted string), and `direction` (`inflow`/`outflow`) — copy `amountFormatted` VERBATIM and use `direction` to pick the verb when echoing back to the user.",
+            "Get a single transaction's full detail including any user overlay. The `row.date` field is a provider-local ISO date (`YYYY-MM-DD`). The `row` field carries `amount` (Plaid convention dollars), `displayAmount` (human convention dollars), `amountFormatted` (pre-formatted string), and `direction` (`inflow`/`outflow`) — copy `amountFormatted` VERBATIM and use `direction` to pick the verb when echoing back to the user.",
         llmInputSchema: z.object({
             plaidTransactionId: z.string(),
         }),
@@ -169,10 +169,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     get_spend_by_category: {
         description:
-            "Aggregate spending by category over a date range. Defaults to the last 30 days when dateFrom/dateTo are omitted.",
+            "Aggregate spending by category over a provider-local ISO date range. Defaults to the last 30 days when dateFrom/dateTo are omitted. Bucket amounts and totalAmount are display dollars.",
         llmInputSchema: z.object({
-            dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
-            dateTo: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
+            dateFrom: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
+            dateTo: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
             granularity: z.enum(["primary", "detailed"]).optional(),
         }),
         handler: agent.tools.read.getSpendByCategory.getSpendByCategory,
@@ -185,10 +185,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     get_spend_over_time: {
         description:
-            "Aggregate spending bucketed by day, week, or month. Defaults to the last 90 days bucketed by week when args are omitted.",
+            "Aggregate spending bucketed by provider-local ISO day, week, or month. Defaults to the last 90 days bucketed by week when args are omitted. Bucket amounts and totalAmount are display dollars.",
         llmInputSchema: z.object({
-            dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
-            dateTo: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
+            dateFrom: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
+            dateTo: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
             bucket: z.enum(["day", "week", "month"]).optional(),
         }),
         handler: agent.tools.read.getSpendOverTime.getSpendOverTime,
@@ -228,11 +228,11 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     search_merchants: {
         description:
-            "Substring (case-insensitive) search for merchants by name across the user's transactions. Honors user-edited merchant names. Defaults window to last 90 days; returns merchants ranked by transaction count. Per-row carries `amountFormatted` and `direction` (copy verbatim / use direction for verb). Each merchant in `preview.merchants` carries `displayTotalAmount` (human convention) — quote that, not `totalAmount`.",
+            "Substring (case-insensitive) search for merchants by name across the user's transactions. Honors user-edited merchant names. Defaults window to last 90 provider-local ISO days; returns merchants ranked by transaction count. Per-row carries `amountFormatted` and `direction` (copy verbatim / use direction for verb). Each merchant in `preview.merchants` carries `displayTotalAmount` (human convention dollars) — quote that, not `totalAmount`.",
         llmInputSchema: z.object({
             query: z.string().min(1).max(128),
-            dateFrom: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
-            dateTo: z.string().optional().describe("ISO date (YYYY-MM-DD)"),
+            dateFrom: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
+            dateTo: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
             limit: z.number().int().max(50).optional(),
         }),
         handler: agent.tools.read.searchMerchants.searchMerchants,
@@ -282,8 +282,8 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         llmInputSchema: z.object({
             filter: z
                 .object({
-                    dateFrom: z.string().optional(),
-                    dateTo: z.string().optional(),
+                    dateFrom: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
+                    dateTo: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
                     merchantName: z.string().optional(),
                     categoryDetailed: z.array(z.string()).optional(),
                     accountIds: z.array(z.string()).optional(),
@@ -299,7 +299,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
                 notes: z.string().optional(),
                 isHidden: z.boolean().optional(),
                 userMerchantName: z.string().optional(),
-                userDate: z.string().optional(),
+                userDate: isoDateSchema.optional().describe("Provider-local ISO date (YYYY-MM-DD)."),
                 userTime: z.string().optional(),
             }),
             limit: z.number().int().max(1000).optional(),

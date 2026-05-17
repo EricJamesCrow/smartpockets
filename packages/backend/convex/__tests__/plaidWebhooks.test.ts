@@ -17,8 +17,10 @@
 
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { convexTest } from "convex-test";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { components } from "../_generated/api";
 import schema from "../schema";
 import plaidSchema from "../../../convex-plaid/src/component/schema";
 
@@ -44,10 +46,35 @@ function loadFixture(name: string): Fixture {
   return JSON.parse(fs.readFileSync(path.join(FIXTURE_DIR, name), "utf8"));
 }
 
-function setupHarness() {
-  const t = convexTest(schema, modules);
+function setupHarness(options?: { transactionLimits?: any }) {
+  const t = options
+    ? convexTest({
+        schema,
+        modules,
+        transactionLimits: options.transactionLimits,
+      })
+    : convexTest(schema, modules);
   t.registerComponent("plaid", plaidSchema as any, plaidModules);
   return t;
+}
+
+async function seedPlaidItem(t: ReturnType<typeof setupHarness>, itemId: string) {
+  return await t.mutation((components as any).plaid.private.createPlaidItem, {
+    userId: "clerk_user_plaid_webhook_test",
+    itemId,
+    accessToken: `access_token_${itemId}`,
+    institutionId: "ins_webhook_test",
+    institutionName: "Webhook Test Bank",
+    products: ["transactions"],
+    isActive: true,
+    status: "active",
+  });
+}
+
+function bodyHash(fixture: Fixture) {
+  return createHash("sha256")
+    .update(JSON.stringify(fixture.body))
+    .digest("hex");
 }
 
 async function postWebhook(
@@ -129,4 +156,55 @@ describe("Plaid webhook HTTP route (signature-bypass)", () => {
       expect(json.ignored).toBe("unknown_item");
     });
   }
+
+  it("returns 200 OK for a known log-only webhook", async () => {
+    const t = setupHarness();
+    const fx = loadFixture("item_login_repaired.json");
+    await seedPlaidItem(t, fx.body.item_id);
+
+    const resp = await postWebhook(t, fx);
+
+    expect(resp.status).toBe(200);
+    await expect(resp.json()).resolves.toMatchObject({ received: true });
+  });
+
+  it("keeps in-flight duplicate replay handling intact", async () => {
+    const t = setupHarness();
+    const fx = loadFixture("item_login_repaired.json");
+    await seedPlaidItem(t, fx.body.item_id);
+
+    const first = await t.mutation(
+      (components as any).plaid.public.recordWebhookReceived,
+      {
+        itemId: fx.body.item_id,
+        webhookType: fx.body.webhook_type,
+        webhookCode: fx.body.webhook_code,
+        bodyHash: bodyHash(fx),
+        receivedAt: Date.now(),
+      },
+    );
+    expect(first.duplicate).toBe(false);
+
+    const resp = await postWebhook(t, fx);
+
+    expect(resp.status).toBe(200);
+    await expect(resp.json()).resolves.toMatchObject({
+      received: true,
+      duplicate: true,
+    });
+  });
+
+  it("returns a retryable non-2xx response for transient processing failures", async () => {
+    const t = setupHarness({ transactionLimits: { bytesWritten: 1 } });
+    const fx = loadFixture("transactions_sync_updates_available.json");
+
+    const resp = await postWebhook(t, fx);
+
+    expect(resp.status).toBe(500);
+    await expect(resp.json()).resolves.toMatchObject({
+      received: false,
+      error: "processing_failed",
+      retryable: true,
+    });
+  });
 });

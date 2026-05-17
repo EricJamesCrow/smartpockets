@@ -277,7 +277,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       getActiveSubscriptions: FunctionReference<
         "query",
         "internal",
-        { userId: string },
+        { limit?: number; userId: string },
         Array<{
           _id: string;
           accountId: string;
@@ -294,9 +294,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           merchantName?: string;
           plaidItemId: string;
           predictedNextDate?: string;
-          status: string;
+          status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
           streamId: string;
-          type: string;
+          type: "inflow" | "outflow";
           updatedAt: number;
           userId: string;
         }>,
@@ -726,7 +726,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       getRecurringIncome: FunctionReference<
         "query",
         "internal",
-        { userId: string },
+        { limit?: number; userId: string },
         Array<{
           _id: string;
           accountId: string;
@@ -743,9 +743,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           merchantName?: string;
           plaidItemId: string;
           predictedNextDate?: string;
-          status: string;
+          status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
           streamId: string;
-          type: string;
+          type: "inflow" | "outflow";
           updatedAt: number;
           userId: string;
         }>,
@@ -754,7 +754,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       getRecurringStreamsByItem: FunctionReference<
         "query",
         "internal",
-        { plaidItemId: string },
+        { limit?: number; plaidItemId: string },
         Array<{
           _id: string;
           accountId: string;
@@ -771,9 +771,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           merchantName?: string;
           plaidItemId: string;
           predictedNextDate?: string;
-          status: string;
+          status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
           streamId: string;
-          type: string;
+          type: "inflow" | "outflow";
           updatedAt: number;
           userId: string;
         }>,
@@ -782,7 +782,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       getRecurringStreamsByUser: FunctionReference<
         "query",
         "internal",
-        { userId: string },
+        { limit?: number; userId: string },
         Array<{
           _id: string;
           accountId: string;
@@ -799,9 +799,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           merchantName?: string;
           plaidItemId: string;
           predictedNextDate?: string;
-          status: string;
+          status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
           streamId: string;
-          type: string;
+          type: "inflow" | "outflow";
           updatedAt: number;
           userId: string;
         }>,
@@ -1013,8 +1013,11 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           name: string;
           originalDescription?: string;
           pending: boolean;
+          paymentChannel?: string;
+          pendingTransactionId?: string;
           plaidItemId: string;
           transactionId: string;
+          updatedAt?: number;
           userId: string;
         }>,
         Name
@@ -1026,6 +1029,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           endDate?: string;
           limit?: number;
           startDate?: string;
+          transactionIds?: Array<string>;
           userId: string;
         },
         Array<{
@@ -1053,8 +1057,11 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           name: string;
           originalDescription?: string;
           pending: boolean;
+          paymentChannel?: string;
+          pendingTransactionId?: string;
           plaidItemId: string;
           transactionId: string;
+          updatedAt?: number;
           userId: string;
         }>,
         Name

@@ -7,7 +7,7 @@ type Preview = { summary?: string };
 const base = {
     toolName: "get_upcoming_statements" as const,
     threadId: THREAD_ID,
-    input: { windowDays: 30 },
+    input: { withinDays: 30 },
 };
 
 export const inputStreaming: ToolResultComponentProps<unknown, ToolOutput<Preview>> = {

@@ -43,12 +43,12 @@ export const getTransactionDetail = agentQuery({
         const viewerAccountIds = new Set(viewerAccounts.map((a) => a.accountId));
         const accountMaskById = new Map(viewerAccounts.map((a) => [a.accountId, a.mask]));
 
-        // Pull the user's transactions and locate the requested one. The
-        // Plaid component does not expose a single-transaction lookup, so
-        // we filter the user-scoped list. The auth boundary is enforced by
-        // the userId arg + the accountId membership check below.
+        // Fetch the requested transaction directly. The component still scopes
+        // by userId; the account membership check below is defense in depth.
         const rawTransactions = (await ctx.runQuery(components.plaid.public.getTransactionsByUser, {
             userId: viewer.externalId,
+            transactionIds: [plaidTransactionId],
+            limit: 1,
         })) as RawTransaction[];
 
         const tx = rawTransactions.find((row) => row.transactionId === plaidTransactionId);

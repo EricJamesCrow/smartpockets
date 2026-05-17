@@ -295,6 +295,7 @@ export declare class Plaid {
             userId: string;
         }[], string | undefined>;
         getActiveSubscriptions: import("convex/server").FunctionReference<"query", "internal", {
+            limit?: number;
             userId: string;
         }, {
             _id: string;
@@ -312,9 +313,9 @@ export declare class Plaid {
             merchantName?: string;
             plaidItemId: string;
             predictedNextDate?: string;
-            status: string;
+            status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
             streamId: string;
-            type: string;
+            type: "inflow" | "outflow";
             updatedAt: number;
             userId: string;
         }[], string | undefined>;
@@ -640,6 +641,7 @@ export declare class Plaid {
             ytdPrincipalPaid?: number;
         } | null, string | undefined>;
         getRecurringIncome: import("convex/server").FunctionReference<"query", "internal", {
+            limit?: number;
             userId: string;
         }, {
             _id: string;
@@ -657,13 +659,14 @@ export declare class Plaid {
             merchantName?: string;
             plaidItemId: string;
             predictedNextDate?: string;
-            status: string;
+            status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
             streamId: string;
-            type: string;
+            type: "inflow" | "outflow";
             updatedAt: number;
             userId: string;
         }[], string | undefined>;
         getRecurringStreamsByItem: import("convex/server").FunctionReference<"query", "internal", {
+            limit?: number;
             plaidItemId: string;
         }, {
             _id: string;
@@ -681,13 +684,14 @@ export declare class Plaid {
             merchantName?: string;
             plaidItemId: string;
             predictedNextDate?: string;
-            status: string;
+            status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
             streamId: string;
-            type: string;
+            type: "inflow" | "outflow";
             updatedAt: number;
             userId: string;
         }[], string | undefined>;
         getRecurringStreamsByUser: import("convex/server").FunctionReference<"query", "internal", {
+            limit?: number;
             userId: string;
         }, {
             _id: string;
@@ -705,9 +709,9 @@ export declare class Plaid {
             merchantName?: string;
             plaidItemId: string;
             predictedNextDate?: string;
-            status: string;
+            status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
             streamId: string;
-            type: string;
+            type: "inflow" | "outflow";
             updatedAt: number;
             userId: string;
         }[], string | undefined>;
@@ -907,14 +911,18 @@ export declare class Plaid {
             name: string;
             originalDescription?: string;
             pending: boolean;
+            paymentChannel?: string;
+            pendingTransactionId?: string;
             plaidItemId: string;
             transactionId: string;
+            updatedAt?: number;
             userId: string;
         }[], string | undefined>;
         getTransactionsByUser: import("convex/server").FunctionReference<"query", "internal", {
             endDate?: string;
             limit?: number;
             startDate?: string;
+            transactionIds?: Array<string>;
             userId: string;
         }, {
             _id: string;
@@ -941,8 +949,11 @@ export declare class Plaid {
             name: string;
             originalDescription?: string;
             pending: boolean;
+            paymentChannel?: string;
+            pendingTransactionId?: string;
             plaidItemId: string;
             transactionId: string;
+            updatedAt?: number;
             userId: string;
         }[], string | undefined>;
         listErrorItemsInternal: import("convex/server").FunctionReference<"query", "internal", {

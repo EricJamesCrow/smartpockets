@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
  * Auth-free smoke test that runs before any sign-in flow. Verifies that
  *
  *   - Playwright can boot the Next.js dev server (`bun run dev`).
- *   - The app's Clerk middleware (`apps/app/src/middleware.ts`) redirects
+ *   - The app's Clerk proxy (`apps/app/src/proxy.ts`) redirects
  *     unauthenticated visitors away from the app — to the marketing site in
  *     dev, or to `/sign-in` if the marketing redirect is disabled.
  *
@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
  * a clearer signal than a cascade of auth errors.
  */
 test("dev server responds to a Next-internal route", async ({ page }) => {
-    // We don't navigate to `/` because Clerk middleware redirects
+    // We don't navigate to `/` because Clerk proxy redirects
     // unauthenticated visitors to the marketing site URL
     // (`http://localhost:3001` in dev), which isn't running during e2e.
     // Following that redirect makes Chromium throw ECONNREFUSED. Instead

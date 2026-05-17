@@ -2,7 +2,22 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyMCPToken } from "@/lib/mcp/auth";
+import { checkMCPToolCallRateLimit } from "@/lib/mcp/rate-limit";
 import { handleToolCall, getTools } from "@/lib/mcp/server";
+
+type JsonRpcId = string | number | null | undefined;
+type JsonRpcRateLimitErrorResponse = {
+  jsonrpc: "2.0";
+  error: {
+    code: -32002;
+    message: string;
+    data: {
+      code: "rate_limited";
+      retryAfterSeconds: number;
+    };
+  };
+  id: string | number | null;
+};
 
 /**
  * MCP Protocol Handler
@@ -34,7 +49,7 @@ export async function POST(request: NextRequest) {
     jsonrpc: string;
     method: string;
     params?: Record<string, unknown>;
-    id?: string | number;
+    id?: string | number | null;
   };
 
   try {
@@ -86,6 +101,15 @@ export async function POST(request: NextRequest) {
       }
 
       case "tools/call": {
+        const rateLimit = checkMCPToolCallRateLimit({
+          userId: authResult.userContext.clerkUserId,
+          token: authResult.token,
+        });
+
+        if (!rateLimit.ok) {
+          return rateLimitErrorResponse(id, rateLimit.retryAfterSeconds);
+        }
+
         const { name, arguments: args } = params as {
           name: string;
           arguments?: Record<string, unknown>;
@@ -123,6 +147,31 @@ export async function POST(request: NextRequest) {
       id,
     });
   }
+}
+
+function rateLimitErrorResponse(id: JsonRpcId, retryAfterSeconds: number) {
+  const body: JsonRpcRateLimitErrorResponse = {
+    jsonrpc: "2.0",
+    error: {
+      code: -32002,
+      message: "MCP tool call rate limit exceeded. Retry later.",
+      data: {
+        code: "rate_limited",
+        retryAfterSeconds,
+      },
+    },
+    id: id ?? null,
+  };
+
+  return NextResponse.json(
+    body,
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(retryAfterSeconds),
+      },
+    }
+  );
 }
 
 /**

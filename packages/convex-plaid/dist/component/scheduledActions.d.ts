@@ -55,13 +55,13 @@ export declare const syncAllActiveItems: import("convex/server").RegisteredActio
  */
 export declare const syncSingleItem: import("convex/server").RegisteredAction<"internal", {
     plaidItemId: string;
-    syncType: "transactions" | "liabilities" | "recurring" | "all";
     plaidConfig: {
         encryptionKey: string;
         plaidClientId: string;
         plaidEnv: string;
         plaidSecret: string;
     };
+    syncType: "transactions" | "liabilities" | "recurring" | "all";
 }, Promise<{
     success: boolean;
     error?: string;
