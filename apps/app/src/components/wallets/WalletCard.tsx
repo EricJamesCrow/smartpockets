@@ -14,6 +14,7 @@ import {
   type WalletCardProps,
   type MiniCardPreviewProps,
 } from "./shared";
+import { DeleteWalletConfirm } from "./DeleteWalletConfirm";
 
 // =============================================================================
 // COMPONENT
@@ -35,6 +36,7 @@ import {
 export function WalletCard({ wallet, isExtended }: WalletCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [editName, setEditName] = useState(wallet.name);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -86,10 +88,9 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
     await actions.togglePin();
   };
 
-  const handleDelete = async () => {
-    if (confirm(`Delete "${wallet.name}"? Cards will not be deleted.`)) {
-      await actions.remove();
-    }
+  const handleDeleteConfirmed = async () => {
+    await actions.remove();
+    setDeleteConfirmOpen(false);
   };
 
   return (
@@ -170,7 +171,7 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
                     {wallet.isPinned ? "Unpin from Sidebar" : "Pin to Sidebar"}
                   </span>
                 </Dropdown.Item>
-                <Dropdown.Item icon={Trash01} onAction={handleDelete}>
+                <Dropdown.Item icon={Trash01} onAction={() => setDeleteConfirmOpen(true)}>
                   <span className="pr-4 text-error-primary">Delete</span>
                 </Dropdown.Item>
               </Dropdown.Menu>
@@ -229,6 +230,13 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <DeleteWalletConfirm
+        open={deleteConfirmOpen}
+        walletName={wallet.name}
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </motion.div>
   );
 }
