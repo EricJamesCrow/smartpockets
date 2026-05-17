@@ -10,9 +10,17 @@ cd "$ROOT"
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
+PACKAGE_MANAGER="$(sed -n 's/.*"packageManager"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -n 1)"
+BUN_VERSION="${PACKAGE_MANAGER#bun@}"
+
+if [[ -z "$BUN_VERSION" || "$BUN_VERSION" == "$PACKAGE_MANAGER" ]]; then
+  echo "[cursor-env-install] error: could not read bun version from package.json packageManager" >&2
+  exit 1
+fi
+
 if ! command -v bun >/dev/null 2>&1; then
-  echo "[cursor-env-install] Bun not on PATH; installing Bun 1.1.42 (matches package.json packageManager)..."
-  curl -fsSL https://bun.sh/install | bash -s "bun-v1.1.42"
+  echo "[cursor-env-install] Bun not on PATH; installing Bun ${BUN_VERSION} (from package.json packageManager)..."
+  curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
   export PATH="$BUN_INSTALL/bin:$PATH"
 fi
 
