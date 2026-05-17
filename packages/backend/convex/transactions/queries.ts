@@ -109,6 +109,7 @@ async function assertViewerOwnsAccount(ctx: any, accountId: string) {
     const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
         userId: viewer.externalId,
     });
+    const ownedPlaidItemIds = new Set<string>();
 
     // Include paused items: the user still owns accounts on those connections,
     // and product rules elsewhere decide visibility — do not deny reads here.
@@ -117,8 +118,12 @@ async function assertViewerOwnsAccount(ctx: any, accountId: string) {
             plaidItemId: item._id,
         });
         if (itemAccounts.some((account: { accountId: string }) => account.accountId === accountId)) {
-            return viewer;
+            ownedPlaidItemIds.add(item._id);
         }
+    }
+
+    if (ownedPlaidItemIds.size > 0) {
+        return { viewer, ownedPlaidItemIds };
     }
 
     throw new Error("Unauthorized: Account does not belong to user");
@@ -154,11 +159,13 @@ export const getTransactionsAndStreamsByAccountId = query({
         pagination: transactionPaginationValidator,
     }),
     handler: async (ctx, args) => {
-        const viewer = await assertViewerOwnsAccount(ctx, args.accountId);
+        const { viewer, ownedPlaidItemIds } = await assertViewerOwnsAccount(ctx, args.accountId);
         const userId = viewer.externalId; // Clerk user ID
 
         // Get regular transactions from component
-        const rawTransactions = await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId: args.accountId });
+        const rawTransactions = (await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId: args.accountId })).filter(
+            (tx) => tx.userId === userId && ownedPlaidItemIds.has(tx.plaidItemId),
+        );
 
         // Enrich transactions with merchant data (with cache to deduplicate)
         const merchantCache = new Map<string, MerchantEnrichmentResult>();
@@ -168,7 +175,7 @@ export const getTransactionsAndStreamsByAccountId = query({
         const allStreams = await ctx.runQuery(components.plaid.public.getRecurringStreamsByUser, { userId });
 
         // Filter streams to only those for this account
-        const streams = allStreams.filter((stream) => stream.accountId === args.accountId);
+        const streams = allStreams.filter((stream) => stream.accountId === args.accountId && ownedPlaidItemIds.has(stream.plaidItemId));
 
         // Transform streams to match transaction shape
         const transformedStreams = streams.map((stream) => ({
@@ -308,10 +315,12 @@ export const getTransactionsByAccountId = query({
     args: { accountId: v.string() },
     returns: v.array(transactionWithMerchantValidator),
     handler: async (ctx, args) => {
-        await assertViewerOwnsAccount(ctx, args.accountId);
+        const { viewer, ownedPlaidItemIds } = await assertViewerOwnsAccount(ctx, args.accountId);
 
         // Get transactions from component
-        const transactions = await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId: args.accountId });
+        const transactions = (await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId: args.accountId })).filter(
+            (tx) => tx.userId === viewer.externalId && ownedPlaidItemIds.has(tx.plaidItemId),
+        );
 
         // Enrich with merchant data (with cache to deduplicate)
         const merchantCache = new Map<string, MerchantEnrichmentResult>();
@@ -506,7 +515,9 @@ export const listAllForUser = query({
         const merchantCache = new Map<string, MerchantEnrichmentResult>();
 
         for (const accountId of allAccountIds) {
-            const rawTransactions = await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId });
+            const rawTransactions = (await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId })).filter(
+                (tx) => tx.userId === userId && activeItemIds.has(tx.plaidItemId),
+            );
 
             const sourceInfo = accountToCardMap.get(accountId)!;
 

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { api, components } from "../_generated/api";
+import { components, internal } from "../_generated/api";
 import { query } from "../functions";
 import { enrichTransactionWithMerchant, type MerchantEnrichmentResult } from "../transactions/helpers";
 
@@ -196,7 +196,7 @@ export const getPlaidAccounts = query({
         const wanted = new Set(ids);
         if (wanted.size === 0) return [];
 
-        const accounts = (await ctx.runQuery(api.plaidComponent.getAccountsByUserId, {
+        const accounts = (await ctx.runQuery(internal.plaidComponent.getAccountsByTrustedUserId, {
             userId: viewer.externalId,
         })) as Array<{
             _id: string;

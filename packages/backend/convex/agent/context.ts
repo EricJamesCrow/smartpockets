@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalQuery } from "../functions";
-import { api, internal } from "../_generated/api";
+import { internal } from "../_generated/api";
 
 /**
  * Compose the retrieval context string injected into the system prompt.
@@ -17,7 +17,7 @@ export const compose = internalQuery({
     const user = await ctx.table("users").getX(userId);
     const [accounts, cards, activePromos, openProposals, thread] =
       await Promise.all([
-        ctx.runQuery(api.plaidComponent.getAccountsByUserId, {
+        ctx.runQuery(internal.plaidComponent.getAccountsByTrustedUserId, {
           userId: user.externalId,
         }) as Promise<unknown[]>,
         ctx
