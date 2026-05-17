@@ -78,6 +78,7 @@ describe("editAndResendUserTurn (CROWDEV-395)", () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
+        delete process.env.AGENT_BUDGET_PER_THREAD_TOKENS;
     });
 
     it("replaces text, deletes downstream messages, and reflags isStreaming", async () => {
@@ -233,6 +234,87 @@ describe("editAndResendUserTurn (CROWDEV-395)", () => {
         ).rejects.toThrow(/empty/);
     });
 
+    it("rejects edit-and-resend while another active run is in progress", async () => {
+        const t = setup();
+        const { threadId } = await seedUserAndThread(t, USER_A.subject);
+
+        const targetUserId = await t.run(async (ctx: any) => {
+            const now = Date.now();
+            const target = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "target prompt",
+                createdAt: now,
+                isStreaming: false,
+            });
+            const active = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "active prompt",
+                createdAt: now + 1,
+                isStreaming: true,
+            });
+            await ctx.db.patch(threadId, {
+                activeRunUserMessageId: active,
+                activeRunStartedAt: now,
+                activeRunExpiresAt: now + 60_000,
+            });
+            return target;
+        });
+
+        await expect(
+            t
+                .withIdentity(USER_A)
+                .mutation(api.agent.threads.editAndResendUserTurn, {
+                    messageId: targetUserId,
+                    newText: "edited target prompt",
+                }),
+        ).rejects.toThrow(/run_in_progress/);
+
+        const messages = await getMessagesAsc(t, threadId);
+        expect(messages).toHaveLength(2);
+        expect(messages[0]?.text).toBe("target prompt");
+    });
+
+    it("rejects edit-and-resend when the per-thread token budget is exhausted", async () => {
+        process.env.AGENT_BUDGET_PER_THREAD_TOKENS = "1";
+        const t = setup();
+        const { threadId } = await seedUserAndThread(t, USER_A.subject);
+
+        const targetUserId = await t.run(async (ctx: any) => {
+            const now = Date.now();
+            const target = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "target prompt",
+                createdAt: now,
+                isStreaming: false,
+            });
+            await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "assistant",
+                text: "expensive reply",
+                tokensIn: 1,
+                createdAt: now + 1,
+                isStreaming: false,
+            });
+            return target;
+        });
+
+        await expect(
+            t
+                .withIdentity(USER_A)
+                .mutation(api.agent.threads.editAndResendUserTurn, {
+                    messageId: targetUserId,
+                    newText: "edited target prompt",
+                }),
+        ).rejects.toThrow(/budget_exhausted:thread_cap/);
+
+        const messages = await getMessagesAsc(t, threadId);
+        expect(messages).toHaveLength(2);
+        expect(messages[0]?.text).toBe("target prompt");
+    });
+
     it("preserves prior turns whose createdAt is strictly less than the target", async () => {
         // Edit on the SECOND user message: turn 1 (user + assistant) must
         // remain intact; turn 2's assistant + everything later must be deleted.
@@ -288,6 +370,42 @@ describe("editAndResendUserTurn (CROWDEV-395)", () => {
         expect(messages[2]?._id).toBe(secondUserId);
         expect(messages[2]?.text).toBe("edited second prompt");
         expect(messages[2]?.isStreaming).toBe(true);
+    });
+
+    it("deletes downstream messages that share the target createdAt timestamp", async () => {
+        const t = setup();
+        const { threadId } = await seedUserAndThread(t, USER_A.subject);
+
+        const targetUserId = await t.run(async (ctx: any) => {
+            const now = Date.now();
+            const target = await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "user",
+                text: "same tick target",
+                createdAt: now,
+                isStreaming: false,
+            });
+            await ctx.db.insert("agentMessages", {
+                agentThreadId: threadId,
+                role: "assistant",
+                text: "same tick reply",
+                createdAt: now,
+                isStreaming: false,
+            });
+            return target;
+        });
+
+        await t
+            .withIdentity(USER_A)
+            .mutation(api.agent.threads.editAndResendUserTurn, {
+                messageId: targetUserId,
+                newText: "edited same tick target",
+            });
+
+        const messages = await getMessagesAsc(t, threadId);
+        expect(messages).toHaveLength(1);
+        expect(messages[0]?._id).toBe(targetUserId);
+        expect(messages[0]?.text).toBe("edited same tick target");
     });
 
     it("keeps a summary whose marker is before the edited message", async () => {

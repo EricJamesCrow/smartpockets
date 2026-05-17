@@ -563,6 +563,7 @@ export const runAgentTurn = internalAction({
         const turnStartedAt = turnScheduledAt;
         const controller = new AbortController();
         let cancelObserved = false;
+        let runFailed = false;
 
         const isCancelledForThisTurn = async (): Promise<boolean> => {
             if (cancelObserved) return true;
@@ -786,6 +787,7 @@ export const runAgentTurn = internalAction({
             if (cancelObserved || (err as { name?: string })?.name === "AbortError") {
                 // expected
             } else {
+                runFailed = true;
                 logAgentRuntimeError({
                     event: "agent_runtime_error",
                     phase: "stream",
@@ -864,22 +866,24 @@ export const runAgentTurn = internalAction({
                     correlationParts: [threadId, userMessageId],
                 });
             }
-            try {
-                await ctx.runAction(agent.compaction.maybeCompact, { threadId });
-            } catch (err) {
-                logAgentRuntimeError({
-                    event: "agent_compaction_error",
-                    phase: "post_run_compaction",
-                    modelId,
-                    error: err,
-                    retryable: true,
-                    correlationParts: [threadId, userMessageId],
-                });
-            }
-            // CROWDEV-351: auto-title the thread after the first turn. Action
-            // is best-effort and re-checks skip-if-set, so a no-op on aborts.
-            if (isFirstTurn) {
-                await ctx.scheduler.runAfter(0, agent.titling.generateThreadTitle, { threadId });
+            if (!cancelObserved && !runFailed) {
+                try {
+                    await ctx.runAction(agent.compaction.maybeCompact, { threadId });
+                } catch (err) {
+                    logAgentRuntimeError({
+                        event: "agent_compaction_error",
+                        phase: "post_run_compaction",
+                        modelId,
+                        error: err,
+                        retryable: true,
+                        correlationParts: [threadId, userMessageId],
+                    });
+                }
+                // CROWDEV-351: auto-title the thread after the first turn.
+                // Action is best-effort and re-checks skip-if-set.
+                if (isFirstTurn) {
+                    await ctx.scheduler.runAfter(0, agent.titling.generateThreadTitle, { threadId });
+                }
             }
         }
         return null;

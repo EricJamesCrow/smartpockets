@@ -377,6 +377,7 @@ const schema = defineEntSchema(
             .edges("agentMessages", { ref: true })
             .edges("agentProposals", { ref: true })
             .index("by_user_lastTurnAt", ["userId", "lastTurnAt"])
+            .index("by_user_archived_lastTurnAt", ["userId", "isArchived", "lastTurnAt"])
             .index("by_activeRunExpiresAt", ["activeRunExpiresAt"])
             .index("by_componentThreadId", ["componentThreadId"]),
 
@@ -395,7 +396,8 @@ const schema = defineEntSchema(
             isStreaming: v.boolean(),
         })
             .edge("agentThread")
-            .index("by_thread_createdAt", ["agentThreadId", "createdAt"]),
+            .index("by_thread_createdAt", ["agentThreadId", "createdAt"])
+            .index("by_thread_role_createdAt", ["agentThreadId", "role", "createdAt"]),
 
         // === AGENT PROPOSALS (W2) ===
         agentProposals: defineEnt({
