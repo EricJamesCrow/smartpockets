@@ -1,6 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+// Next.js proxy files run as Node.js proxy functions by default. Keep this
+// default unless a dedicated issue verifies Clerk/auth redirects under Edge.
+
 // API routes should not redirect (they return 401 instead)
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 
