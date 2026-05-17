@@ -25,9 +25,9 @@ export const compose = internalQuery({
             q.eq("userId", userId).eq("isActive", true),
           ),
         ctx
-          .table("promoRates")
-          .filter((q) => q.eq(q.field("userId"), userId))
-          .filter((q) => q.eq(q.field("isActive"), true)),
+          .table("promoRates", "by_user_active", (q) =>
+            q.eq("userId", userId).eq("isActive", true),
+          ),
         ctx.runQuery(
           (internal as any).agent.proposals.countOpenForThreadInternal,
           { threadId },

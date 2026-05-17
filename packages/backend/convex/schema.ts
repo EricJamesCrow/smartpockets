@@ -188,7 +188,8 @@ const schema = defineEntSchema(
             isManual: v.optional(v.boolean()),
         })
             .edge("user")
-            .edge("creditCard"),
+            .edge("creditCard")
+            .index("by_user_active", ["userId", "isActive"]),
 
         installmentPlans: defineEnt({
             description: v.string(),

@@ -23,6 +23,7 @@ import { internal } from "../_generated/api";
 import { internalAction } from "../_generated/server";
 import { internalMutation } from "../functions";
 import { AGENT_DEFAULT_MODEL, getAnthropicModel } from "./config";
+import { logAgentRuntimeError } from "./logging";
 
 const MAX_TITLE_CHARS = 60;
 const TITLE_INPUT_CHAR_CAP = 2_000;
@@ -74,6 +75,7 @@ export const generateThreadTitle = internalAction({
   args: { threadId: v.id("agentThreads") },
   returns: v.null(),
   handler: async (ctx, { threadId }) => {
+    const modelId = process.env.AGENT_MODEL_DEFAULT ?? AGENT_DEFAULT_MODEL;
     try {
       const thread: { title?: string } = await ctx.runQuery(
         internal.agent.threads.getForRun,
@@ -102,7 +104,6 @@ export const generateThreadTitle = internalAction({
       const assistantText = (firstAssistant?.text ?? "").slice(0, TITLE_INPUT_CHAR_CAP);
 
       const { generateText } = await import("ai");
-      const modelId = process.env.AGENT_MODEL_DEFAULT ?? AGENT_DEFAULT_MODEL;
 
       const result = await generateText({
         model: getAnthropicModel(modelId) as any,
@@ -132,7 +133,14 @@ export const generateThreadTitle = internalAction({
         title: cleaned,
       });
     } catch (err) {
-      console.warn("[agent.titling] generateThreadTitle skipped:", err);
+      logAgentRuntimeError({
+        event: "agent_titling_error",
+        phase: "generate_title",
+        modelId,
+        error: err,
+        retryable: true,
+        correlationParts: [threadId],
+      });
     }
     return null;
   },

@@ -11,7 +11,9 @@ export const listDeferredInterestPromos = agentQuery({
     returns: v.any(),
     handler: async (ctx, { includeExpired }) => {
         const viewer = ctx.viewerX();
-        const promos = (await viewer.edge("promoRates")) as unknown as Array<
+        const promos = (await ctx.table("promoRates", "by_user_active", (q) =>
+            q.eq("userId", viewer._id).eq("isActive", true),
+        )) as unknown as Array<
             Record<string, unknown> & {
                 _id: string;
                 isActive: boolean;
@@ -19,7 +21,7 @@ export const listDeferredInterestPromos = agentQuery({
             }
         >;
         const today = new Date().toISOString().slice(0, 10);
-        const active = includeExpired ? promos : promos.filter((p) => p.isActive && p.expirationDate >= today);
+        const active = includeExpired ? promos : promos.filter((p) => p.expirationDate >= today);
         const withCountdown = active.map((p) => {
             const daysToExpiration = Math.max(0, Math.ceil((new Date(p.expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
             return { ...p, daysToExpiration };

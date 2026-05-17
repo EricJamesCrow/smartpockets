@@ -3,6 +3,8 @@ import { internal } from "../_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "../functions";
 import { DESTRUCTIVE_TOOLS, encodeReversalToken } from "./writeTool";
 
+const EXPIRE_STALE_BATCH_SIZE = 100;
+
 function parseJson(value: string | undefined): unknown {
     if (!value) return null;
     try {
@@ -279,18 +281,16 @@ export const markReverted = internalMutation({
     },
 });
 
-// TTL cron handler. Scans all awaiting proposals; at MVP volumes (< 1k rows)
-// the full-table scan is acceptable. Post-M3 follow-up: add
-// `by_state_awaitingExpiresAt` index and switch to range query.
+// TTL cron handler. Uses the leading state equality + expiry range index so
+// stale-awaiting proposal cleanup stays bounded as proposal volume grows.
 export const expireStaleInternal = internalMutation({
     args: {},
     returns: v.null(),
     handler: async (ctx) => {
         const now = Date.now();
-        const allProposals = await ctx.table("agentProposals");
-        const expired = allProposals.filter(
-            (p: { state: string; awaitingExpiresAt: number }) => p.state === "awaiting_confirmation" && p.awaitingExpiresAt < now,
-        );
+        const expired = await ctx.table("agentProposals", "by_state_awaitingExpiresAt", (q) =>
+            q.eq("state", "awaiting_confirmation").lt("awaitingExpiresAt", now),
+        ).take(EXPIRE_STALE_BATCH_SIZE);
         for (const p of expired) {
             const writable = await ctx.table("agentProposals").getX(p._id);
             await writable.patch({ state: "timed_out" });

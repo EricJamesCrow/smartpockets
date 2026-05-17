@@ -15,6 +15,7 @@ import type * as agent_context from "../agent/context.js";
 import type * as agent_errors from "../agent/errors.js";
 import type * as agent_functions from "../agent/functions.js";
 import type * as agent_liveRows from "../agent/liveRows.js";
+import type * as agent_logging from "../agent/logging.js";
 import type * as agent_proposals from "../agent/proposals.js";
 import type * as agent_rag from "../agent/rag.js";
 import type * as agent_rateLimits from "../agent/rateLimits.js";
@@ -142,6 +143,7 @@ declare const fullApi: ApiFromModules<{
   "agent/errors": typeof agent_errors;
   "agent/functions": typeof agent_functions;
   "agent/liveRows": typeof agent_liveRows;
+  "agent/logging": typeof agent_logging;
   "agent/proposals": typeof agent_proposals;
   "agent/rag": typeof agent_rag;
   "agent/rateLimits": typeof agent_rateLimits;

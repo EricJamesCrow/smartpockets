@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { logAgentRuntimeError } from "./logging";
 
 /**
  * Compact a thread when it grows past a message or input-token threshold.
@@ -55,7 +56,7 @@ export const maybeCompact = internalAction({
 
     const summaryText: string = await ctx.runAction(
       (internal as any).agent.compaction.runClassifierInternal,
-      { messages: classifierMessages },
+      { threadId, messages: classifierMessages },
     );
 
     if (summaryText) {
@@ -79,16 +80,19 @@ export const maybeCompact = internalAction({
  * on budget pressure. Falls back to "" on any error (logged).
  */
 export const runClassifierInternal = internalAction({
-  args: { messages: v.array(v.any()) },
+  args: {
+    threadId: v.optional(v.id("agentThreads")),
+    messages: v.array(v.any()),
+  },
   returns: v.string(),
-  handler: async (_ctx, { messages }) => {
+  handler: async (_ctx, { threadId, messages }) => {
+    let modelId = process.env.AGENT_MODEL_CLASSIFIER ?? "claude-haiku-4-5";
     try {
       const { generateText } = await import("ai");
       const { getAnthropicModel, AGENT_CLASSIFIER_MODEL } = await import(
         "./config"
       );
-      const modelId =
-        process.env.AGENT_MODEL_CLASSIFIER ?? AGENT_CLASSIFIER_MODEL;
+      modelId = process.env.AGENT_MODEL_CLASSIFIER ?? AGENT_CLASSIFIER_MODEL;
       const result = await generateText({
         model: getAnthropicModel(modelId) as any,
         system:
@@ -106,7 +110,14 @@ export const runClassifierInternal = internalAction({
       } as any);
       return (result as any).text ?? "";
     } catch (err) {
-      console.error("compaction failed", err);
+      logAgentRuntimeError({
+        event: "agent_compaction_error",
+        phase: "classifier",
+        modelId,
+        error: err,
+        retryable: true,
+        correlationParts: [threadId],
+      });
       return "";
     }
   },

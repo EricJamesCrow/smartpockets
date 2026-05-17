@@ -14,6 +14,7 @@
  */
 import type { Id } from "../_generated/dataModel";
 import { idempotencyKey } from "../notifications/hashing";
+import { logAgentRuntimeError } from "./logging";
 import { agentLimiter } from "./rateLimits";
 
 // ---- Tool executor registry -------------------------------------------------
@@ -324,7 +325,16 @@ export async function executeWriteTool(
             if (err instanceof Error && err.message.startsWith("destructive_rate_limited")) {
                 throw err;
             }
-            console.warn("[agent.writeTool] destructive rate-limit check failed:", err);
+            logAgentRuntimeError({
+                event: "agent_write_tool_error",
+                phase: "destructive_rate_limit",
+                toolName: proposal.toolName,
+                bucket: "destructive_ops",
+                error: err,
+                errorCode: "destructive_rate_limit_check_failed",
+                retryable: true,
+                correlationParts: [proposal._id, viewer._id],
+            });
             throw new Error("destructive_rate_limit_unavailable");
         }
     }
