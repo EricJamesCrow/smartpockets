@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex-helpers/react/cache/hooks";
+import { usePaginatedQuery, useQuery } from "convex-helpers/react/cache/hooks";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
@@ -22,6 +22,7 @@ import { MessageList } from "@/components/chat/MessageList";
 import { ReconsentModal } from "@/components/chat/ReconsentModal";
 
 type AgentMessage = Doc<"agentMessages">;
+const MESSAGE_PAGE_SIZE = 50;
 
 interface ChatViewProps {
   initialThreadId?: Id<"agentThreads">;
@@ -113,6 +114,14 @@ function buildOptimisticAssistantMessage(
   } as AgentMessage;
 }
 
+function sortMessagesOldestFirst(messages: AgentMessage[]): AgentMessage[] {
+  return [...messages].sort((a, b) => {
+    const createdAtDelta = (a.createdAt ?? 0) - (b.createdAt ?? 0);
+    if (createdAtDelta !== 0) return createdAtDelta;
+    return (a._creationTime ?? 0) - (b._creationTime ?? 0);
+  });
+}
+
 function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
   const { sendMessage } = useChatInteraction();
   const [isLoading, setIsLoading] = useState(false);
@@ -131,15 +140,41 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
 
   // W2 emits a role: "system" row during provider outages; surface the most
   // recent one as llm_down.
-  const messages = useQuery(
-    api.agent.threads.listMessages,
-    threadId ? { threadId } : "skip",
+  const latestMessages = useQuery(
+    api.agent.threads.listLatestMessages,
+    threadId ? { threadId, limit: MESSAGE_PAGE_SIZE } : "skip",
   ) as AgentMessage[] | undefined;
+  const olderMessages = usePaginatedQuery(
+    api.agent.threads.listMessagesPage,
+    threadId ? { threadId } : "skip",
+    { initialNumItems: MESSAGE_PAGE_SIZE },
+  );
   const runState = useQuery(
     api.agent.threads.getRunState,
     threadId ? { threadId } : "skip",
   ) as { activeRunUserMessageId?: Id<"agentMessages"> } | undefined;
   const hasActiveRun = Boolean(runState?.activeRunUserMessageId);
+  const messages = useMemo<AgentMessage[] | undefined>(() => {
+    if (!threadId) return undefined;
+    const hasLatest = latestMessages !== undefined;
+    const hasPaginated = olderMessages.status !== "LoadingFirstPage";
+    if (!hasLatest && !hasPaginated) return undefined;
+
+    const byId = new Map<string, AgentMessage>();
+    for (const message of olderMessages.results as AgentMessage[]) {
+      byId.set(message._id, message);
+    }
+    for (const message of latestMessages ?? []) {
+      byId.set(message._id, message);
+    }
+    return sortMessagesOldestFirst([...byId.values()]);
+  }, [threadId, latestMessages, olderMessages.results, olderMessages.status]);
+  const canLoadEarlier = olderMessages.status === "CanLoadMore";
+  const isLoadingEarlier = olderMessages.status === "LoadingMore";
+  const handleLoadEarlier = useCallback(() => {
+    if (olderMessages.status !== "CanLoadMore") return;
+    olderMessages.loadMore(MESSAGE_PAGE_SIZE);
+  }, [olderMessages]);
 
   // Streaming detection. The user-turn marker is inserted with
   // `isStreaming: true`, and the run is "in flight" until either an assistant
@@ -335,6 +370,10 @@ function ChatViewBody({ threadId }: { threadId: Id<"agentThreads"> | null }) {
       ) : (
         <MessageList
           threadId={threadId}
+          messages={messages}
+          canLoadEarlier={canLoadEarlier}
+          isLoadingEarlier={isLoadingEarlier}
+          onLoadEarlier={handleLoadEarlier}
           optimisticUserMessage={optimisticUserMessage}
           optimisticAssistantMessage={optimisticAssistantMessage}
           onMessagesLoaded={handleMessagesLoaded}

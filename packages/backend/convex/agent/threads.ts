@@ -1,3 +1,8 @@
+import {
+  paginationOptsValidator,
+  paginationResultValidator,
+  type PaginationOptions,
+} from "convex/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "../functions";
@@ -8,6 +13,48 @@ import { PROMPT_VERSION } from "./system";
 const DEFAULT_ACTIVE_RUN_TTL_MS = 10 * 60 * 1000;
 const ACTIVE_RUN_REAP_BATCH_SIZE = 100;
 const DEFAULT_CHAT_TURN_RETRY_AFTER_SECONDS = 60;
+const MESSAGE_PAGE_SIZE = 50;
+const MESSAGE_PAGE_MAX_ROWS_READ = 150;
+const MESSAGE_PAGE_MAX_BYTES_READ = 256_000;
+const LATEST_MESSAGE_HEAD_LIMIT = 50;
+const MODEL_HISTORY_SCAN_LIMIT = 200;
+const MODEL_HISTORY_MESSAGE_LIMIT = 80;
+
+const agentMessageDtoValidator = v.object({
+  _id: v.id("agentMessages"),
+  _creationTime: v.number(),
+  agentThreadId: v.id("agentThreads"),
+  role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system"), v.literal("tool")),
+  text: v.optional(v.string()),
+  toolCallsJson: v.optional(v.string()),
+  toolName: v.optional(v.string()),
+  toolResultJson: v.optional(v.string()),
+  proposalId: v.optional(v.id("agentProposals")),
+  tokensIn: v.optional(v.number()),
+  tokensOut: v.optional(v.number()),
+  modelId: v.optional(v.string()),
+  createdAt: v.number(),
+  isStreaming: v.boolean(),
+});
+
+function boundedMessagePaginationOpts(paginationOpts: PaginationOptions): PaginationOptions {
+  const requested = Number.isFinite(paginationOpts.numItems)
+    ? Math.floor(paginationOpts.numItems)
+    : MESSAGE_PAGE_SIZE;
+  const numItems = Math.min(Math.max(1, requested), MESSAGE_PAGE_SIZE);
+  return {
+    ...paginationOpts,
+    numItems,
+    maximumRowsRead: Math.min(
+      paginationOpts.maximumRowsRead ?? MESSAGE_PAGE_MAX_ROWS_READ,
+      MESSAGE_PAGE_MAX_ROWS_READ,
+    ),
+    maximumBytesRead: Math.min(
+      paginationOpts.maximumBytesRead ?? MESSAGE_PAGE_MAX_BYTES_READ,
+      MESSAGE_PAGE_MAX_BYTES_READ,
+    ),
+  };
+}
 
 function activeRunTtlMs(): number {
   const configured = Number(process.env.AGENT_ACTIVE_RUN_TTL_MS ?? DEFAULT_ACTIVE_RUN_TTL_MS);
@@ -118,15 +165,60 @@ async function startUserTurn(
   return { threadId: finalThreadId, messageId };
 }
 
-// Public query consumed by W1 for the reactive message stream.
+async function getOwnedThread(ctx: any, threadId: Id<"agentThreads">) {
+  const viewer = ctx.viewerX();
+  const thread = await ctx.table("agentThreads").getX(threadId);
+  if (thread.userId !== viewer._id) throw new Error("Not authorized");
+  return thread;
+}
+
+// Public reactive head query for the newest/streaming rows. The paginated
+// history query below loads older pages; this bounded head stays subscribed so
+// newly inserted or patched rows surface without relying on page revalidation.
+export const listLatestMessages = query({
+  args: {
+    threadId: v.id("agentThreads"),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(agentMessageDtoValidator),
+  handler: async (ctx, { threadId, limit }) => {
+    await getOwnedThread(ctx, threadId);
+    const requested = typeof limit === "number" && Number.isFinite(limit) ? Math.floor(limit) : LATEST_MESSAGE_HEAD_LIMIT;
+    const cap = Math.min(Math.max(1, requested), LATEST_MESSAGE_HEAD_LIMIT);
+    const rows = await ctx
+      .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
+      .order("desc")
+      .take(cap);
+    return rows.reverse();
+  },
+});
+
+export const listMessagesPage = query({
+  args: {
+    threadId: v.id("agentThreads"),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginationResultValidator(agentMessageDtoValidator),
+  handler: async (ctx, { threadId, paginationOpts }) => {
+    await getOwnedThread(ctx, threadId);
+    return await ctx
+      .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
+      .order("desc")
+      .paginate(boundedMessagePaginationOpts(paginationOpts));
+  },
+});
+
+// Backward-compatible bounded head query for older callers/tests.
 export const listMessages = query({
   args: { threadId: v.id("agentThreads") },
-  returns: v.array(v.any()),
+  returns: v.array(agentMessageDtoValidator),
   handler: async (ctx, { threadId }) => {
-    const viewer = ctx.viewerX();
-    const thread = await ctx.table("agentThreads").getX(threadId);
-    if (thread.userId !== viewer._id) throw new Error("Not authorized");
-    return await thread.edge("agentMessages").order("asc");
+    await getOwnedThread(ctx, threadId);
+    const rows = await ctx
+      .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
+      .order("desc")
+      .take(LATEST_MESSAGE_HEAD_LIMIT);
+    return rows.reverse();
   },
 });
 
@@ -290,6 +382,43 @@ export const getForRun = internalQuery({
   returns: v.any(),
   handler: async (ctx, { threadId }) => {
     return await ctx.table("agentThreads").getX(threadId);
+  },
+});
+
+export const getRunBootstrap = internalQuery({
+  args: {
+    threadId: v.id("agentThreads"),
+    userMessageId: v.id("agentMessages"),
+  },
+  returns: v.object({
+    latestUserMessage: v.union(
+      v.object({
+        _id: v.id("agentMessages"),
+        text: v.optional(v.string()),
+        toolCallsJson: v.optional(v.string()),
+      }),
+      v.null(),
+    ),
+    isFirstTurn: v.boolean(),
+  }),
+  handler: async (ctx, { threadId, userMessageId }) => {
+    const userMessage = await ctx.table("agentMessages").get(userMessageId);
+    const latestUserMessage =
+      userMessage?.agentThreadId === threadId && userMessage.role === "user"
+        ? {
+            _id: userMessage._id,
+            text: userMessage.text,
+            toolCallsJson: userMessage.toolCallsJson,
+          }
+        : null;
+    const firstMessages = await ctx
+      .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
+      .order("asc")
+      .take(2);
+    return {
+      latestUserMessage,
+      isFirstTurn: firstMessages.length === 1 && firstMessages[0]?._id === userMessageId,
+    };
   },
 });
 
@@ -479,8 +608,13 @@ export const loadForStream = internalQuery({
   args: { threadId: v.id("agentThreads") },
   returns: v.array(v.any()),
   handler: async (ctx, { threadId }) => {
-    const thread = await ctx.table("agentThreads").getX(threadId);
-    const messages = await thread.edge("agentMessages").order("asc");
+    await ctx.table("agentThreads").getX(threadId);
+    const messages = (
+      await ctx
+        .table("agentMessages", "by_thread_createdAt", (q) => q.eq("agentThreadId", threadId))
+        .order("desc")
+        .take(MODEL_HISTORY_SCAN_LIMIT)
+    ).reverse();
     const out: Array<{ role: "user" | "assistant"; content: string }> = [];
     for (const m of messages as Array<{ role: string; text?: string; isStreaming?: boolean }>) {
       if (m.role !== "user" && m.role !== "assistant") continue;
@@ -489,7 +623,7 @@ export const loadForStream = internalQuery({
       if (typeof text !== "string" || text.length === 0) continue;
       out.push({ role: m.role, content: text });
     }
-    return out;
+    return out.slice(-MODEL_HISTORY_MESSAGE_LIMIT);
   },
 });
 

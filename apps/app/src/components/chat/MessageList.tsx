@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useQuery } from "convex-helpers/react/cache/hooks";
 import { StickToBottom } from "use-stick-to-bottom";
-import { api } from "@convex/_generated/api";
 import type { Doc, Id } from "@convex/_generated/dataModel";
+import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ScrollToBottomButton } from "@/components/chat/ScrollToBottomButton";
 
@@ -12,6 +11,10 @@ type AgentMessage = Doc<"agentMessages">;
 
 interface MessageListProps {
   threadId: Id<"agentThreads"> | null;
+  messages?: AgentMessage[];
+  canLoadEarlier?: boolean;
+  isLoadingEarlier?: boolean;
+  onLoadEarlier?: () => void;
   /**
    * A synthesized user message rendered in-line with the real query rows so the
    * UI reflects the just-typed prompt during the 100–400ms before the real
@@ -34,16 +37,15 @@ interface MessageListProps {
 
 export function MessageList({
   threadId,
+  messages,
+  canLoadEarlier = false,
+  isLoadingEarlier = false,
+  onLoadEarlier,
   optimisticUserMessage,
   optimisticAssistantMessage,
   onMessagesLoaded,
   onRegenerate,
 }: MessageListProps) {
-  const messages = useQuery(
-    api.agent.threads.listMessages,
-    threadId ? { threadId } : "skip",
-  ) as AgentMessage[] | undefined;
-
   // The real query row has caught up to the optimistic prompt — used both to
   // suppress the optimistic copy in `displayMessages` and to fire
   // `onMessagesLoaded` exactly once on the transition.
@@ -141,6 +143,20 @@ export function MessageList({
         aria-busy={isStreaming}
         className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8"
       >
+        {(canLoadEarlier || isLoadingEarlier) && (
+          <div className="flex justify-center">
+            <Button
+              color="secondary"
+              size="sm"
+              onClick={onLoadEarlier}
+              isDisabled={!canLoadEarlier}
+              isLoading={isLoadingEarlier}
+              showTextWhileLoading
+            >
+              Load earlier
+            </Button>
+          </div>
+        )}
         {displayMessages.map((message) => (
           <MessageBubble
             key={message._id}
