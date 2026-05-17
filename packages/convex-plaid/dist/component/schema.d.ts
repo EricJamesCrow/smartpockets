@@ -18,9 +18,9 @@ declare const _default: import("convex/server").SchemaDefinition<{
     plaidItems: import("convex/server").TableDefinition<import("convex/values").VObject<{
         institutionId?: string | undefined;
         isActive?: boolean | undefined;
+        errorMessage?: string | undefined;
         circuitState?: "closed" | "open" | "half_open" | undefined;
         errorCode?: string | undefined;
-        errorMessage?: string | undefined;
         cursor?: string | undefined;
         institutionName?: string | undefined;
         syncError?: string | undefined;
@@ -77,7 +77,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         newAccountsAvailableAt: import("convex/values").VFloat64<number | undefined, "optional">;
         firstErrorAt: import("convex/values").VFloat64<number | undefined, "optional">;
         lastDispatchedAt: import("convex/values").VFloat64<number | undefined, "optional">;
-    }, "required", "products" | "userId" | "institutionId" | "isActive" | "itemId" | "circuitState" | "status" | "errorCode" | "errorMessage" | "accessToken" | "cursor" | "institutionName" | "syncError" | "createdAt" | "lastSyncedAt" | "activatedAt" | "errorAt" | "reauthReason" | "reauthAt" | "disconnectedReason" | "disconnectedAt" | "syncVersion" | "syncStartedAt" | "consecutiveFailures" | "consecutiveSuccesses" | "lastFailureAt" | "nextRetryAt" | "newAccountsAvailableAt" | "firstErrorAt" | "lastDispatchedAt">, {
+    }, "required", "products" | "userId" | "institutionId" | "itemId" | "isActive" | "errorMessage" | "status" | "circuitState" | "errorCode" | "accessToken" | "cursor" | "institutionName" | "syncError" | "createdAt" | "lastSyncedAt" | "activatedAt" | "errorAt" | "reauthReason" | "reauthAt" | "disconnectedReason" | "disconnectedAt" | "syncVersion" | "syncStartedAt" | "consecutiveFailures" | "consecutiveSuccesses" | "lastFailureAt" | "nextRetryAt" | "newAccountsAvailableAt" | "firstErrorAt" | "lastDispatchedAt">, {
         by_user: ["userId", "_creationTime"];
         by_item_id: ["itemId", "_creationTime"];
         by_status: ["status", "_creationTime"];
@@ -209,6 +209,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         by_account: ["accountId", "_creationTime"];
         by_account_date: ["accountId", "date", "_creationTime"];
         by_transaction_id: ["transactionId", "_creationTime"];
+        by_user_transaction_id: ["userId", "transactionId", "_creationTime"];
         by_date: ["userId", "date", "_creationTime"];
         by_plaid_item: ["plaidItemId", "_creationTime"];
         by_merchant: ["merchantId", "_creationTime"];
@@ -290,7 +291,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         userId: string;
         accountId: string;
         isActive: boolean;
-        status: "MATURE" | "EARLY_DETECTION" | "TOMBSTONED";
+        status: "EARLY_DETECTION" | "MATURE" | "TOMBSTONED";
         type: "inflow" | "outflow";
         createdAt: number;
         isoCurrencyCode: string;
@@ -311,7 +312,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         lastAmount: import("convex/values").VFloat64<number, "required">;
         isoCurrencyCode: import("convex/values").VString<string, "required">;
         frequency: import("convex/values").VString<string, "required">;
-        status: import("convex/values").VUnion<"MATURE" | "EARLY_DETECTION" | "TOMBSTONED", [import("convex/values").VLiteral<"MATURE", "required">, import("convex/values").VLiteral<"EARLY_DETECTION", "required">, import("convex/values").VLiteral<"TOMBSTONED", "required">], "required", never>;
+        status: import("convex/values").VUnion<"EARLY_DETECTION" | "MATURE" | "TOMBSTONED", [import("convex/values").VLiteral<"MATURE", "required">, import("convex/values").VLiteral<"EARLY_DETECTION", "required">, import("convex/values").VLiteral<"TOMBSTONED", "required">], "required", never>;
         isActive: import("convex/values").VBoolean<boolean, "required">;
         type: import("convex/values").VUnion<"inflow" | "outflow", [import("convex/values").VLiteral<"inflow", "required">, import("convex/values").VLiteral<"outflow", "required">], "required", never>;
         category: import("convex/values").VString<string | undefined, "optional">;
@@ -322,9 +323,12 @@ declare const _default: import("convex/server").SchemaDefinition<{
         updatedAt: import("convex/values").VFloat64<number, "required">;
     }, "required", "plaidItemId" | "userId" | "accountId" | "isActive" | "status" | "type" | "createdAt" | "isoCurrencyCode" | "merchantName" | "updatedAt" | "streamId" | "description" | "averageAmount" | "lastAmount" | "frequency" | "category" | "firstDate" | "lastDate" | "predictedNextDate">, {
         by_user: ["userId", "_creationTime"];
+        by_user_updated_at: ["userId", "updatedAt", "_creationTime"];
         by_stream_id: ["streamId", "_creationTime"];
         by_plaid_item: ["plaidItemId", "_creationTime"];
+        by_plaid_item_updated_at: ["plaidItemId", "updatedAt", "_creationTime"];
         by_status: ["userId", "status", "isActive", "_creationTime"];
+        by_user_status_active_type_updated_at: ["userId", "status", "isActive", "type", "updatedAt", "_creationTime"];
     }, {}, {}>;
     /**
      * Plaid Mortgage Liabilities - Mortgage loan details
@@ -554,12 +558,12 @@ declare const _default: import("convex/server").SchemaDefinition<{
         processedAt?: number | undefined;
         scheduledFunctionId?: string | undefined;
         itemId: string;
-        status: "received" | "processing" | "processed" | "duplicate" | "failed";
-        webhookId: string;
-        webhookType: string;
-        webhookCode: string;
         bodyHash: string;
         receivedAt: number;
+        webhookCode: string;
+        webhookType: string;
+        status: "received" | "processing" | "processed" | "duplicate" | "failed";
+        webhookId: string;
     }, {
         webhookId: import("convex/values").VString<string, "required">;
         itemId: import("convex/values").VString<string, "required">;
@@ -571,7 +575,7 @@ declare const _default: import("convex/server").SchemaDefinition<{
         status: import("convex/values").VUnion<"received" | "processing" | "processed" | "duplicate" | "failed", [import("convex/values").VLiteral<"received", "required">, import("convex/values").VLiteral<"processing", "required">, import("convex/values").VLiteral<"processed", "required">, import("convex/values").VLiteral<"duplicate", "required">, import("convex/values").VLiteral<"failed", "required">], "required", never>;
         errorMessage: import("convex/values").VString<string | undefined, "optional">;
         scheduledFunctionId: import("convex/values").VString<string | undefined, "optional">;
-    }, "required", "itemId" | "status" | "errorMessage" | "webhookId" | "webhookType" | "webhookCode" | "bodyHash" | "receivedAt" | "processedAt" | "scheduledFunctionId">, {
+    }, "required", "itemId" | "bodyHash" | "receivedAt" | "webhookCode" | "webhookType" | "errorMessage" | "processedAt" | "scheduledFunctionId" | "status" | "webhookId">, {
         by_body_hash: ["bodyHash", "_creationTime"];
         by_body_hash_received_at: ["bodyHash", "receivedAt", "_creationTime"];
         by_received_at: ["receivedAt", "_creationTime"];
@@ -586,8 +590,8 @@ declare const _default: import("convex/server").SchemaDefinition<{
      * Run pruneOldSyncLogs periodically (e.g., daily cron) to prevent table growth.
      */
     syncLogs: import("convex/server").TableDefinition<import("convex/values").VObject<{
-        errorCode?: string | undefined;
         errorMessage?: string | undefined;
+        errorCode?: string | undefined;
         completedAt?: number | undefined;
         durationMs?: number | undefined;
         result?: {
@@ -638,10 +642,11 @@ declare const _default: import("convex/server").SchemaDefinition<{
         errorCode: import("convex/values").VString<string | undefined, "optional">;
         errorMessage: import("convex/values").VString<string | undefined, "optional">;
         retryCount: import("convex/values").VFloat64<number | undefined, "optional">;
-    }, "required", "plaidItemId" | "userId" | "status" | "errorCode" | "errorMessage" | "syncType" | "trigger" | "startedAt" | "completedAt" | "durationMs" | "result" | "retryCount" | "result.transactionsAdded" | "result.transactionsModified" | "result.transactionsRemoved" | "result.accountsUpdated" | "result.streamsUpdated" | "result.creditCardsUpdated" | "result.mortgagesUpdated" | "result.studentLoansUpdated">, {
+    }, "required", "plaidItemId" | "userId" | "errorMessage" | "status" | "errorCode" | "syncType" | "trigger" | "startedAt" | "completedAt" | "durationMs" | "result" | "retryCount" | "result.transactionsAdded" | "result.transactionsModified" | "result.transactionsRemoved" | "result.accountsUpdated" | "result.streamsUpdated" | "result.creditCardsUpdated" | "result.mortgagesUpdated" | "result.studentLoansUpdated">, {
         by_plaid_item: ["plaidItemId", "_creationTime"];
         by_plaid_item_startedAt: ["plaidItemId", "startedAt", "_creationTime"];
         by_user: ["userId", "_creationTime"];
+        by_user_startedAt: ["userId", "startedAt", "_creationTime"];
         by_status: ["status", "_creationTime"];
         by_started_at: ["startedAt", "_creationTime"];
         by_trigger: ["trigger", "_creationTime"];

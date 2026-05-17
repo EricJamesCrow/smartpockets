@@ -20,6 +20,8 @@ type SourceInfo = {
     institutionName?: string;
 };
 
+const MAX_TRANSACTION_LIVE_ROW_IDS = 500;
+
 function normalizeTransactionId(id: string): string {
     const parts = id.split(":");
     return parts[parts.length - 1] ?? id;
@@ -57,6 +59,7 @@ export const getTransactions = query({
         const viewer = ctx.viewerX();
         const wanted = new Set(ids.map(normalizeTransactionId));
         if (wanted.size === 0) return [];
+        const requestedIds = Array.from(wanted).slice(0, MAX_TRANSACTION_LIVE_ROW_IDS);
 
         // Pull transactions + overlays in parallel. We also pull credit cards
         // (for sourceInfo) and item-health (for institutionName) so the chat
@@ -65,7 +68,8 @@ export const getTransactions = query({
         const [transactions, overlays, allCards] = await Promise.all([
             ctx.runQuery(components.plaid.public.getTransactionsByUser, {
                 userId: viewer.externalId,
-                limit: 2000,
+                transactionIds: requestedIds,
+                limit: requestedIds.length,
             }),
             ctx.table("transactionOverlays", "by_user_and_transaction", (q) => q.eq("userId", viewer._id)),
             ctx.table("creditCards", "by_user_active", (q) => q.eq("userId", viewer._id).eq("isActive", true)).map((card) => card.doc()),

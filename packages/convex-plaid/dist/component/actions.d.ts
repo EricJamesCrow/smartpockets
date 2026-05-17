@@ -237,10 +237,6 @@ export declare const completeReauth: import("convex/server").RegisteredAction<"p
  * enrichment heuristics expect the messy raw form.
  */
 export declare const enrichTransactions: import("convex/server").RegisteredAction<"public", {
-    encryptionKey: string;
-    plaidClientId: string;
-    plaidEnv: string;
-    plaidSecret: string;
     transactions: {
         iso_currency_code?: string | undefined;
         mcc?: string | undefined;
@@ -256,6 +252,10 @@ export declare const enrichTransactions: import("convex/server").RegisteredActio
         direction: "INFLOW" | "OUTFLOW";
         account_type: "credit" | "depository";
     }[];
+    encryptionKey: string;
+    plaidClientId: string;
+    plaidEnv: string;
+    plaidSecret: string;
 }, Promise<{
     enriched: number;
     failed: number;

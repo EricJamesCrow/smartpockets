@@ -25,6 +25,19 @@ const aprValidator = v.object({
     balanceSubjectToApr: v.optional(v.number()),
     interestChargeAmount: v.optional(v.number()),
 });
+const DEFAULT_TRANSACTION_LIMIT = 500;
+const MAX_TRANSACTION_LIMIT = 2000;
+const MAX_TRANSACTION_ID_LOOKUP = 500;
+const DEFAULT_RECURRING_STREAM_LIMIT = 250;
+const MAX_RECURRING_STREAM_LIMIT = 1000;
+const DEFAULT_SYNC_LOG_LIMIT = 100;
+const MAX_SYNC_LOG_LIMIT = 500;
+const MAX_SYNC_STATS_LOGS = 1000;
+function boundedLimit(limit, defaultLimit, maxLimit) {
+    if (limit == null || !Number.isFinite(limit))
+        return defaultLimit;
+    return Math.min(maxLimit, Math.max(1, Math.floor(limit)));
+}
 async function getPlaidItemById(ctx, plaidItemId) {
     const id = ctx.db.normalizeId("plaidItems", plaidItemId);
     if (!id)
@@ -360,12 +373,67 @@ export const getAccountsByItem = query({
 // =============================================================================
 // TRANSACTIONS QUERIES
 // =============================================================================
+const enrichmentDataValidator = v.object({
+    counterpartyName: v.optional(v.string()),
+    counterpartyType: v.optional(v.string()),
+    counterpartyEntityId: v.optional(v.string()),
+    counterpartyConfidence: v.optional(v.string()),
+    counterpartyLogoUrl: v.optional(v.string()),
+    counterpartyWebsite: v.optional(v.string()),
+    counterpartyPhoneNumber: v.optional(v.string()),
+    enrichedAt: v.optional(v.number()),
+});
+const transactionReturnValidator = v.object({
+    _id: v.string(),
+    userId: v.string(),
+    plaidItemId: v.string(),
+    accountId: v.string(),
+    transactionId: v.string(),
+    amount: v.number(),
+    isoCurrencyCode: v.string(),
+    date: v.string(),
+    datetime: v.optional(v.string()),
+    name: v.string(),
+    merchantName: v.optional(v.string()),
+    originalDescription: v.optional(v.string()),
+    pending: v.boolean(),
+    pendingTransactionId: v.optional(v.string()),
+    categoryPrimary: v.optional(v.string()),
+    categoryDetailed: v.optional(v.string()),
+    paymentChannel: v.optional(v.string()),
+    enrichmentData: v.optional(enrichmentDataValidator),
+    merchantId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+});
+function mapTransaction(txn) {
+    return {
+        _id: String(txn._id),
+        userId: txn.userId,
+        plaidItemId: txn.plaidItemId,
+        accountId: txn.accountId,
+        transactionId: txn.transactionId,
+        amount: txn.amount,
+        isoCurrencyCode: txn.isoCurrencyCode,
+        date: txn.date,
+        datetime: txn.datetime,
+        name: txn.name,
+        merchantName: txn.merchantName,
+        originalDescription: txn.originalDescription,
+        pending: txn.pending,
+        pendingTransactionId: txn.pendingTransactionId,
+        categoryPrimary: txn.categoryPrimary,
+        categoryDetailed: txn.categoryDetailed,
+        paymentChannel: txn.paymentChannel,
+        enrichmentData: txn.enrichmentData,
+        merchantId: txn.merchantId,
+        createdAt: txn.createdAt,
+        updatedAt: txn.updatedAt,
+    };
+}
 /**
  * Get transactions for a specific account.
  * Returns most recent first.
- */
-/**
- * Get transactions for a specific account.
  *
  * @security Components cannot access ctx.auth. Host apps must verify ownership
  * of the account before calling this query.
@@ -375,63 +443,15 @@ export const getTransactionsByAccount = query({
         accountId: v.string(),
         limit: v.optional(v.number()),
     },
-    returns: v.array(v.object({
-        _id: v.string(),
-        userId: v.string(),
-        plaidItemId: v.string(),
-        accountId: v.string(),
-        transactionId: v.string(),
-        amount: v.number(),
-        isoCurrencyCode: v.string(),
-        date: v.string(),
-        datetime: v.optional(v.string()),
-        name: v.string(),
-        merchantName: v.optional(v.string()),
-        originalDescription: v.optional(v.string()),
-        pending: v.boolean(),
-        categoryPrimary: v.optional(v.string()),
-        categoryDetailed: v.optional(v.string()),
-        enrichmentData: v.optional(v.object({
-            counterpartyName: v.optional(v.string()),
-            counterpartyType: v.optional(v.string()),
-            counterpartyEntityId: v.optional(v.string()),
-            counterpartyConfidence: v.optional(v.string()),
-            counterpartyLogoUrl: v.optional(v.string()),
-            counterpartyWebsite: v.optional(v.string()),
-            counterpartyPhoneNumber: v.optional(v.string()),
-            enrichedAt: v.optional(v.number()),
-        })),
-        merchantId: v.optional(v.string()),
-        createdAt: v.number(),
-    })),
+    returns: v.array(transactionReturnValidator),
     handler: async (ctx, args) => {
-        let queryBuilder = ctx.db
+        const limit = boundedLimit(args.limit, DEFAULT_TRANSACTION_LIMIT, MAX_TRANSACTION_LIMIT);
+        const transactions = await ctx.db
             .query("plaidTransactions")
-            .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
-            .order("desc");
-        const transactions = args.limit
-            ? await queryBuilder.take(args.limit)
-            : await queryBuilder.collect();
-        return transactions.map((txn) => ({
-            _id: String(txn._id),
-            userId: txn.userId,
-            plaidItemId: txn.plaidItemId,
-            accountId: txn.accountId,
-            transactionId: txn.transactionId,
-            amount: txn.amount,
-            isoCurrencyCode: txn.isoCurrencyCode,
-            date: txn.date,
-            datetime: txn.datetime,
-            name: txn.name,
-            merchantName: txn.merchantName,
-            originalDescription: txn.originalDescription,
-            pending: txn.pending,
-            categoryPrimary: txn.categoryPrimary,
-            categoryDetailed: txn.categoryDetailed,
-            enrichmentData: txn.enrichmentData,
-            merchantId: txn.merchantId,
-            createdAt: txn.createdAt,
-        }));
+            .withIndex("by_account_date", (q) => q.eq("accountId", args.accountId))
+            .order("desc")
+            .take(limit);
+        return transactions.map(mapTransaction);
     },
 });
 /**
@@ -446,75 +466,44 @@ export const getTransactionsByUser = query({
         startDate: v.optional(v.string()),
         endDate: v.optional(v.string()),
         limit: v.optional(v.number()),
+        transactionIds: v.optional(v.array(v.string())),
     },
-    returns: v.array(v.object({
-        _id: v.string(),
-        userId: v.string(),
-        plaidItemId: v.string(),
-        accountId: v.string(),
-        transactionId: v.string(),
-        amount: v.number(),
-        isoCurrencyCode: v.string(),
-        date: v.string(),
-        datetime: v.optional(v.string()),
-        name: v.string(),
-        merchantName: v.optional(v.string()),
-        originalDescription: v.optional(v.string()),
-        pending: v.boolean(),
-        categoryPrimary: v.optional(v.string()),
-        categoryDetailed: v.optional(v.string()),
-        enrichmentData: v.optional(v.object({
-            counterpartyName: v.optional(v.string()),
-            counterpartyType: v.optional(v.string()),
-            counterpartyEntityId: v.optional(v.string()),
-            counterpartyConfidence: v.optional(v.string()),
-            counterpartyLogoUrl: v.optional(v.string()),
-            counterpartyWebsite: v.optional(v.string()),
-            counterpartyPhoneNumber: v.optional(v.string()),
-            enrichedAt: v.optional(v.number()),
-        })),
-        merchantId: v.optional(v.string()),
-        createdAt: v.number(),
-    })),
+    returns: v.array(transactionReturnValidator),
     handler: async (ctx, args) => {
-        // Query by userId, then filter by date range in JavaScript
-        // This is simpler than trying to use compound index range queries
-        let transactions = await ctx.db
+        const limit = boundedLimit(args.limit, DEFAULT_TRANSACTION_LIMIT, MAX_TRANSACTION_LIMIT);
+        if (args.transactionIds && args.transactionIds.length > 0) {
+            const uniqueIds = [...new Set(args.transactionIds)].slice(0, Math.min(MAX_TRANSACTION_ID_LOOKUP, limit));
+            const rows = await Promise.all(uniqueIds.map((transactionId) => ctx.db
+                .query("plaidTransactions")
+                .withIndex("by_user_transaction_id", (q) => q.eq("userId", args.userId).eq("transactionId", transactionId))
+                .order("desc")
+                .first()));
+            const byTransactionId = new Map(rows
+                .filter((txn) => txn !== null)
+                .map((txn) => [txn.transactionId, txn]));
+            return uniqueIds
+                .map((transactionId) => byTransactionId.get(transactionId))
+                .filter((txn) => txn != null)
+                .map(mapTransaction);
+        }
+        const transactions = await ctx.db
             .query("plaidTransactions")
-            .withIndex("by_date", (q) => q.eq("userId", args.userId))
+            .withIndex("by_date", (q) => {
+            const byUser = q.eq("userId", args.userId);
+            if (args.startDate && args.endDate) {
+                return byUser.gte("date", args.startDate).lte("date", args.endDate);
+            }
+            if (args.startDate) {
+                return byUser.gte("date", args.startDate);
+            }
+            if (args.endDate) {
+                return byUser.lte("date", args.endDate);
+            }
+            return byUser;
+        })
             .order("desc")
-            .collect();
-        // Apply date range filters
-        if (args.startDate) {
-            transactions = transactions.filter((t) => t.date >= args.startDate);
-        }
-        if (args.endDate) {
-            transactions = transactions.filter((t) => t.date <= args.endDate);
-        }
-        // Apply limit
-        if (args.limit) {
-            transactions = transactions.slice(0, args.limit);
-        }
-        return transactions.map((txn) => ({
-            _id: String(txn._id),
-            userId: txn.userId,
-            plaidItemId: txn.plaidItemId,
-            accountId: txn.accountId,
-            transactionId: txn.transactionId,
-            amount: txn.amount,
-            isoCurrencyCode: txn.isoCurrencyCode,
-            date: txn.date,
-            datetime: txn.datetime,
-            name: txn.name,
-            merchantName: txn.merchantName,
-            originalDescription: txn.originalDescription,
-            pending: txn.pending,
-            categoryPrimary: txn.categoryPrimary,
-            categoryDetailed: txn.categoryDetailed,
-            enrichmentData: txn.enrichmentData,
-            merchantId: txn.merchantId,
-            createdAt: txn.createdAt,
-        }));
+            .take(limit);
+        return transactions.map(mapTransaction);
     },
 });
 // =============================================================================
@@ -1052,9 +1041,9 @@ const recurringStreamReturnValidator = v.object({
     lastAmount: v.number(),
     isoCurrencyCode: v.string(),
     frequency: v.string(),
-    status: v.string(),
+    status: v.union(v.literal("MATURE"), v.literal("EARLY_DETECTION"), v.literal("TOMBSTONED")),
     isActive: v.boolean(),
-    type: v.string(),
+    type: v.union(v.literal("inflow"), v.literal("outflow")),
     category: v.optional(v.string()),
     firstDate: v.optional(v.string()),
     lastDate: v.optional(v.string()),
@@ -1062,6 +1051,30 @@ const recurringStreamReturnValidator = v.object({
     createdAt: v.number(),
     updatedAt: v.number(),
 });
+function mapRecurringStream(stream) {
+    return {
+        _id: String(stream._id),
+        userId: stream.userId,
+        plaidItemId: stream.plaidItemId,
+        streamId: stream.streamId,
+        accountId: stream.accountId,
+        description: stream.description,
+        merchantName: stream.merchantName,
+        averageAmount: stream.averageAmount,
+        lastAmount: stream.lastAmount,
+        isoCurrencyCode: stream.isoCurrencyCode,
+        frequency: stream.frequency,
+        status: stream.status,
+        isActive: stream.isActive,
+        type: stream.type,
+        category: stream.category,
+        firstDate: stream.firstDate,
+        lastDate: stream.lastDate,
+        predictedNextDate: stream.predictedNextDate,
+        createdAt: stream.createdAt,
+        updatedAt: stream.updatedAt,
+    };
+}
 /**
  * Get all recurring streams for a user.
  *
@@ -1069,36 +1082,16 @@ const recurringStreamReturnValidator = v.object({
  * before calling this query.
  */
 export const getRecurringStreamsByUser = query({
-    args: { userId: v.string() },
+    args: { userId: v.string(), limit: v.optional(v.number()) },
     returns: v.array(recurringStreamReturnValidator),
     handler: async (ctx, args) => {
+        const limit = boundedLimit(args.limit, DEFAULT_RECURRING_STREAM_LIMIT, MAX_RECURRING_STREAM_LIMIT);
         const streams = await ctx.db
             .query("plaidRecurringStreams")
-            .withIndex("by_user", (q) => q.eq("userId", args.userId))
-            .collect();
-        // Explicitly map fields to avoid including _creationTime from Convex
-        return streams.map((stream) => ({
-            _id: String(stream._id),
-            userId: stream.userId,
-            plaidItemId: stream.plaidItemId,
-            streamId: stream.streamId,
-            accountId: stream.accountId,
-            description: stream.description,
-            merchantName: stream.merchantName,
-            averageAmount: stream.averageAmount,
-            lastAmount: stream.lastAmount,
-            isoCurrencyCode: stream.isoCurrencyCode,
-            frequency: stream.frequency,
-            status: stream.status,
-            isActive: stream.isActive,
-            type: stream.type,
-            category: stream.category,
-            firstDate: stream.firstDate,
-            lastDate: stream.lastDate,
-            predictedNextDate: stream.predictedNextDate,
-            createdAt: stream.createdAt,
-            updatedAt: stream.updatedAt,
-        }));
+            .withIndex("by_user_updated_at", (q) => q.eq("userId", args.userId))
+            .order("desc")
+            .take(limit);
+        return streams.map(mapRecurringStream);
     },
 });
 /**
@@ -1108,36 +1101,16 @@ export const getRecurringStreamsByUser = query({
  * of the plaidItem before calling this query.
  */
 export const getRecurringStreamsByItem = query({
-    args: { plaidItemId: v.string() },
+    args: { plaidItemId: v.string(), limit: v.optional(v.number()) },
     returns: v.array(recurringStreamReturnValidator),
     handler: async (ctx, args) => {
+        const limit = boundedLimit(args.limit, DEFAULT_RECURRING_STREAM_LIMIT, MAX_RECURRING_STREAM_LIMIT);
         const streams = await ctx.db
             .query("plaidRecurringStreams")
-            .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", args.plaidItemId))
-            .collect();
-        // Explicitly map fields to avoid including _creationTime from Convex
-        return streams.map((stream) => ({
-            _id: String(stream._id),
-            userId: stream.userId,
-            plaidItemId: stream.plaidItemId,
-            streamId: stream.streamId,
-            accountId: stream.accountId,
-            description: stream.description,
-            merchantName: stream.merchantName,
-            averageAmount: stream.averageAmount,
-            lastAmount: stream.lastAmount,
-            isoCurrencyCode: stream.isoCurrencyCode,
-            frequency: stream.frequency,
-            status: stream.status,
-            isActive: stream.isActive,
-            type: stream.type,
-            category: stream.category,
-            firstDate: stream.firstDate,
-            lastDate: stream.lastDate,
-            predictedNextDate: stream.predictedNextDate,
-            createdAt: stream.createdAt,
-            updatedAt: stream.updatedAt,
-        }));
+            .withIndex("by_plaid_item_updated_at", (q) => q.eq("plaidItemId", args.plaidItemId))
+            .order("desc")
+            .take(limit);
+        return streams.map(mapRecurringStream);
     },
 });
 /**
@@ -1148,38 +1121,20 @@ export const getRecurringStreamsByItem = query({
  * before calling this query.
  */
 export const getActiveSubscriptions = query({
-    args: { userId: v.string() },
+    args: { userId: v.string(), limit: v.optional(v.number()) },
     returns: v.array(recurringStreamReturnValidator),
     handler: async (ctx, args) => {
+        const limit = boundedLimit(args.limit, DEFAULT_RECURRING_STREAM_LIMIT, MAX_RECURRING_STREAM_LIMIT);
         const streams = await ctx.db
             .query("plaidRecurringStreams")
-            .withIndex("by_user", (q) => q.eq("userId", args.userId))
-            .collect();
-        // Filter for active subscriptions
-        const subscriptions = streams.filter((s) => s.status === "MATURE" && s.type === "outflow" && s.isActive);
-        // Explicitly map fields to avoid including _creationTime from Convex
-        return subscriptions.map((stream) => ({
-            _id: String(stream._id),
-            userId: stream.userId,
-            plaidItemId: stream.plaidItemId,
-            streamId: stream.streamId,
-            accountId: stream.accountId,
-            description: stream.description,
-            merchantName: stream.merchantName,
-            averageAmount: stream.averageAmount,
-            lastAmount: stream.lastAmount,
-            isoCurrencyCode: stream.isoCurrencyCode,
-            frequency: stream.frequency,
-            status: stream.status,
-            isActive: stream.isActive,
-            type: stream.type,
-            category: stream.category,
-            firstDate: stream.firstDate,
-            lastDate: stream.lastDate,
-            predictedNextDate: stream.predictedNextDate,
-            createdAt: stream.createdAt,
-            updatedAt: stream.updatedAt,
-        }));
+            .withIndex("by_user_status_active_type_updated_at", (q) => q
+            .eq("userId", args.userId)
+            .eq("status", "MATURE")
+            .eq("isActive", true)
+            .eq("type", "outflow"))
+            .order("desc")
+            .take(limit);
+        return streams.map(mapRecurringStream);
     },
 });
 /**
@@ -1190,38 +1145,20 @@ export const getActiveSubscriptions = query({
  * before calling this query.
  */
 export const getRecurringIncome = query({
-    args: { userId: v.string() },
+    args: { userId: v.string(), limit: v.optional(v.number()) },
     returns: v.array(recurringStreamReturnValidator),
     handler: async (ctx, args) => {
+        const limit = boundedLimit(args.limit, DEFAULT_RECURRING_STREAM_LIMIT, MAX_RECURRING_STREAM_LIMIT);
         const streams = await ctx.db
             .query("plaidRecurringStreams")
-            .withIndex("by_user", (q) => q.eq("userId", args.userId))
-            .collect();
-        // Filter for active income streams
-        const income = streams.filter((s) => s.status === "MATURE" && s.type === "inflow" && s.isActive);
-        // Explicitly map fields to avoid including _creationTime from Convex
-        return income.map((stream) => ({
-            _id: String(stream._id),
-            userId: stream.userId,
-            plaidItemId: stream.plaidItemId,
-            streamId: stream.streamId,
-            accountId: stream.accountId,
-            description: stream.description,
-            merchantName: stream.merchantName,
-            averageAmount: stream.averageAmount,
-            lastAmount: stream.lastAmount,
-            isoCurrencyCode: stream.isoCurrencyCode,
-            frequency: stream.frequency,
-            status: stream.status,
-            isActive: stream.isActive,
-            type: stream.type,
-            category: stream.category,
-            firstDate: stream.firstDate,
-            lastDate: stream.lastDate,
-            predictedNextDate: stream.predictedNextDate,
-            createdAt: stream.createdAt,
-            updatedAt: stream.updatedAt,
-        }));
+            .withIndex("by_user_status_active_type_updated_at", (q) => q
+            .eq("userId", args.userId)
+            .eq("status", "MATURE")
+            .eq("isActive", true)
+            .eq("type", "inflow"))
+            .order("desc")
+            .take(limit);
+        return streams.map(mapRecurringStream);
     },
 });
 /**
@@ -1242,12 +1179,15 @@ export const getSubscriptionsSummary = query({
         annualCount: v.number(),
     }),
     handler: async (ctx, args) => {
-        const streams = await ctx.db
+        const subscriptions = await ctx.db
             .query("plaidRecurringStreams")
-            .withIndex("by_user", (q) => q.eq("userId", args.userId))
-            .collect();
-        // Filter for active subscriptions
-        const subscriptions = streams.filter((s) => s.status === "MATURE" && s.type === "outflow" && s.isActive);
+            .withIndex("by_user_status_active_type_updated_at", (q) => q
+            .eq("userId", args.userId)
+            .eq("status", "MATURE")
+            .eq("isActive", true)
+            .eq("type", "outflow"))
+            .order("desc")
+            .take(MAX_RECURRING_STREAM_LIMIT);
         let monthlyTotal = 0;
         let weeklyCount = 0;
         let biweeklyCount = 0;
@@ -1308,17 +1248,34 @@ const syncLogReturnValidator = v.object({
     _id: v.string(),
     plaidItemId: v.string(),
     userId: v.string(),
-    syncType: v.string(),
-    trigger: v.string(),
+    syncType: v.union(v.literal("transactions"), v.literal("liabilities"), v.literal("recurring"), v.literal("accounts"), v.literal("onboard")),
+    trigger: v.union(v.literal("webhook"), v.literal("scheduled"), v.literal("manual"), v.literal("onboard")),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     durationMs: v.optional(v.number()),
-    status: v.string(),
+    status: v.union(v.literal("started"), v.literal("success"), v.literal("error"), v.literal("rate_limited"), v.literal("circuit_open")),
     result: syncResultValidator,
     errorCode: v.optional(v.string()),
     errorMessage: v.optional(v.string()),
     retryCount: v.optional(v.number()),
 });
+function mapSyncLog(log) {
+    return {
+        _id: String(log._id),
+        plaidItemId: log.plaidItemId,
+        userId: log.userId,
+        syncType: log.syncType,
+        trigger: log.trigger,
+        startedAt: log.startedAt,
+        completedAt: log.completedAt,
+        durationMs: log.durationMs,
+        status: log.status,
+        result: log.result,
+        errorCode: log.errorCode,
+        errorMessage: log.errorMessage,
+        retryCount: log.retryCount,
+    };
+}
 /**
  * Get sync logs for a specific plaidItem.
  * Returns most recent first.
@@ -1333,29 +1290,13 @@ export const getSyncLogsByItem = query({
     },
     returns: v.array(syncLogReturnValidator),
     handler: async (ctx, args) => {
-        let queryBuilder = ctx.db
+        const limit = boundedLimit(args.limit, DEFAULT_SYNC_LOG_LIMIT, MAX_SYNC_LOG_LIMIT);
+        const logs = await ctx.db
             .query("syncLogs")
-            .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", args.plaidItemId))
-            .order("desc");
-        const logs = args.limit
-            ? await queryBuilder.take(args.limit)
-            : await queryBuilder.collect();
-        // Explicitly map fields to avoid including _creationTime from Convex
-        return logs.map((log) => ({
-            _id: String(log._id),
-            plaidItemId: log.plaidItemId,
-            userId: log.userId,
-            syncType: log.syncType,
-            trigger: log.trigger,
-            startedAt: log.startedAt,
-            completedAt: log.completedAt,
-            durationMs: log.durationMs,
-            status: log.status,
-            result: log.result,
-            errorCode: log.errorCode,
-            errorMessage: log.errorMessage,
-            retryCount: log.retryCount,
-        }));
+            .withIndex("by_plaid_item_startedAt", (q) => q.eq("plaidItemId", args.plaidItemId))
+            .order("desc")
+            .take(limit);
+        return logs.map(mapSyncLog);
     },
 });
 /**
@@ -1372,29 +1313,13 @@ export const getSyncLogsByUser = query({
     },
     returns: v.array(syncLogReturnValidator),
     handler: async (ctx, args) => {
-        let queryBuilder = ctx.db
+        const limit = boundedLimit(args.limit, DEFAULT_SYNC_LOG_LIMIT, MAX_SYNC_LOG_LIMIT);
+        const logs = await ctx.db
             .query("syncLogs")
-            .withIndex("by_user", (q) => q.eq("userId", args.userId))
-            .order("desc");
-        const logs = args.limit
-            ? await queryBuilder.take(args.limit)
-            : await queryBuilder.collect();
-        // Explicitly map fields to avoid including _creationTime from Convex
-        return logs.map((log) => ({
-            _id: String(log._id),
-            plaidItemId: log.plaidItemId,
-            userId: log.userId,
-            syncType: log.syncType,
-            trigger: log.trigger,
-            startedAt: log.startedAt,
-            completedAt: log.completedAt,
-            durationMs: log.durationMs,
-            status: log.status,
-            result: log.result,
-            errorCode: log.errorCode,
-            errorMessage: log.errorMessage,
-            retryCount: log.retryCount,
-        }));
+            .withIndex("by_user_startedAt", (q) => q.eq("userId", args.userId))
+            .order("desc")
+            .take(limit);
+        return logs.map(mapSyncLog);
     },
 });
 /**
@@ -1425,10 +1350,10 @@ export const getSyncStats = query({
         const cutoff = Date.now() - daysBack * 24 * 60 * 60 * 1000;
         const logs = await ctx.db
             .query("syncLogs")
-            .withIndex("by_plaid_item", (q) => q.eq("plaidItemId", args.plaidItemId))
-            .collect();
-        // Filter to recent logs
-        const recentLogs = logs.filter((log) => log.startedAt >= cutoff);
+            .withIndex("by_plaid_item_startedAt", (q) => q.eq("plaidItemId", args.plaidItemId).gte("startedAt", cutoff))
+            .order("desc")
+            .take(MAX_SYNC_STATS_LOGS);
+        const recentLogs = logs;
         const successLogs = recentLogs.filter((log) => log.status === "success");
         const errorLogs = recentLogs.filter((log) => log.status === "error" ||
             log.status === "rate_limited" ||
