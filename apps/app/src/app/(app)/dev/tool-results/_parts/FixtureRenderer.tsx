@@ -45,27 +45,6 @@ type OutputPreviewShape = {
     window?: { from: string; to: string };
     preview?: {
         buckets?: Array<{ category?: string; from?: string; to?: string; amount: number }>;
-        promos?: Array<{
-            id: string;
-            cardId: Id<"creditCards">;
-            kind: string;
-            apr: number;
-            startDate: string;
-            endDate: string;
-            balance?: number;
-            note?: string;
-        }>;
-        plans?: Array<{
-            id: string;
-            cardId: Id<"creditCards">;
-            merchantName: string;
-            totalAmount: number;
-            monthlyPayment: number;
-            totalPayments: number;
-            remainingPayments: number;
-            startDate: string;
-            endDate: string;
-        }>;
         reminders?: Array<{
             id: string;
             title: string;
@@ -96,8 +75,6 @@ function synthesizeOverrides(props: AnyProps, existing: LivePreviewOverrides | u
         transactions: { ...(existing?.transactions ?? {}) },
         creditCards: { ...(existing?.creditCards ?? {}) },
         plaidAccounts: { ...(existing?.plaidAccounts ?? {}) },
-        promoRates: { ...(existing?.promoRates ?? {}) },
-        installmentPlans: { ...(existing?.installmentPlans ?? {}) },
         reminders: { ...(existing?.reminders ?? {}) },
     };
 
@@ -161,15 +138,9 @@ function synthesizeOverrides(props: AnyProps, existing: LivePreviewOverrides | u
             ];
             const institution = institutionPalette[institutionIndex % institutionPalette.length]!;
             const isCredit = index % 3 === 2;
-            const subtypeOptions = isCredit
-                ? ["credit card"]
-                : ["checking", "savings", "money market"];
+            const subtypeOptions = isCredit ? ["credit card"] : ["checking", "savings", "money market"];
             const subtype = subtypeOptions[index % subtypeOptions.length]!;
-            const accountName = isCredit
-                ? `${institution.name} Credit Card`
-                : index % 2 === 0
-                  ? `${institution.name} Checking`
-                  : `${institution.name} Savings`;
+            const accountName = isCredit ? `${institution.name} Credit Card` : index % 2 === 0 ? `${institution.name} Checking` : `${institution.name} Savings`;
             result.plaidAccounts![id] = {
                 _id: id,
                 name: accountName,
@@ -188,8 +159,8 @@ function synthesizeOverrides(props: AnyProps, existing: LivePreviewOverrides | u
             };
         } else if (id.startsWith("creditCards:") && !result.creditCards?.[id]) {
             // Seed enough fields for the rich agent credit-cards table:
-            // institution branding (logo color), brand, statement/min-payment
-            // balances, APRs, and lock/active flags so all status-badge paths
+            // institution branding (logo color), brand, balance/payment
+            // fields, APRs, and lock/active flags so all status-badge paths
             // render in the dev preview.
             const issuerPalette = [
                 { company: "Chase", color: "#117ACA", brand: "visa" as const },
@@ -215,40 +186,10 @@ function synthesizeOverrides(props: AnyProps, existing: LivePreviewOverrides | u
                 isLocked: false,
                 isActive: true,
                 nextPaymentDueDate: "2026-05-05",
-                statementClosingDay: 15 + index,
                 plaidItemId: `plaid:plaidItems:issuer-${index}`,
                 institutionName: issuer.company,
                 institutionPrimaryColor: issuer.color,
             };
-        } else if (id.startsWith("promoRates:") && !result.promoRates?.[id]) {
-            const promo = o.preview?.promos?.[index];
-            if (promo) {
-                result.promoRates![id] = {
-                    _id: id,
-                    creditCardId: promo.cardId,
-                    kind: promo.kind,
-                    apr: promo.apr,
-                    startDate: promo.startDate,
-                    endDate: promo.endDate,
-                    balance: promo.balance ?? null,
-                    note: promo.note ?? null,
-                };
-            }
-        } else if (id.startsWith("installmentPlans:") && !result.installmentPlans?.[id]) {
-            const plan = o.preview?.plans?.[index];
-            if (plan) {
-                result.installmentPlans![id] = {
-                    _id: id,
-                    creditCardId: plan.cardId,
-                    merchantName: plan.merchantName,
-                    totalAmount: plan.totalAmount,
-                    monthlyPayment: plan.monthlyPayment,
-                    totalPayments: plan.totalPayments,
-                    remainingPayments: plan.remainingPayments,
-                    startDate: plan.startDate,
-                    endDate: plan.endDate,
-                };
-            }
         } else if (id.startsWith("reminders:") && !result.reminders?.[id]) {
             const reminder = o.preview?.reminders?.[index];
             if (reminder) {
@@ -294,7 +235,7 @@ function synthesizeOverrides(props: AnyProps, existing: LivePreviewOverrides | u
 
 function ErrorPreview({ errorText, toolName }: { errorText: string | undefined; toolName: string }) {
     return (
-        <div className="border-utility-error-300 bg-utility-error-50 shadow-xs max-w-[640px] rounded-xl border px-4 py-4">
+        <div className="border-utility-error-300 bg-utility-error-50 shadow-xs rounded-xl px-4 py-4 max-w-[640px] border">
             <h3 className="text-utility-error-700 text-sm font-semibold">Tool error: {toolName}</h3>
             <p className="text-utility-error-700 mt-1 text-xs">{errorText ?? "Tool returned output-error without errorText."}</p>
             <p className="text-tertiary mt-3 text-xs">
@@ -354,7 +295,7 @@ export function FixtureRenderer({ toolName }: { toolName: string }) {
                     return (
                         <article key={name} className="space-y-3">
                             <header className="flex items-center justify-between">
-                                <h2 className={cx("text-tertiary text-xs font-semibold uppercase tracking-wide")}>{name}</h2>
+                                <h2 className={cx("text-tertiary text-xs font-semibold tracking-wide uppercase")}>{name}</h2>
                                 <code className="text-tertiary text-xs">{props.state}</code>
                             </header>
                             <LivePreviewOverrideProvider value={mergedOverrides}>

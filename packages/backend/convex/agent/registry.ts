@@ -10,7 +10,7 @@ export interface ToolDef {
     handler: unknown;
     handlerType: "query" | "mutation";
     bucket: BucketName;
-    ownership: "W2" | "W5" | "W6";
+    ownership: "W2" | "W5";
     category: ToolCategory;
     firstTurnGuard: boolean;
     incrementsReadCount: boolean;
@@ -27,28 +27,8 @@ function isIsoDateString(value: string): boolean {
 
 const isoDateSchema = z.string().refine(isIsoDateString, "Expected an ISO date in YYYY-MM-DD format.");
 
-const manualPromoSchema = z
-    .object({
-        promoRateId: z.string().min(1).optional(),
-        description: z.string().trim().min(1).max(160),
-        aprPercentage: z.number().finite().min(0).max(100),
-        originalBalance: z.number().finite().positive(),
-        remainingBalance: z.number().finite().min(0),
-        startDate: isoDateSchema,
-        expirationDate: isoDateSchema,
-        isDeferredInterest: z.boolean(),
-    })
-    .refine((promo) => promo.remainingBalance <= promo.originalBalance, {
-        path: ["remainingBalance"],
-        message: "remainingBalance must be less than or equal to originalBalance.",
-    })
-    .refine((promo) => promo.expirationDate >= promo.startDate, {
-        path: ["expirationDate"],
-        message: "expirationDate must be on or after startDate.",
-    });
-
 export const AGENT_TOOLS: Record<string, ToolDef> = {
-    // ===== READ TOOLS (14) =====
+    // ===== READ TOOLS =====
     list_accounts: {
         description: "List the user's bank and credit card accounts, optionally filtered by type.",
         llmInputSchema: z.object({
@@ -129,39 +109,13 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         incrementsReadCount: true,
     },
     get_credit_card_detail: {
-        description: "Get a credit card's full detail including APRs, balances, ISB, and YTD fees.",
+        description: "Get a credit card's full detail including APRs, balances, payments, and fees.",
         llmInputSchema: z.object({
             cardId: z.string().describe("Convex Ents ID for the credit card."),
         }),
         handler: agent.tools.read.getCreditCardDetail.getCreditCardDetail,
         handlerType: "query" as const,
         bucket: "read_moderate" as const,
-        ownership: "W2" as const,
-        category: "read" as const,
-        firstTurnGuard: false,
-        incrementsReadCount: true,
-    },
-    list_deferred_interest_promos: {
-        description: "List active deferred-interest promos and their expiration dates.",
-        llmInputSchema: z.object({
-            includeExpired: z.boolean().optional(),
-        }),
-        handler: agent.tools.read.listDeferredInterestPromos.listDeferredInterestPromos,
-        handlerType: "query" as const,
-        bucket: "read_cheap" as const,
-        ownership: "W2" as const,
-        category: "read" as const,
-        firstTurnGuard: false,
-        incrementsReadCount: true,
-    },
-    list_installment_plans: {
-        description: "List active installment plans tied to credit cards.",
-        llmInputSchema: z.object({
-            includeInactive: z.boolean().optional(),
-        }),
-        handler: agent.tools.read.listInstallmentPlans.listInstallmentPlans,
-        handlerType: "query" as const,
-        bucket: "read_cheap" as const,
         ownership: "W2" as const,
         category: "read" as const,
         firstTurnGuard: false,
@@ -194,19 +148,6 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         handler: agent.tools.read.getSpendOverTime.getSpendOverTime,
         handlerType: "query" as const,
         bucket: "read_moderate" as const,
-        ownership: "W2" as const,
-        category: "read" as const,
-        firstTurnGuard: false,
-        incrementsReadCount: true,
-    },
-    get_upcoming_statements: {
-        description: "List credit cards with a statement closing in the next N days.",
-        llmInputSchema: z.object({
-            withinDays: z.number().int().max(90).optional(),
-        }),
-        handler: agent.tools.read.getUpcomingStatements.getUpcomingStatements,
-        handlerType: "query" as const,
-        bucket: "read_cheap" as const,
         ownership: "W2" as const,
         category: "read" as const,
         firstTurnGuard: false,
@@ -256,7 +197,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         incrementsReadCount: true,
     },
 
-    // ===== PROPOSE TOOLS (6; W5 bodies) =====
+    // ===== PROPOSE TOOLS =====
     propose_transaction_update: {
         description: "Propose an update to a single transaction's overlay. User confirms before execute.",
         llmInputSchema: z.object({
@@ -329,50 +270,22 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
                             aprs: z
                                 .array(
                                     z.object({
-                                        index: z
-                                            .number()
-                                            .int()
-                                            .describe(
-                                                "0 = purchase APR, 1 = balance-transfer APR, etc.",
-                                            ),
-                                        aprPercentage: z
-                                            .number()
-                                            .optional()
-                                            .describe(
-                                                "As a percent, e.g. 0 for 0% intro, 21.99 for standard.",
-                                            ),
+                                        index: z.number().int().describe("0 = purchase APR, 1 = balance-transfer APR, etc."),
+                                        aprPercentage: z.number().optional().describe("As a percent, e.g. 0 for 0% intro, 21.99 for standard."),
                                         balanceSubjectToApr: z.number().optional(),
                                         interestChargeAmount: z.number().optional(),
                                     }),
                                 )
                                 .optional()
-                                .describe(
-                                    "APR overrides keyed by index. To set the purchase APR to 0%, send aprs: [{ index: 0, aprPercentage: 0 }].",
-                                ),
+                                .describe("APR overrides keyed by index. To set the purchase APR to 0%, send aprs: [{ index: 0, aprPercentage: 0 }]."),
                             providerDashboardUrl: z.string().optional(),
                         })
                         .optional()
-                        .describe(
-                            "User-set overrides for fields the user can correct manually (Plaid-sync'd values stay separate).",
-                        ),
+                        .describe("User-set overrides for fields the user can correct manually (Plaid-sync'd values stay separate)."),
                 })
                 .passthrough(),
         }),
         handler: agent.tools.propose.proposeCreditCardMetadataUpdate.proposeCreditCardMetadataUpdate,
-        handlerType: "mutation" as const,
-        bucket: "write_single" as const,
-        ownership: "W5" as const,
-        category: "propose" as const,
-        firstTurnGuard: true,
-        incrementsReadCount: false,
-    },
-    propose_manual_promo: {
-        description: "Propose adding a manual (user-entered) deferred-interest promo for a card.",
-        llmInputSchema: z.object({
-            cardId: z.string(),
-            promo: manualPromoSchema,
-        }),
-        handler: agent.tools.propose.proposeManualPromo.proposeManualPromo,
         handlerType: "mutation" as const,
         bucket: "write_single" as const,
         ownership: "W5" as const,

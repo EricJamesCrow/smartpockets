@@ -1,7 +1,7 @@
 import { UserJSON } from "@clerk/backend";
 import { Validator, v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./functions";
 import { components } from "./_generated/api";
+import { internalMutation, internalQuery, mutation, query } from "./functions";
 
 /**
  * Get the current authenticated user
@@ -92,12 +92,8 @@ export const upsertFromClerk = internalMutation({
             externalId: account.id,
         }));
 
-        const primary = (data.email_addresses || []).find(
-            (e: any) => e.id === data.primary_email_address_id,
-        );
-        const primaryEmail: string | undefined = primary?.email_address
-            ? String(primary.email_address).toLowerCase()
-            : undefined;
+        const primary = (data.email_addresses || []).find((e: any) => e.id === data.primary_email_address_id);
+        const primaryEmail: string | undefined = primary?.email_address ? String(primary.email_address).toLowerCase() : undefined;
 
         // Look up existing user by Clerk ID
         const existingUser = await ctx.table("users").get("externalId", data.id);
@@ -136,10 +132,14 @@ export const deleteFromClerk = internalMutation({
             const edgeNames = [
                 "creditCards",
                 "wallets",
-                "statementSnapshots",
-                "promoRates",
-                "installmentPlans",
                 "transactionOverlays",
+                "transactionAttachments",
+                "notificationPreferences",
+                "agentThreads",
+                "agentProposals",
+                "agentUsage",
+                "reminders",
+                "auditLog",
             ] as const;
 
             for (const edgeName of edgeNames) {

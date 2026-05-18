@@ -26,9 +26,6 @@ const schema = defineEntSchema(
             .field("externalId", v.string(), { unique: true }) // Clerk ID
             .edges("creditCards", { ref: true })
             .edges("wallets", { ref: true })
-            .edges("statementSnapshots", { ref: true })
-            .edges("promoRates", { ref: true })
-            .edges("installmentPlans", { ref: true })
             .edges("transactionOverlays", { ref: true })
             .edges("transactionAttachments", { ref: true })
             .edges("notificationPreferences", { ref: true })
@@ -37,12 +34,7 @@ const schema = defineEntSchema(
             .edges("agentUsage", { ref: true })
             .edges("usageCounters", { ref: true })
             .edges("reminders", { ref: true })
-            .edges("auditLog", { ref: true })
-            .edges("promoCountdowns", { ref: true })
-            .edges("statementReminders", { ref: true })
-            .edges("anomalies", { ref: true })
-            .edges("detectedSubscriptions", { ref: true })
-            .edges("cashflowForecasts", { ref: true }),
+            .edges("auditLog", { ref: true }),
 
         // === PAYMENT ATTEMPTS ===
         paymentAttempts: defineEnt(paymentAttemptSchemaValidator)
@@ -112,12 +104,6 @@ const schema = defineEntSchema(
             isAutoPay: v.boolean(),
             autoPayEnabledAt: v.optional(v.number()),
 
-            // Statement & issuer config
-            statementClosingDay: v.optional(v.number()),
-            payOverTimeEnabled: v.optional(v.boolean()),
-            payOverTimeLimit: v.optional(v.number()),
-            payOverTimeApr: v.optional(v.number()),
-
             // User overrides (preserves raw Plaid data, user edits stored here)
             userOverrides: v.optional(
                 v.object({
@@ -143,74 +129,10 @@ const schema = defineEntSchema(
         })
             .edge("user")
             .edges("walletCards", { ref: true })
-            .edges("statementSnapshots", { ref: true })
-            .edges("promoRates", { ref: true })
-            .edges("installmentPlans", { ref: true })
-            .edges("promoCountdowns", { ref: true })
-            .edges("statementReminders", { ref: true })
             .index("by_accountId", ["accountId"])
             .index("by_plaidItemId", ["plaidItemId"])
             .index("by_user_active", ["userId", "isActive"])
-            .index("by_user_overdue", ["userId", "isOverdue"])
-            .index("by_closingDay_active", ["statementClosingDay", "isActive"]),
-
-        // === CREDIT CARD DETAILS ===
-        // Native statement, promo, and installment money fields are display
-        // dollars until a separate audited migration changes their unit.
-        statementSnapshots: defineEnt({
-            statementDate: v.string(),
-            previousBalance: v.number(),
-            paymentsAndCredits: v.number(),
-            newPurchases: v.number(),
-            fees: v.number(),
-            interestCharged: v.number(),
-            newBalance: v.number(),
-            minimumPaymentDue: v.number(),
-            dueDate: v.string(),
-            source: v.union(v.literal("manual"), v.literal("inferred")),
-        })
-            .edge("user")
-            .edge("creditCard")
-            .index("by_card_date", ["creditCardId", "statementDate"]),
-
-        promoRates: defineEnt({
-            description: v.string(),
-            aprPercentage: v.number(),
-            originalBalance: v.number(),
-            remainingBalance: v.number(),
-            startDate: v.string(),
-            expirationDate: v.string(),
-            isDeferredInterest: v.boolean(),
-            accruedDeferredInterest: v.optional(v.number()),
-            monthlyMinimumPayment: v.optional(v.number()),
-            isActive: v.boolean(),
-            // User overrides for Plaid-synced promos
-            userOverrides: v.optional(
-                v.object({
-                    expirationDate: v.optional(v.string()),
-                }),
-            ),
-            // True for user-created promos (not from Plaid)
-            isManual: v.optional(v.boolean()),
-        })
-            .edge("user")
-            .edge("creditCard")
-            .index("by_user_active", ["userId", "isActive"]),
-
-        installmentPlans: defineEnt({
-            description: v.string(),
-            startDate: v.string(),
-            originalPrincipal: v.number(),
-            remainingPrincipal: v.number(),
-            totalPayments: v.number(),
-            remainingPayments: v.number(),
-            monthlyPrincipal: v.number(),
-            monthlyFee: v.number(),
-            aprPercentage: v.number(),
-            isActive: v.boolean(),
-        })
-            .edge("user")
-            .edge("creditCard"),
+            .index("by_user_overdue", ["userId", "isOverdue"]),
 
         // === WALLETS ===
         wallets: defineEnt({
@@ -279,11 +201,6 @@ const schema = defineEntSchema(
 
         // === NOTIFICATION PREFERENCES (W7) ===
         notificationPreferences: defineEnt({
-            weeklyDigestEnabled: v.boolean(),
-            promoWarningEnabled: v.boolean(),
-            statementReminderEnabled: v.boolean(),
-            anomalyAlertEnabled: v.boolean(),
-            subscriptionDetectedEnabled: v.boolean(),
             welcomeOnboardingEnabled: v.boolean(),
             masterUnsubscribed: v.boolean(),
             updatedAt: v.number(),
@@ -502,116 +419,6 @@ const schema = defineEntSchema(
             .index("by_version", ["version"])
             .index("by_activatedAt", ["activatedAt"]),
 
-        // === INTELLIGENCE (W6) ===
-        promoCountdowns: defineEnt({
-            promoRateId: v.id("promoRates"),
-            daysToExpiration: v.number(),
-            effectiveDate: v.string(),
-            sourceField: v.union(
-                v.literal("override"),
-                v.literal("plaid"),
-                v.literal("manual"),
-            ),
-            originalExpirationDate: v.string(),
-            isDeferredInterest: v.boolean(),
-            remainingBalance: v.number(),
-            accruedDeferredInterest: v.optional(v.number()),
-            lastRefreshedAt: v.number(),
-        })
-            .edge("user")
-            .edge("creditCard")
-            .index("by_user_daysToExpiration", ["userId", "daysToExpiration"])
-            .index("by_promoRateId", ["promoRateId"]),
-
-        statementReminders: defineEnt({
-            statementClosingDate: v.string(),
-            daysToClose: v.number(),
-            nextPaymentDueDate: v.optional(v.string()),
-            minimumPaymentAmount: v.optional(v.number()),
-            lastStatementBalance: v.optional(v.number()),
-            lastRefreshedAt: v.number(),
-        })
-            .edge("user")
-            .edge("creditCard")
-            .index("by_user_daysToClose", ["userId", "daysToClose"]),
-
-        anomalies: defineEnt({
-            plaidTransactionId: v.string(),
-            ruleType: v.union(
-                v.literal("amount_spike_3x"),
-                v.literal("new_merchant_threshold"),
-                v.literal("duplicate_charge_24h"),
-            ),
-            score: v.number(),
-            evidenceJson: v.string(),
-            merchantName: v.string(),
-            amount: v.number(),
-            transactionDate: v.string(),
-            detectedAt: v.number(),
-            userStatus: v.union(
-                v.literal("pending"),
-                v.literal("acknowledged"),
-                v.literal("dismissed_false_positive"),
-            ),
-            userStatusUpdatedAt: v.optional(v.number()),
-        })
-            .edge("user")
-            .index("by_user_detectedAt", ["userId", "detectedAt"])
-            .index("by_plaidTransactionId_ruleType", ["plaidTransactionId", "ruleType"]),
-
-        anomalyScanState: defineEnt({
-            lastScannedAt: v.number(),
-            lastScannedTransactionDate: v.string(),
-            skippedNullMerchantCount: v.number(),
-        })
-            .field("userId", v.id("users"), { unique: true }),
-
-        detectedSubscriptions: defineEnt({
-            normalizedMerchant: v.string(),
-            amountBucket: v.number(),
-            frequency: v.union(
-                v.literal("weekly"),
-                v.literal("biweekly"),
-                v.literal("monthly"),
-                v.literal("quarterly"),
-                v.literal("annual"),
-            ),
-            averageAmount: v.number(),
-            nextPredictedDate: v.optional(v.string()),
-            source: v.union(v.literal("plaid"), v.literal("catchup")),
-            plaidStreamId: v.optional(v.string()),
-            sampleTransactionIds: v.array(v.string()),
-            firstSeenDate: v.string(),
-            lastSeenDate: v.string(),
-            occurrenceCount: v.number(),
-            userStatus: v.union(
-                v.literal("pending"),
-                v.literal("confirmed"),
-                v.literal("dismissed"),
-            ),
-            userStatusUpdatedAt: v.optional(v.number()),
-            nickname: v.optional(v.string()),
-            isActive: v.boolean(),
-        })
-            .edge("user")
-            .index("by_user_userStatus", ["userId", "userStatus"])
-            .index(
-                "by_user_normalizedMerchant_amountBucket",
-                ["userId", "normalizedMerchant", "amountBucket"],
-            ),
-
-        cashflowForecasts: defineEnt({
-            horizonStartDate: v.string(),
-            horizonEndDate: v.string(),
-            startingBalance: v.number(),
-            projectedNetCash: v.number(),
-            endingBalance: v.number(),
-            lineItemsJson: v.string(),
-            generatedAt: v.number(),
-        })
-            .edge("user")
-            .index("by_user_generatedAt", ["userId", "generatedAt"]),
-
         // === REMINDERS (W2 ships table; W5 owns CRUD) ===
         reminders: defineEnt({
             title: v.string(),
@@ -620,13 +427,7 @@ const schema = defineEntSchema(
             isDone: v.boolean(),
             doneAt: v.optional(v.number()),
             dismissedAt: v.optional(v.number()),
-            relatedResourceType: v.union(
-                v.literal("creditCard"),
-                v.literal("promoRate"),
-                v.literal("installmentPlan"),
-                v.literal("transaction"),
-                v.literal("none"),
-            ),
+            relatedResourceType: v.union(v.literal("creditCard"), v.literal("transaction"), v.literal("none")),
             relatedResourceId: v.optional(v.string()),
             triggerLeadDays: v.optional(v.number()),
             channels: v.array(v.union(v.literal("chat"), v.literal("email"))),

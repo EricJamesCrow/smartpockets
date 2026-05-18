@@ -74,7 +74,6 @@ type CreditCardRow = {
         interestChargeAmount?: number | null;
     }> | null;
     nextPaymentDueDate?: string | null;
-    statementClosingDay?: number | null;
     plaidItemId?: string | null;
     institutionName?: string | null;
     institutionLogoBase64?: string | null;
@@ -94,31 +93,6 @@ type PlaidAccountRow = {
     institutionName?: string | null;
     institutionLogoBase64?: string | null;
     institutionPrimaryColor?: string | null;
-};
-
-type PromoRateRow = {
-    _id: string;
-    _updateTime?: number;
-    creditCardId: Id<"creditCards">;
-    kind: string;
-    apr: number;
-    startDate: string;
-    endDate: string;
-    balance?: number | null; // Native promo dollars.
-    note?: string | null;
-};
-
-type InstallmentPlanRow = {
-    _id: string;
-    _updateTime?: number;
-    creditCardId: Id<"creditCards">;
-    merchantName: string;
-    totalAmount: number; // Native installment dollars.
-    monthlyPayment: number;
-    totalPayments: number;
-    remainingPayments: number;
-    startDate: string;
-    endDate: string;
 };
 
 type ReminderRow = {
@@ -165,8 +139,6 @@ export type LivePreviewOverrides = {
     transactions?: Record<string, TransactionRow | null>;
     creditCards?: Record<string, CreditCardRow | null>;
     plaidAccounts?: Record<string, PlaidAccountRow | null>;
-    promoRates?: Record<string, PromoRateRow | null>;
-    installmentPlans?: Record<string, InstallmentPlanRow | null>;
     reminders?: Record<string, ReminderRow | null>;
 };
 
@@ -210,22 +182,6 @@ export function useLivePlaidAccounts(ids: string[]): PlaidAccountRow[] | undefin
     return live;
 }
 
-export function useLivePromoRates(ids: string[]): PromoRateRow[] | undefined {
-    const overrides = useContext(LivePreviewOverrideContext);
-    const live = useQuery((api as any).agent.liveRows.getPromoRates, ids.length > 0 ? { ids } : "skip") as PromoRateRow[] | undefined;
-    const hit = collect<PromoRateRow>(ids, overrides?.promoRates);
-    if (hit) return hit;
-    return live;
-}
-
-export function useLiveInstallmentPlans(ids: string[]): InstallmentPlanRow[] | undefined {
-    const overrides = useContext(LivePreviewOverrideContext);
-    const live = useQuery((api as any).agent.liveRows.getInstallmentPlans, ids.length > 0 ? { ids } : "skip") as InstallmentPlanRow[] | undefined;
-    const hit = collect<InstallmentPlanRow>(ids, overrides?.installmentPlans);
-    if (hit) return hit;
-    return live;
-}
-
 export function useLiveReminders(ids: string[]): ReminderRow[] | undefined {
     const overrides = useContext(LivePreviewOverrideContext);
     const live = useQuery((api as any).agent.liveRows.getReminders, ids.length > 0 ? { ids } : "skip") as ReminderRow[] | undefined;
@@ -244,4 +200,4 @@ export function useLiveProposal(proposalId: AgentProposalId | undefined): AgentP
     return live;
 }
 
-export type { TransactionRow, CreditCardRow, PlaidAccountRow, PromoRateRow, InstallmentPlanRow, ReminderRow, AgentProposalRow };
+export type { TransactionRow, CreditCardRow, PlaidAccountRow, ReminderRow, AgentProposalRow };

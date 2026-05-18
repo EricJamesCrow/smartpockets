@@ -152,11 +152,6 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
         setCurrentPage(1);
     };
 
-    // Export handler - stub for future CSV export feature
-    const handleExport = () => {
-        // CSV export will be implemented when file download utilities are added
-    };
-
     // Convert credit-card Transaction to DetailPanelTransaction for the panel
     const handleSelectTransaction = (transaction: Transaction) => {
         setSelectedTransaction({
@@ -184,22 +179,22 @@ export function TransactionsSection({ cardId, accountId, filterMode = "all" }: T
                 />
 
                 {/* Filters - Above the table */}
-                <TransactionFilters filters={filters} onFiltersChange={handleFiltersChange} onExport={handleExport} />
+                <TransactionFilters filters={filters} onFiltersChange={handleFiltersChange} />
 
                 {/* Table */}
                 {isLoading ? (
                     <div className="animate-pulse">
                         {/* Header skeleton */}
-                        <div className="border-secondary bg-secondary flex items-center gap-4 border-b px-4 py-3">
+                        <div className="border-secondary bg-secondary gap-4 px-4 py-3 flex items-center border-b">
                             {[...Array(6)].map((_, i) => (
                                 <div key={i} className="bg-tertiary/30 h-3 w-20 rounded" />
                             ))}
                         </div>
                         {/* Row skeletons */}
                         {[...Array(5)].map((_, i) => (
-                            <div key={i} className="border-secondary flex items-center gap-4 border-b px-4 py-3">
+                            <div key={i} className="border-secondary gap-4 px-4 py-3 flex items-center border-b">
                                 <div className="bg-tertiary/20 h-4 w-20 rounded" />
-                                <div className="flex flex-1 items-center gap-3">
+                                <div className="gap-3 flex flex-1 items-center">
                                     <div className="bg-tertiary/20 h-8 w-8 rounded-full" />
                                     <div className="bg-tertiary/20 h-4 w-32 rounded" />
                                 </div>

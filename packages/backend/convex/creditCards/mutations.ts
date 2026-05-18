@@ -4,10 +4,14 @@
  * All write operations for credit card data.
  * Uses Convex Ents for type-safe mutations with user ownership verification.
  */
-
 import { v } from "convex/values";
-import { mutation } from "../functions";
 import { internalMutation } from "../_generated/server";
+import { mutation } from "../functions";
+// =============================================================================
+// PLAID SYNC MUTATIONS (internal only - used by creditCards/actions.ts)
+// =============================================================================
+
+import { creditCardValidator } from "./validators";
 
 /**
  * Toggle card locked status
@@ -20,36 +24,36 @@ import { internalMutation } from "../_generated/server";
  * @returns Object with isLocked and optional lockedAt timestamp
  */
 export const toggleLock = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-    isLocked: v.boolean(),
-  },
-  returns: v.object({
-    isLocked: v.boolean(),
-    lockedAt: v.optional(v.number()),
-  }),
-  async handler(ctx, { cardId, isLocked }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+        isLocked: v.boolean(),
+    },
+    returns: v.object({
+        isLocked: v.boolean(),
+        lockedAt: v.optional(v.number()),
+    }),
+    async handler(ctx, { cardId, isLocked }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    // Verify ownership
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to modify this card");
-    }
+        // Verify ownership
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to modify this card");
+        }
 
-    const now = Date.now();
-    const lockedAt = isLocked ? now : undefined;
+        const now = Date.now();
+        const lockedAt = isLocked ? now : undefined;
 
-    await card.patch({
-      isLocked,
-      lockedAt,
-    });
+        await card.patch({
+            isLocked,
+            lockedAt,
+        });
 
-    return {
-      isLocked,
-      lockedAt,
-    };
-  },
+        return {
+            isLocked,
+            lockedAt,
+        };
+    },
 });
 
 /**
@@ -63,35 +67,35 @@ export const toggleLock = mutation({
  * @returns Object with isAutoPay and optional autoPayEnabledAt timestamp
  */
 export const toggleAutoPay = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-    isAutoPay: v.boolean(),
-  },
-  returns: v.object({
-    isAutoPay: v.boolean(),
-    autoPayEnabledAt: v.optional(v.number()),
-  }),
-  async handler(ctx, { cardId, isAutoPay }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+        isAutoPay: v.boolean(),
+    },
+    returns: v.object({
+        isAutoPay: v.boolean(),
+        autoPayEnabledAt: v.optional(v.number()),
+    }),
+    async handler(ctx, { cardId, isAutoPay }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    // Verify ownership
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to modify this card");
-    }
+        // Verify ownership
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to modify this card");
+        }
 
-    const autoPayEnabledAt = isAutoPay ? Date.now() : undefined;
+        const autoPayEnabledAt = isAutoPay ? Date.now() : undefined;
 
-    await card.patch({
-      isAutoPay,
-      autoPayEnabledAt,
-    });
+        await card.patch({
+            isAutoPay,
+            autoPayEnabledAt,
+        });
 
-    return {
-      isAutoPay,
-      autoPayEnabledAt,
-    };
-  },
+        return {
+            isAutoPay,
+            autoPayEnabledAt,
+        };
+    },
 });
 
 /**
@@ -103,23 +107,23 @@ export const toggleAutoPay = mutation({
  * @param displayName - New display name
  */
 export const updateDisplayName = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-    displayName: v.string(),
-  },
-  returns: v.null(),
-  async handler(ctx, { cardId, displayName }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+        displayName: v.string(),
+    },
+    returns: v.null(),
+    async handler(ctx, { cardId, displayName }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    // Verify ownership
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to modify this card");
-    }
+        // Verify ownership
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to modify this card");
+        }
 
-    await card.patch({ displayName });
-    return null;
-  },
+        await card.patch({ displayName });
+        return null;
+    },
 });
 
 /**
@@ -131,52 +135,42 @@ export const updateDisplayName = mutation({
  * @returns The new card's document ID
  */
 export const create = mutation({
-  args: {
-    accountId: v.string(),
-    accountName: v.string(),
-    displayName: v.string(),
-    mask: v.optional(v.string()),
-    currentBalance: v.optional(v.number()),
-    availableCredit: v.optional(v.number()),
-    creditLimit: v.optional(v.number()),
-    company: v.optional(v.string()),
-    brand: v.optional(
-      v.union(
-        v.literal("visa"),
-        v.literal("mastercard"),
-        v.literal("amex"),
-        v.literal("discover"),
-        v.literal("other")
-      )
-    ),
-    lastFour: v.optional(v.string()),
-    nextPaymentDueDate: v.optional(v.string()),
-    minimumPaymentAmount: v.optional(v.number()),
-  },
-  returns: v.id("creditCards"),
-  async handler(ctx, data) {
-    const viewer = ctx.viewerX();
+    args: {
+        accountId: v.string(),
+        accountName: v.string(),
+        displayName: v.string(),
+        mask: v.optional(v.string()),
+        currentBalance: v.optional(v.number()),
+        availableCredit: v.optional(v.number()),
+        creditLimit: v.optional(v.number()),
+        company: v.optional(v.string()),
+        brand: v.optional(v.union(v.literal("visa"), v.literal("mastercard"), v.literal("amex"), v.literal("discover"), v.literal("other"))),
+        lastFour: v.optional(v.string()),
+        nextPaymentDueDate: v.optional(v.string()),
+        minimumPaymentAmount: v.optional(v.number()),
+    },
+    returns: v.id("creditCards"),
+    async handler(ctx, data) {
+        const viewer = ctx.viewerX();
 
-    // Check if accountId already exists for this user
-    const existing = await ctx
-      .table("creditCards", "by_accountId", (q) => q.eq("accountId", data.accountId))
-      .first();
+        // Check if accountId already exists for this user
+        const existing = await ctx.table("creditCards", "by_accountId", (q) => q.eq("accountId", data.accountId)).first();
 
-    if (existing && existing.userId === viewer._id) {
-      throw new Error("A card with this account ID already exists");
-    }
+        if (existing && existing.userId === viewer._id) {
+            throw new Error("A card with this account ID already exists");
+        }
 
-    const cardId = await ctx.table("creditCards").insert({
-      ...data,
-      userId: viewer._id,
-      isOverdue: false,
-      isLocked: false,
-      isAutoPay: false,
-      isActive: true,
-    });
+        const cardId = await ctx.table("creditCards").insert({
+            ...data,
+            userId: viewer._id,
+            isOverdue: false,
+            isLocked: false,
+            isAutoPay: false,
+            isActive: true,
+        });
 
-    return cardId;
-  },
+        return cardId;
+    },
 });
 
 /**
@@ -188,59 +182,40 @@ export const create = mutation({
  * @param data - Fields to update
  */
 export const update = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-    accountName: v.optional(v.string()),
-    displayName: v.optional(v.string()),
-    mask: v.optional(v.string()),
-    currentBalance: v.optional(v.number()),
-    availableCredit: v.optional(v.number()),
-    creditLimit: v.optional(v.number()),
-    company: v.optional(v.string()),
-    brand: v.optional(
-      v.union(
-        v.literal("visa"),
-        v.literal("mastercard"),
-        v.literal("amex"),
-        v.literal("discover"),
-        v.literal("other")
-      )
-    ),
-    lastFour: v.optional(v.string()),
-    nextPaymentDueDate: v.optional(v.string()),
-    minimumPaymentAmount: v.optional(v.number()),
-    isOverdue: v.optional(v.boolean()),
-    statementClosingDay: v.optional(v.number()),
-    payOverTimeEnabled: v.optional(v.boolean()),
-    payOverTimeLimit: v.optional(v.number()),
-    payOverTimeApr: v.optional(v.number()),
-  },
-  returns: v.null(),
-  async handler(ctx, { cardId, ...data }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+        accountName: v.optional(v.string()),
+        displayName: v.optional(v.string()),
+        mask: v.optional(v.string()),
+        currentBalance: v.optional(v.number()),
+        availableCredit: v.optional(v.number()),
+        creditLimit: v.optional(v.number()),
+        company: v.optional(v.string()),
+        brand: v.optional(v.union(v.literal("visa"), v.literal("mastercard"), v.literal("amex"), v.literal("discover"), v.literal("other"))),
+        lastFour: v.optional(v.string()),
+        nextPaymentDueDate: v.optional(v.string()),
+        minimumPaymentAmount: v.optional(v.number()),
+        isOverdue: v.optional(v.boolean()),
+    },
+    returns: v.null(),
+    async handler(ctx, { cardId, ...data }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    // Verify ownership
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to modify this card");
-    }
+        // Verify ownership
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to modify this card");
+        }
 
-    if (data.statementClosingDay != null &&
-        (!Number.isInteger(data.statementClosingDay) || data.statementClosingDay < 1 || data.statementClosingDay > 31)) {
-      throw new Error("Statement closing day must be an integer between 1 and 31");
-    }
+        // Filter out undefined values
+        const updates = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
 
-    // Filter out undefined values
-    const updates = Object.fromEntries(
-      Object.entries(data).filter(([, value]) => value !== undefined)
-    );
+        if (Object.keys(updates).length > 0) {
+            await card.patch(updates);
+        }
 
-    if (Object.keys(updates).length > 0) {
-      await card.patch(updates);
-    }
-
-    return null;
-  },
+        return null;
+    },
 });
 
 /**
@@ -248,32 +223,27 @@ export const update = mutation({
  * Stores the user's value in userOverrides while preserving the raw Plaid value.
  */
 export const setOverride = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-    field: v.union(
-      v.literal("officialName"),
-      v.literal("accountName"),
-      v.literal("company"),
-      v.literal("providerDashboardUrl"),
-    ),
-    value: v.union(v.string(), v.number()),
-  },
-  returns: v.null(),
-  async handler(ctx, { cardId, field, value }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+        field: v.union(v.literal("officialName"), v.literal("accountName"), v.literal("company"), v.literal("providerDashboardUrl")),
+        value: v.union(v.string(), v.number()),
+    },
+    returns: v.null(),
+    async handler(ctx, { cardId, field, value }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to modify this card");
-    }
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to modify this card");
+        }
 
-    const currentOverrides = card.userOverrides ?? {};
-    await card.patch({
-      userOverrides: { ...currentOverrides, [field]: value },
-    });
+        const currentOverrides = card.userOverrides ?? {};
+        await card.patch({
+            userOverrides: { ...currentOverrides, [field]: value },
+        });
 
-    return null;
-  },
+        return null;
+    },
 });
 
 /**
@@ -281,129 +251,116 @@ export const setOverride = mutation({
  * The index identifies which APR entry in the array to override.
  */
 export const setAprOverride = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-    aprIndex: v.number(),
-    field: v.union(
-      v.literal("aprPercentage"),
-      v.literal("balanceSubjectToApr"),
-      v.literal("interestChargeAmount"),
-    ),
-    value: v.number(),
-  },
-  returns: v.null(),
-  async handler(ctx, { cardId, aprIndex, field, value }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+        aprIndex: v.number(),
+        field: v.union(v.literal("aprPercentage"), v.literal("balanceSubjectToApr"), v.literal("interestChargeAmount")),
+        value: v.number(),
+    },
+    returns: v.null(),
+    async handler(ctx, { cardId, aprIndex, field, value }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to modify this card");
-    }
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to modify this card");
+        }
 
-    const currentOverrides = card.userOverrides ?? {};
-    const aprOverrides = [...(currentOverrides.aprs ?? [])];
+        const currentOverrides = card.userOverrides ?? {};
+        const aprOverrides = [...(currentOverrides.aprs ?? [])];
 
-    // Find or create override entry for this index
-    const existingIdx = aprOverrides.findIndex((o) => o.index === aprIndex);
-    if (existingIdx >= 0) {
-      const existing = aprOverrides[existingIdx]!;
-      aprOverrides[existingIdx] = { ...existing, index: existing.index, [field]: value };
-    } else {
-      aprOverrides.push({ index: aprIndex, [field]: value });
-    }
+        // Find or create override entry for this index
+        const existingIdx = aprOverrides.findIndex((o) => o.index === aprIndex);
+        if (existingIdx >= 0) {
+            const existing = aprOverrides[existingIdx]!;
+            aprOverrides[existingIdx] = { ...existing, index: existing.index, [field]: value };
+        } else {
+            aprOverrides.push({ index: aprIndex, [field]: value });
+        }
 
-    await card.patch({
-      userOverrides: { ...currentOverrides, aprs: aprOverrides },
-    });
+        await card.patch({
+            userOverrides: { ...currentOverrides, aprs: aprOverrides },
+        });
 
-    return null;
-  },
+        return null;
+    },
 });
 
 /**
  * Clear a user override, reverting to the Plaid value.
  */
 export const clearOverride = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-    field: v.union(
-      v.literal("officialName"),
-      v.literal("accountName"),
-      v.literal("company"),
-      v.literal("providerDashboardUrl"),
-    ),
-  },
-  returns: v.null(),
-  async handler(ctx, { cardId, field }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+        field: v.union(v.literal("officialName"), v.literal("accountName"), v.literal("company"), v.literal("providerDashboardUrl")),
+    },
+    returns: v.null(),
+    async handler(ctx, { cardId, field }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to modify this card");
-    }
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to modify this card");
+        }
 
-    const currentOverrides = card.userOverrides ?? {};
-    const { [field]: _removed, ...remaining } = currentOverrides as Record<string, unknown>;
+        const currentOverrides = card.userOverrides ?? {};
+        const { [field]: _removed, ...remaining } = currentOverrides as Record<string, unknown>;
 
-    // If empty, set to undefined
-    const hasOverrides = Object.values(remaining).some((v) => v !== undefined);
-    await card.patch({
-      userOverrides: hasOverrides ? (remaining as typeof currentOverrides) : undefined,
-    });
+        // If empty, set to undefined
+        const hasOverrides = Object.values(remaining).some((v) => v !== undefined);
+        await card.patch({
+            userOverrides: hasOverrides ? (remaining as typeof currentOverrides) : undefined,
+        });
 
-    return null;
-  },
+        return null;
+    },
 });
 
 /**
  * Clear an APR field override, reverting to the Plaid value.
  */
 export const clearAprOverride = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-    aprIndex: v.number(),
-    field: v.union(
-      v.literal("aprPercentage"),
-      v.literal("balanceSubjectToApr"),
-      v.literal("interestChargeAmount"),
-    ),
-  },
-  returns: v.null(),
-  async handler(ctx, { cardId, aprIndex, field }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+        aprIndex: v.number(),
+        field: v.union(v.literal("aprPercentage"), v.literal("balanceSubjectToApr"), v.literal("interestChargeAmount")),
+    },
+    returns: v.null(),
+    async handler(ctx, { cardId, aprIndex, field }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to modify this card");
-    }
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to modify this card");
+        }
 
-    const currentOverrides = card.userOverrides ?? {};
-    let aprOverrides = [...(currentOverrides.aprs ?? [])];
+        const currentOverrides = card.userOverrides ?? {};
+        let aprOverrides = [...(currentOverrides.aprs ?? [])];
 
-    const existingIdx = aprOverrides.findIndex((o) => o.index === aprIndex);
-    if (existingIdx >= 0) {
-      const entry = aprOverrides[existingIdx]!;
-      const { [field]: _removed, ...remaining } = entry;
-      // If only index remains, remove the entry entirely
-      if (Object.keys(remaining).length <= 1) {
-        aprOverrides = aprOverrides.filter((_, i) => i !== existingIdx);
-      } else {
-        aprOverrides[existingIdx] = remaining as (typeof aprOverrides)[number];
-      }
-    }
+        const existingIdx = aprOverrides.findIndex((o) => o.index === aprIndex);
+        if (existingIdx >= 0) {
+            const entry = aprOverrides[existingIdx]!;
+            const { [field]: _removed, ...remaining } = entry;
+            // If only index remains, remove the entry entirely
+            if (Object.keys(remaining).length <= 1) {
+                aprOverrides = aprOverrides.filter((_, i) => i !== existingIdx);
+            } else {
+                aprOverrides[existingIdx] = remaining as (typeof aprOverrides)[number];
+            }
+        }
 
-    const updatedOverrides = {
-      ...currentOverrides,
-      aprs: aprOverrides.length > 0 ? aprOverrides : undefined,
-    };
+        const updatedOverrides = {
+            ...currentOverrides,
+            aprs: aprOverrides.length > 0 ? aprOverrides : undefined,
+        };
 
-    const hasOverrides = Object.values(updatedOverrides).some((v) => v !== undefined);
-    await card.patch({
-      userOverrides: hasOverrides ? updatedOverrides : undefined,
-    });
+        const hasOverrides = Object.values(updatedOverrides).some((v) => v !== undefined);
+        await card.patch({
+            userOverrides: hasOverrides ? updatedOverrides : undefined,
+        });
 
-    return null;
-  },
+        return null;
+    },
 });
 
 /**
@@ -412,23 +369,23 @@ export const clearAprOverride = mutation({
  * @param cardId - Credit card document ID
  */
 export const remove = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-  },
-  returns: v.null(),
-  async handler(ctx, { cardId }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+    },
+    returns: v.null(),
+    async handler(ctx, { cardId }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    // Verify ownership
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to delete this card");
-    }
+        // Verify ownership
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to delete this card");
+        }
 
-    // Soft delete
-    await card.patch({ isActive: false });
-    return null;
-  },
+        // Soft delete
+        await card.patch({ isActive: false });
+        return null;
+    },
 });
 
 /**
@@ -437,29 +394,23 @@ export const remove = mutation({
  * @param cardId - Credit card document ID
  */
 export const hardDelete = mutation({
-  args: {
-    cardId: v.id("creditCards"),
-  },
-  returns: v.null(),
-  async handler(ctx, { cardId }) {
-    const viewer = ctx.viewerX();
-    const card = await ctx.table("creditCards").getX(cardId);
+    args: {
+        cardId: v.id("creditCards"),
+    },
+    returns: v.null(),
+    async handler(ctx, { cardId }) {
+        const viewer = ctx.viewerX();
+        const card = await ctx.table("creditCards").getX(cardId);
 
-    // Verify ownership
-    if (card.userId !== viewer._id) {
-      throw new Error("Not authorized to delete this card");
-    }
+        // Verify ownership
+        if (card.userId !== viewer._id) {
+            throw new Error("Not authorized to delete this card");
+        }
 
-    await card.delete();
-    return null;
-  },
+        await card.delete();
+        return null;
+    },
 });
-
-// =============================================================================
-// PLAID SYNC MUTATIONS (internal only - used by creditCards/actions.ts)
-// =============================================================================
-
-import { creditCardValidator } from "./validators";
 
 // =============================================================================
 // INTERNAL MUTATIONS (for webhook/scheduled job use - no auth required)
@@ -473,14 +424,14 @@ import { creditCardValidator } from "./validators";
  * @param cardId - Credit card document ID
  */
 export const markAsStale = internalMutation({
-  args: { cardId: v.id("creditCards") },
-  returns: v.null(),
-  async handler(ctx, { cardId }) {
-    await ctx.db.patch(cardId, {
-      syncStatus: "stale",
-    });
-    return null;
-  },
+    args: { cardId: v.id("creditCards") },
+    returns: v.null(),
+    async handler(ctx, { cardId }) {
+        await ctx.db.patch(cardId, {
+            syncStatus: "stale",
+        });
+        return null;
+    },
 });
 
 /**
@@ -493,60 +444,60 @@ export const markAsStale = internalMutation({
  * @param creditCards - Array of credit card data
  */
 export const bulkUpsertCreditCardsInternal = internalMutation({
-  args: {
-    userId: v.string(),
-    creditCards: v.array(creditCardValidator),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const { userId, creditCards } = args;
-    const now = Date.now();
+    args: {
+        userId: v.string(),
+        creditCards: v.array(creditCardValidator),
+    },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const { userId, creditCards } = args;
+        const now = Date.now();
 
-    // Find the user by externalId (Clerk ID)
-    const user = await ctx.db
-      .query("users")
-      .withIndex("externalId", (q) => q.eq("externalId", userId))
-      .first();
+        // Find the user by externalId (Clerk ID)
+        const user = await ctx.db
+            .query("users")
+            .withIndex("externalId", (q) => q.eq("externalId", userId))
+            .first();
 
-    if (!user) {
-      throw new Error(`User not found for userId: ${userId}`);
-    }
+        if (!user) {
+            throw new Error(`User not found for userId: ${userId}`);
+        }
 
-    for (const card of creditCards) {
-      // Verify ownership
-      if (card.userId !== userId) {
-        throw new Error("Unauthorized: userId mismatch");
-      }
+        for (const card of creditCards) {
+            // Verify ownership
+            if (card.userId !== userId) {
+                throw new Error("Unauthorized: userId mismatch");
+            }
 
-      // Destructure fields that need special handling
-      const { userId: cardUserId, isLocked, ...cardData } = card;
+            // Destructure fields that need special handling
+            const { userId: cardUserId, isLocked, ...cardData } = card;
 
-      // Idempotent upsert using accountId as unique key
-      const existing = await ctx.db
-        .query("creditCards")
-        .withIndex("by_accountId", (q) => q.eq("accountId", card.accountId))
-        .first();
+            // Idempotent upsert using accountId as unique key
+            const existing = await ctx.db
+                .query("creditCards")
+                .withIndex("by_accountId", (q) => q.eq("accountId", card.accountId))
+                .first();
 
-      if (existing) {
-        // Update existing record (preserve existing isLocked)
-        await ctx.db.patch(existing._id, {
-          ...cardData,
-          userId: user._id, // Use Convex user ID
-          lastSyncedAt: now,
-        });
-      } else {
-        await ctx.db.insert("creditCards", {
-          ...cardData,
-          userId: user._id, // Use Convex user ID
-          isLocked: isLocked ?? false,
-          isAutoPay: false,
-          lastSyncedAt: now,
-        });
-      }
-    }
+            if (existing) {
+                // Update existing record (preserve existing isLocked)
+                await ctx.db.patch(existing._id, {
+                    ...cardData,
+                    userId: user._id, // Use Convex user ID
+                    lastSyncedAt: now,
+                });
+            } else {
+                await ctx.db.insert("creditCards", {
+                    ...cardData,
+                    userId: user._id, // Use Convex user ID
+                    isLocked: isLocked ?? false,
+                    isAutoPay: false,
+                    lastSyncedAt: now,
+                });
+            }
+        }
 
-    return null;
-  },
+        return null;
+    },
 });
 
 /**
@@ -559,58 +510,58 @@ export const bulkUpsertCreditCardsInternal = internalMutation({
  * @param card - Credit card data
  */
 export const upsertCreditCardInternal = internalMutation({
-  args: {
-    userId: v.string(),
-    card: creditCardValidator,
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const { userId, card } = args;
-    const now = Date.now();
+    args: {
+        userId: v.string(),
+        card: creditCardValidator,
+    },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const { userId, card } = args;
+        const now = Date.now();
 
-    // Verify ownership
-    if (card.userId !== userId) {
-      throw new Error("Unauthorized: userId mismatch");
-    }
+        // Verify ownership
+        if (card.userId !== userId) {
+            throw new Error("Unauthorized: userId mismatch");
+        }
 
-    // Destructure fields that need special handling
-    const { userId: cardUserId, isLocked, ...cardData } = card;
+        // Destructure fields that need special handling
+        const { userId: cardUserId, isLocked, ...cardData } = card;
 
-    // Find the user by externalId (Clerk ID)
-    const user = await ctx.db
-      .query("users")
-      .withIndex("externalId", (q) => q.eq("externalId", userId))
-      .first();
+        // Find the user by externalId (Clerk ID)
+        const user = await ctx.db
+            .query("users")
+            .withIndex("externalId", (q) => q.eq("externalId", userId))
+            .first();
 
-    if (!user) {
-      throw new Error(`User not found for userId: ${userId}`);
-    }
+        if (!user) {
+            throw new Error(`User not found for userId: ${userId}`);
+        }
 
-    // Idempotent upsert
-    const existing = await ctx.db
-      .query("creditCards")
-      .withIndex("by_accountId", (q) => q.eq("accountId", card.accountId))
-      .first();
+        // Idempotent upsert
+        const existing = await ctx.db
+            .query("creditCards")
+            .withIndex("by_accountId", (q) => q.eq("accountId", card.accountId))
+            .first();
 
-    if (existing) {
-      // Update existing record (preserve existing isLocked)
-      await ctx.db.patch(existing._id, {
-        ...cardData,
-        userId: user._id,
-        lastSyncedAt: now,
-      });
-    } else {
-      await ctx.db.insert("creditCards", {
-        ...cardData,
-        userId: user._id,
-        isLocked: isLocked ?? false,
-        isAutoPay: false,
-        lastSyncedAt: now,
-      });
-    }
+        if (existing) {
+            // Update existing record (preserve existing isLocked)
+            await ctx.db.patch(existing._id, {
+                ...cardData,
+                userId: user._id,
+                lastSyncedAt: now,
+            });
+        } else {
+            await ctx.db.insert("creditCards", {
+                ...cardData,
+                userId: user._id,
+                isLocked: isLocked ?? false,
+                isAutoPay: false,
+                lastSyncedAt: now,
+            });
+        }
 
-    return null;
-  },
+        return null;
+    },
 });
 
 /**
@@ -624,28 +575,28 @@ export const upsertCreditCardInternal = internalMutation({
  * @param error - Error message
  */
 export const updateSyncErrorInternal = internalMutation({
-  args: {
-    userId: v.string(),
-    accountId: v.string(),
-    error: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const { accountId, error } = args;
+    args: {
+        userId: v.string(),
+        accountId: v.string(),
+        error: v.string(),
+    },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const { accountId, error } = args;
 
-    const card = await ctx.db
-      .query("creditCards")
-      .withIndex("by_accountId", (q) => q.eq("accountId", accountId))
-      .first();
+        const card = await ctx.db
+            .query("creditCards")
+            .withIndex("by_accountId", (q) => q.eq("accountId", accountId))
+            .first();
 
-    if (!card) return null;
+        if (!card) return null;
 
-    await ctx.db.patch(card._id, {
-      syncStatus: "error",
-      lastSyncError: error,
-      syncAttempts: (card.syncAttempts ?? 0) + 1,
-    });
+        await ctx.db.patch(card._id, {
+            syncStatus: "error",
+            lastSyncError: error,
+            syncAttempts: (card.syncAttempts ?? 0) + 1,
+        });
 
-    return null;
-  },
+        return null;
+    },
 });

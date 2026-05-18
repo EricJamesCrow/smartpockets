@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import schema from "../schema";
+import { describe, expect, it } from "vitest";
 import { internal } from "../_generated/api";
 import { PROMPT_VERSION } from "../agent/system";
+import schema from "../schema";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const modules = import.meta.glob("../**/*.ts");
@@ -14,10 +14,7 @@ function setup() {
     return convexTest(schema, modules);
 }
 
-async function seedUserAndThread(
-    t: ReturnType<typeof setup>,
-    externalId: string,
-): Promise<{ userId: string; threadId: string }> {
+async function seedUserAndThread(t: ReturnType<typeof setup>, externalId: string): Promise<{ userId: string; threadId: string }> {
     return await t.run(async (ctx: any) => {
         const userId = await ctx.db.insert("users", {
             externalId,
@@ -78,25 +75,6 @@ describe("agent index hygiene (CROWDEV-440/CROWDEV-441)", () => {
         expect(schemaSource).toContain('.index("by_thread_role_createdAt", ["agentThreadId", "role", "createdAt"])');
         expect(threadsSource).toContain('table("agentThreads", "by_user_archived_lastTurnAt"');
         expect(threadsSource).toContain('table("agentMessages", "by_thread_role_createdAt"');
-    });
-
-    it("declares and uses promoRates.by_user_active for active promo reads", () => {
-        const schemaSource = readFileSync(resolve(__dirname, "../schema.ts"), "utf8");
-        const contextSource = readFileSync(resolve(__dirname, "../agent/context.ts"), "utf8");
-        const promoToolSource = readFileSync(
-            resolve(__dirname, "../agent/tools/read/listDeferredInterestPromos.ts"),
-            "utf8",
-        );
-
-        const promoRatesBlock = schemaSource.slice(
-            schemaSource.indexOf("promoRates: defineEnt"),
-            schemaSource.indexOf("installmentPlans: defineEnt"),
-        );
-        expect(promoRatesBlock).toContain('.index("by_user_active", ["userId", "isActive"])');
-        expect(contextSource).toContain('table("promoRates", "by_user_active"');
-        expect(contextSource).toContain('eq("userId", userId).eq("isActive", true)');
-        expect(promoToolSource).toContain('table("promoRates", "by_user_active"');
-        expect(promoToolSource).toContain('eq("userId", viewer._id).eq("isActive", true)');
     });
 
     it("expires stale awaiting proposals through the state+expiry index", async () => {
