@@ -24,3 +24,12 @@ See AGENTS.md for:
 - Plaid integration flow
 - Security requirements
 - Common pitfalls
+
+## Karpathy engineering guidelines
+
+Behavioral guidelines to reduce common LLM coding mistakes (bias toward caution over speed; for trivial tasks, use judgment). Source: https://github.com/multica-ai/andrej-karpathy-skills
+
+1. **Think Before Coding** — Don't assume. Don't hide confusion. Surface tradeoffs. State assumptions; if uncertain, ask; present multiple interpretations rather than picking silently.
+2. **Simplicity First** — Minimum code that solves the problem. Nothing speculative. No unrequested features/abstractions/flexibility; if 200 lines could be 50, rewrite.
+3. **Surgical Changes** — Touch only what you must; clean up only your own mess. Don't refactor what isn't broken; match existing style; every changed line traces to the request.
+4. **Goal-Driven Execution** — Define success criteria; loop until verified (e.g. "fix the bug" → "write a failing test, then make it pass").
