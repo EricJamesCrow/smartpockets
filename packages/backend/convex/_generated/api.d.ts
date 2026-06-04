@@ -53,6 +53,7 @@ import type * as agent_tools_read_searchMerchants from "../agent/tools/read/sear
 import type * as agent_usage from "../agent/usage.js";
 import type * as agent_writeTool from "../agent/writeTool.js";
 import type * as billing_entitlements from "../billing/entitlements.js";
+import type * as billing_plan from "../billing/plan.js";
 import type * as creditCards_actions from "../creditCards/actions.js";
 import type * as creditCards_mutations from "../creditCards/mutations.js";
 import type * as creditCards_queries from "../creditCards/queries.js";
@@ -182,6 +183,7 @@ declare const fullApi: ApiFromModules<{
   "agent/usage": typeof agent_usage;
   "agent/writeTool": typeof agent_writeTool;
   "billing/entitlements": typeof billing_entitlements;
+  "billing/plan": typeof billing_plan;
   "creditCards/actions": typeof creditCards_actions;
   "creditCards/mutations": typeof creditCards_mutations;
   "creditCards/queries": typeof creditCards_queries;
