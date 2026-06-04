@@ -55,6 +55,7 @@
 - **Plaid Integration Patterns**: Production-grade Plaid component with denormalized data model, webhook handlers, cron sync, and error recovery.
 - **Type-Safe Everything**: Full argument and return validators on every function, viewer-context authentication, and typed schema with relationships.
 - **Figma UI Kit** *(coming soon)*: Full design system artifact — code AND design, not just code.
+- **Cost-Aware Plan Gating**: AI assistant and Plaid usage are metered by a Free tier (15 AI messages/mo + 1 bank connection) vs Pro ($10/mo: 500 messages + 5 connections) via Clerk Billing — caps reflect real Anthropic/Plaid costs, not artificial feature walls. See [`AGENTS.md`](AGENTS.md) → *Billing & Plan Gating*.
 
 ## What SmartPockets is NOT
 
