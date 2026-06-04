@@ -116,6 +116,43 @@ async function clearExpiredActiveRun(ctx: any, thread: ThreadWithActiveRun & { _
   return true;
 }
 
+/**
+ * CROWDEV-330: bump the user's monthly chat message counter (one row per
+ * user-month). Called transactionally from both turn-admit paths after the
+ * headroom check passes.
+ */
+async function incrementChatMessageCount(
+  ctx: any,
+  userId: Id<"users">,
+): Promise<void> {
+  const d = new Date();
+  const periodStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
+  const existing = await ctx.table("usageCounters", "by_user_period", (q: any) =>
+    q.eq("userId", userId).eq("periodStart", periodStart),
+  );
+  const row = existing[0];
+  if (row) {
+    const writable = await ctx.table("usageCounters").getX(row._id);
+    await writable.patch({ chatMessagesUsed: writable.chatMessagesUsed + 1 });
+  } else {
+    await ctx.table("usageCounters").insert({
+      userId,
+      periodStart,
+      chatMessagesUsed: 1,
+    });
+  }
+}
+
+/** Test surface for incrementChatMessageCount (real callers use the helper). */
+export const incrementChatMessageCountForTest = internalMutation({
+  args: { userId: v.id("users") },
+  returns: v.null(),
+  handler: async (ctx, { userId }) => {
+    await incrementChatMessageCount(ctx, userId);
+    return null;
+  },
+});
+
 async function startUserTurn(
   ctx: any,
   args: {
@@ -173,6 +210,8 @@ async function startUserTurn(
     activeRunStartedAt: now,
     activeRunExpiresAt: expiresAt,
   });
+
+  await incrementChatMessageCount(ctx, args.userId);
 
   return { threadId: finalThreadId, messageId };
 }
@@ -360,6 +399,7 @@ export const editAndResendUserTurn = mutation({
       throw new Error(`budget_exhausted:${budget.reason ?? "unknown"}`);
     }
     await applyChatTurnRateLimit(ctx, viewer._id);
+    await incrementChatMessageCount(ctx, viewer._id);
 
     // Truncate every message strictly after the target. `createdAt` is only
     // millisecond precision, so pair it with `_creationTime` for same-tick
