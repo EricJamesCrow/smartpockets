@@ -17,6 +17,11 @@ const schema = defineEntSchema(
                     }),
                 ),
             ),
+            // === BILLING (CROWDEV-330) ===
+            // Mirrored from Clerk Billing via webhook. Absent ⇒ free (fail-safe).
+            plan: v.optional(v.union(v.literal("free"), v.literal("pro"))),
+            subscriptionStatus: v.optional(v.string()), // raw Clerk status, debug/UI
+            planUpdatedAt: v.optional(v.number()),
         })
             .field("externalId", v.string(), { unique: true }) // Clerk ID
             .edges("creditCards", { ref: true })
@@ -30,6 +35,7 @@ const schema = defineEntSchema(
             .edges("agentThreads", { ref: true })
             .edges("agentProposals", { ref: true })
             .edges("agentUsage", { ref: true })
+            .edges("usageCounters", { ref: true })
             .edges("reminders", { ref: true })
             .edges("auditLog", { ref: true })
             .edges("promoCountdowns", { ref: true })
@@ -461,6 +467,17 @@ const schema = defineEntSchema(
         })
             .edge("user")
             .index("by_user_period", ["userId", "periodStart", "modelId"]),
+
+        // === USAGE COUNTERS (CROWDEV-330) ===
+        // One row per (user, month). Holds the user-facing monthly chat message
+        // count. Token accounting stays in `agentUsage`. Reset is implicit: a
+        // new month ⇒ a new periodStart ⇒ a fresh row starting at 0.
+        usageCounters: defineEnt({
+            periodStart: v.number(), // firstOfMonthUtc, matches agentUsage
+            chatMessagesUsed: v.number(),
+        })
+            .edge("user")
+            .index("by_user_period", ["userId", "periodStart"]),
 
         // === PROMPT VERSIONS (W2) ===
         promptVersions: defineEnt({
