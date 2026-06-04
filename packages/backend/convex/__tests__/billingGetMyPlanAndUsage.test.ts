@@ -22,5 +22,6 @@ describe("getMyPlanAndUsage", () => {
     expect(r.chat.limit).toBe(15);
     expect(r.plaid.limit).toBe(1);
     expect(r.chat.used).toBe(0);
+    expect(r.plaid.used).toBe(0);
   });
 });

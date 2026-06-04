@@ -57,4 +57,38 @@ describe("syncPlanFromClerk", () => {
     });
     expect(true).toBe(true);
   });
+
+  it("fail-safe: a canceled pro item does NOT grant pro", async () => {
+    process.env.CLERK_PRO_PLAN_SLUG = "pro";
+    const t = convexTest(schema, modules);
+    const userId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { name: "T", externalId: "user_c" }),
+    );
+    await t.mutation(internal.billing.mutations.syncPlanFromClerk, {
+      data: {
+        payer: { user_id: "user_c" },
+        items: [{ status: "canceled", plan: { slug: "pro" } }],
+        status: "canceled",
+      },
+    });
+    const u = await t.run(async (ctx: any) => ctx.db.get(userId));
+    expect(u.plan).toBe("free");
+  });
+
+  it("fail-safe: a pro item with no status and inactive subscription stays free", async () => {
+    process.env.CLERK_PRO_PLAN_SLUG = "pro";
+    const t = convexTest(schema, modules);
+    const userId = await t.run(async (ctx: any) =>
+      ctx.db.insert("users", { name: "T", externalId: "user_e" }),
+    );
+    await t.mutation(internal.billing.mutations.syncPlanFromClerk, {
+      data: {
+        payer: { user_id: "user_e" },
+        items: [{ plan: { slug: "pro" } }], // no item status
+        status: "incomplete",
+      },
+    });
+    const u = await t.run(async (ctx: any) => ctx.db.get(userId));
+    expect(u.plan).toBe("free");
+  });
 });

@@ -21,7 +21,7 @@ const schema = defineEntSchema(
             // Mirrored from Clerk Billing via webhook. Absent ⇒ free (fail-safe).
             plan: v.optional(v.union(v.literal("free"), v.literal("pro"))),
             subscriptionStatus: v.optional(v.string()), // raw Clerk status, debug/UI
-            planUpdatedAt: v.optional(v.number()),
+            planUpdatedAt: v.optional(v.number()), // UTC epoch milliseconds
         })
             .field("externalId", v.string(), { unique: true }) // Clerk ID
             .edges("creditCards", { ref: true })
