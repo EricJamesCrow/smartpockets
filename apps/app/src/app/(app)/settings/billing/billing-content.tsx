@@ -9,6 +9,8 @@ import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import * as RadioGroups from "@repo/ui/untitledui/base/radio-groups/radio-groups";
 import { LayersThree01, LayersTwo01, Zap } from "@untitledui/icons";
 import { toast } from "sonner";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { formatMoneyFromCents } from "@/utils/money";
 
 // Icon mapping for plan names to UntitledUI icons
@@ -50,6 +52,9 @@ export function BillingContent() {
         for: "user",
     });
     const checkoutLoading = fetchStatus === "fetching";
+
+    // CROWDEV-330: plan + usage for the "This month's usage" panel.
+    const planUsage = useQuery(api.billing.queries.getMyPlanAndUsage);
 
     // Get current subscription item and plan
     const currentSubscriptionItem = subscription?.subscriptionItems?.[0];
@@ -129,6 +134,25 @@ export function BillingContent() {
                             </div>
                         </SectionHeader.Group>
                     </SectionHeader.Root>
+                </div>
+            )}
+
+            {/* This month's usage (hidden for the allowlisted owner / unlimited) */}
+            {planUsage && planUsage.plan !== "unlimited" && (
+                <div className="px-4 lg:px-8">
+                    <SectionHeader.Root className="border-none pb-0">
+                        <SectionHeader.Group>
+                            <SectionHeader.Heading>This month&apos;s usage</SectionHeader.Heading>
+                        </SectionHeader.Group>
+                    </SectionHeader.Root>
+                    <ul className="text-secondary mt-2 flex flex-col gap-1 text-sm">
+                        <li>
+                            AI assistant messages: {planUsage.chat.used} / {planUsage.chat.limit}
+                        </li>
+                        <li>
+                            Bank connections: {planUsage.plaid.used} / {planUsage.plaid.limit}
+                        </li>
+                    </ul>
                 </div>
             )}
 
