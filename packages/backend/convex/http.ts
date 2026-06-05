@@ -117,19 +117,25 @@ http.route({
         break;
       }
 
-      case "subscription.created": // intentional fallthrough
-      case "subscription.updated":
-      case "subscription.active":
-      case "subscription.pastDue": {
-        // CROWDEV-330: mirror the Clerk Billing plan onto users.plan.
-        await ctx.runMutation(internal.billing.mutations.syncPlanFromClerk, {
-          data: (event as any).data,
-        });
-        break;
+      default: {
+        // CROWDEV-646: route all Clerk Billing lifecycle events
+        // (subscription.* and subscriptionItem.*) to the robust sync action,
+        // which re-reads the user's current plan from Clerk's API. This catches
+        // cancellation/downgrade events (subscriptionItem.canceled/ended) that
+        // the prior explicit subscription.* cases missed — subscription.updated
+        // excludes status changes — plus any future billing event types.
+        const eventType = (event as any).type as string;
+        if (
+          eventType.startsWith("subscription.") ||
+          eventType.startsWith("subscriptionItem.")
+        ) {
+          await ctx.runAction(internal.billing.actions.syncPlanFromClerk, {
+            data: (event as any).data,
+          });
+        } else {
+          console.log("Ignored webhook event", eventType);
+        }
       }
-
-      default:
-        console.log("Ignored webhook event", (event as any).type);
     }
 
     return new Response(null, { status: 200 });
