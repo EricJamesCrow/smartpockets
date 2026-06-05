@@ -161,20 +161,26 @@ export const exchangePublicTokenAction = action({
   }),
   handler: async (ctx, args) => {
     const userId = await requireActionUserId(ctx);
-    // CROWDEV-330: enforce the connection cap before exchanging (creates the item).
-    const headroom = await ctx.runQuery(
-      internal.billing.plaidLimit.getPlaidHeadroom,
+    await enforcePlaidRateLimit(ctx, "token_exchange", userId);
+    // CROWDEV-646: atomically reserve a connection slot before exchanging
+    // (which creates the item), released in `finally` once it resolves.
+    const reservation = await ctx.runMutation(
+      internal.billing.plaidLimit.reservePlaidSlot,
       { externalId: userId },
     );
-    if (!headroom.ok) {
+    if (!reservation.ok) {
       throw new Error("plaid_connection_limit");
     }
-    await enforcePlaidRateLimit(ctx, "token_exchange", userId);
-
-    return await getPlaid().exchangePublicToken(ctx, {
-      publicToken: args.publicToken,
-      userId,
-    });
+    try {
+      return await getPlaid().exchangePublicToken(ctx, {
+        publicToken: args.publicToken,
+        userId,
+      });
+    } finally {
+      await ctx.runMutation(internal.billing.plaidLimit.releasePlaidSlot, {
+        reservationId: reservation.reservationId,
+      });
+    }
   },
 });
 
@@ -410,15 +416,17 @@ export const onboardNewConnectionAction = action({
     };
   }> => {
     const userId = await requireActionUserId(ctx);
-    // CROWDEV-330: enforce the connection cap before onboarding a new item.
-    const headroom = await ctx.runQuery(
-      internal.billing.plaidLimit.getPlaidHeadroom,
+    await enforcePlaidRateLimit(ctx, "token_exchange", userId);
+    // CROWDEV-646: atomically reserve a connection slot (replaces the
+    // query-before-create headroom check) so two concurrent Links can't both
+    // pass the cap. Released in the `finally` below once onboarding resolves.
+    const reservation = await ctx.runMutation(
+      internal.billing.plaidLimit.reservePlaidSlot,
       { externalId: userId },
     );
-    if (!headroom.ok) {
+    if (!reservation.ok) {
       throw new Error("plaid_connection_limit");
     }
-    await enforcePlaidRateLimit(ctx, "token_exchange", userId);
 
     console.log("\n=== PLAID ONBOARDING ORCHESTRATOR ===");
     console.log("User ID:", userId);
@@ -535,6 +543,12 @@ export const onboardNewConnectionAction = action({
       console.error(error);
       console.error("=========================\n");
       throw error;
+    } finally {
+      // CROWDEV-646: free the reserved slot once onboarding resolves (success
+      // or failure). The reservation's TTL backstops an action crash here.
+      await ctx.runMutation(internal.billing.plaidLimit.releasePlaidSlot, {
+        reservationId: reservation.reservationId,
+      });
     }
   },
 });

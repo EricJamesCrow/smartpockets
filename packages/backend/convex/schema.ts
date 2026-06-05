@@ -479,6 +479,17 @@ const schema = defineEntSchema(
             .edge("user")
             .index("by_user_period", ["userId", "periodStart"]),
 
+        // === PLAID CONNECTION RESERVATIONS (CROWDEV-646) ===
+        // Short-lived slot reservations that make the per-plan Plaid connection
+        // cap atomic with item creation. Counted (while unexpired) alongside
+        // active items, so two concurrent Plaid Links can't both pass the cap.
+        // Keyed by Clerk externalId (what the Plaid actions hold). Released in
+        // the create action's `finally`; `expiresAt` backstops action crashes.
+        plaidConnectionReservations: defineEnt({
+            externalId: v.string(),
+            expiresAt: v.number(), // UTC epoch milliseconds
+        }).index("by_externalId", ["externalId"]),
+
         // === PROMPT VERSIONS (W2) ===
         promptVersions: defineEnt({
             version: v.string(),
