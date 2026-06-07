@@ -23,12 +23,20 @@ export function ChatBanner({ state, onDismiss }: ChatBannerProps) {
           text: `Slow down. Retry in ${state.retryAfterSeconds}s.`,
           link: null,
         };
-      case "budget_exhausted":
-        return {
-          icon: <AlertCircle className="size-4" />,
-          text: state.reason ?? "Monthly budget reached.",
-          link: { href: "/settings/billing", label: "Upgrade in Settings" },
-        };
+      case "budget_exhausted": {
+        const text =
+          state.reason === "message_cap"
+            ? "You've used all your messages this month."
+            : state.reason === "thread_cap"
+              ? "This conversation is too long — start a new chat."
+              : "You've reached this month's usage limit.";
+        // thread_cap is plan-independent (a per-thread guard), so no upgrade CTA.
+        const link =
+          state.reason === "thread_cap"
+            ? null
+            : { href: "/settings/billing", label: "Upgrade to Pro" };
+        return { icon: <AlertCircle className="size-4" />, text, link };
+      }
       case "run_in_progress":
         return {
           icon: <Clock className="size-4" />,

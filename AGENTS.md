@@ -420,6 +420,29 @@ Every new amount field must document unit, sign convention, and display conventi
 
 Every new date field must document whether it is an ISO date string, timestamp milliseconds, provider-local date, or UTC instant. Do not mix display dates and sortable instants in the same field.
 
+## Billing & Plan Gating (CROWDEV-330)
+
+SmartPockets is a portfolio/demo app, so AI chat and Plaid connections are gated by a per-user plan to bound Anthropic + Plaid cost.
+
+**Tiers (tunable in `convex/billing/entitlements.ts`):**
+
+| Limit | Free | Pro ($10/mo) |
+|---|---|---|
+| Chat messages / month (primary, user-facing) | 15 | 500 |
+| Chat tokens / month (cost backstop) | 500,000 | 10,000,000 |
+| Active Plaid connections (items) | 1 | 5 |
+
+The per-thread token cap (`AGENT_BUDGET_PER_THREAD_TOKENS`, default 200k) is a plan-independent runaway guard and still applies. The old global `AGENT_BUDGET_MONTHLY_TOKENS` is **superseded** — `checkHeadroom` now uses the per-plan `chatTokensPerMonth` and no longer reads it.
+
+**How it works:**
+- Plan is the **Clerk Billing** plan, mirrored onto `users.plan` by the `subscription.*` cases in the `/clerk-users-webhook` handler (`http.ts` → `billing/mutations.syncPlanFromClerk`). Pro is matched by `CLERK_PRO_PLAN_SLUG` (default `pro`); anything else ⇒ `free`.
+- `billing/entitlements.ts` maps plan → limits; `billing/plan.ts` resolves the effective plan (`resolveEffectivePlan`, fail-safe to `free`).
+- **Chat** enforcement: `agent/budgets.checkHeadroom` returns `message_cap` / `monthly_cap` / `thread_cap`; the monthly message count lives in the `usageCounters` ent, incremented at both turn-admit paths in `agent/threads.ts`.
+- **Plaid** enforcement: `billing/plaidLimit.getPlaidHeadroom` is called by all three Plaid actions in `plaidComponent.ts`; over the cap throws `plaid_connection_limit`.
+- **UI**: `billing/queries.getMyPlanAndUsage` drives the `/settings/billing` usage panel, the chat upgrade banner, and the Plaid Link button's upgrade state.
+
+**Owner exception (documented):** `BILLING_UNLIMITED_USER_IDS` (comma-separated Clerk user ids, set in the Convex deployment env) resolves those users to `unlimited`, bypassing every cap so the owner can demo without self-paying. Mirrors the Plaid prod-exception pattern. Every resolver fails safe to `free` on any doubt. Plans must exist in the Clerk Billing dashboard for checkout to work.
+
 ## Security Requirements
 
 SmartPockets handles real financial data. Security is non-negotiable.

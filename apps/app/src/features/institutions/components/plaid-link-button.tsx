@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { usePlaidLink } from "react-plaid-link";
-import { useAction, useConvexAuth } from "convex/react";
+import { useAction, useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { toast } from "sonner";
 import { Plus } from "@untitledui/icons";
@@ -67,10 +67,17 @@ export function PlaidLinkButton({
     api.plaidComponent.onboardNewConnectionAction
   );
 
+  // CROWDEV-330: gate by the plan's connection cap.
+  const planUsage = useQuery(api.billing.queries.getMyPlanAndUsage);
+  const atPlaidCap =
+    planUsage !== undefined &&
+    planUsage.plan !== "unlimited" &&
+    planUsage.plaid.used >= planUsage.plaid.limit;
+
   // Fetch link token on component mount
   useEffect(() => {
     const initializePlaidLink = async () => {
-      if (!isAuthenticated) return;
+      if (!isAuthenticated || atPlaidCap) return;
 
       try {
         const linkTokenArgs: {
@@ -96,7 +103,7 @@ export function PlaidLinkButton({
     };
 
     initializePlaidLink();
-  }, [isAuthenticated, createLinkToken, products, accountFilters]);
+  }, [isAuthenticated, atPlaidCap, createLinkToken, products, accountFilters]);
 
   // Handle successful account connection
   const onSuccess = useCallback(
@@ -129,6 +136,14 @@ export function PlaidLinkButton({
         onSuccessCallback?.();
       } catch (error) {
         console.error("Error connecting bank:", error);
+        const msg = error instanceof Error ? error.message : "";
+        if (msg.includes("plaid_connection_limit")) {
+          toast.error("Connection limit reached", {
+            id: toastId,
+            description: "Upgrade to Pro to connect more banks.",
+          });
+          return;
+        }
         toast.error("Failed to connect bank", {
           id: toastId,
           description:
@@ -148,6 +163,21 @@ export function PlaidLinkButton({
   });
 
   const isDisabled = !ready || isConnecting;
+
+  // CROWDEV-330: at the plan's connection cap, prompt upgrade instead of Link.
+  if (atPlaidCap) {
+    return (
+      <Button
+        size={size}
+        color={color}
+        href="/settings/billing"
+        iconLeading={Plus}
+        className={className}
+      >
+        Upgrade to connect more
+      </Button>
+    );
+  }
 
   // If custom children provided, render as clickable wrapper
   if (children) {

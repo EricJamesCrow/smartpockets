@@ -118,6 +118,15 @@ export const createLinkTokenAction = action({
   }),
   handler: async (ctx, args) => {
     const userId = await requireActionUserId(ctx);
+    // CROWDEV-330: block link-token issuance once the user is at their plan's
+    // connection cap, so a capped free user never even opens Plaid Link.
+    const headroom = await ctx.runQuery(
+      internal.billing.plaidLimit.getPlaidHeadroom,
+      { externalId: userId },
+    );
+    if (!headroom.ok) {
+      throw new Error("plaid_connection_limit");
+    }
     await enforcePlaidRateLimit(ctx, "link_token", userId);
 
     return await getPlaid().createLinkToken(ctx, {
@@ -152,6 +161,14 @@ export const exchangePublicTokenAction = action({
   }),
   handler: async (ctx, args) => {
     const userId = await requireActionUserId(ctx);
+    // CROWDEV-330: enforce the connection cap before exchanging (creates the item).
+    const headroom = await ctx.runQuery(
+      internal.billing.plaidLimit.getPlaidHeadroom,
+      { externalId: userId },
+    );
+    if (!headroom.ok) {
+      throw new Error("plaid_connection_limit");
+    }
     await enforcePlaidRateLimit(ctx, "token_exchange", userId);
 
     return await getPlaid().exchangePublicToken(ctx, {
@@ -393,6 +410,14 @@ export const onboardNewConnectionAction = action({
     };
   }> => {
     const userId = await requireActionUserId(ctx);
+    // CROWDEV-330: enforce the connection cap before onboarding a new item.
+    const headroom = await ctx.runQuery(
+      internal.billing.plaidLimit.getPlaidHeadroom,
+      { externalId: userId },
+    );
+    if (!headroom.ok) {
+      throw new Error("plaid_connection_limit");
+    }
     await enforcePlaidRateLimit(ctx, "token_exchange", userId);
 
     console.log("\n=== PLAID ONBOARDING ORCHESTRATOR ===");

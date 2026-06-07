@@ -117,6 +117,17 @@ http.route({
         break;
       }
 
+      case "subscription.created": // intentional fallthrough
+      case "subscription.updated":
+      case "subscription.active":
+      case "subscription.pastDue": {
+        // CROWDEV-330: mirror the Clerk Billing plan onto users.plan.
+        await ctx.runMutation(internal.billing.mutations.syncPlanFromClerk, {
+          data: (event as any).data,
+        });
+        break;
+      }
+
       default:
         console.log("Ignored webhook event", (event as any).type);
     }
