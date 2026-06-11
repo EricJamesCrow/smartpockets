@@ -186,6 +186,8 @@ Please read our [Contributing Guide](CONTRIBUTING.md) for details on code style,
 
 [AGPLv3](LICENSE) — free to use, modify, and self-host. If you host a modified version, you must share your changes.
 
+> **UI component licensing:** SmartPockets is built with the paid [UntitledUI React](https://www.untitledui.com/) component kit. That source is licensed separately and is **not redistributed** in this repository's working tree (`packages/ui/src/components/untitledui/` is untracked). Builds restore it via `scripts/fetch-private-ui.sh`; everything else in the repo is AGPLv3.
+
 ---
 
 Built by [Eric Crow](https://github.com/EricJamesCrow) · CrowDevelopment LLC

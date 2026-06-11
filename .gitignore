@@ -64,3 +64,8 @@ next-env.d.ts
 
 # superpowers brainstorming session artifacts (local-only)
 .superpowers/
+
+# CROWDEV-462: paid UntitledUI React source — licensed, not redistributed in
+# the working tree. Restored at build time by scripts/fetch-private-ui.sh
+/packages/ui/src/components/untitledui/
+/packages/ui/examples/
