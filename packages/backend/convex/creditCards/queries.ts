@@ -7,8 +7,8 @@
  * SECURITY: Filters out cards from paused Plaid items (SmartPockets parity).
  */
 import { v } from "convex/values";
-import { components } from "../_generated/api";
 import { query } from "../functions";
+import { getCardStatsForUser, getOwnedCard, listOwnedCards } from "./shared";
 
 /**
  * List all credit cards for the current user
@@ -108,27 +108,8 @@ export const list = query({
         }),
     ),
     async handler(ctx, { includeInactive = false }) {
-        const viewer = ctx.viewerX();
-
-        // Get user's active Plaid items to filter by (SmartPockets parity)
-        const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
-            userId: viewer.externalId,
-        });
-        const activeItemIds = new Set(userItems.filter((item) => item.isActive !== false).map((item) => item._id));
-
-        // Helper to filter cards by active Plaid items
-        // Cards without plaidItemId (manual) are always included
-        const filterByActivePlaidItem = (card: { plaidItemId?: string }) => !card.plaidItemId || activeItemIds.has(card.plaidItemId);
-
-        if (includeInactive) {
-            // Get all cards for user (use by_user_active index with just userId prefix)
-            const cards = await ctx.table("creditCards", "by_user_active", (q) => q.eq("userId", viewer._id)).map((card) => card.doc());
-            return cards.filter(filterByActivePlaidItem);
-        }
-
-        // Get only active cards, filtered by active Plaid items
-        const cards = await ctx.table("creditCards", "by_user_active", (q) => q.eq("userId", viewer._id).eq("isActive", true)).map((card) => card.doc());
-        return cards.filter(filterByActivePlaidItem);
+        // Shared with the MCP bridge (mcp/bridge.ts) — logic lives in shared.ts.
+        return listOwnedCards(ctx, ctx.viewerX(), includeInactive);
     },
 });
 
@@ -233,26 +214,8 @@ export const get = query({
         v.null(),
     ),
     async handler(ctx, { cardId }) {
-        const viewer = ctx.viewerX();
-        const card = await ctx.table("creditCards").get(cardId);
-
-        // Verify ownership
-        if (!card || card.userId !== viewer._id) {
-            return null;
-        }
-
-        // If card is from a Plaid item, verify item is active
-        if (card.plaidItemId) {
-            const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
-                userId: viewer.externalId,
-            });
-            const activeItemIds = new Set(userItems.filter((item) => item.isActive !== false).map((item) => item._id));
-            if (!activeItemIds.has(card.plaidItemId)) {
-                return null; // Card's Plaid item is paused
-            }
-        }
-
-        return card.doc();
+        // Shared with the MCP bridge (mcp/bridge.ts) — logic lives in shared.ts.
+        return getOwnedCard(ctx, ctx.viewerX(), cardId);
     },
 });
 
@@ -273,42 +236,7 @@ export const getStats = query({
         cardCount: v.number(),
     }),
     async handler(ctx) {
-        const viewer = ctx.viewerX();
-
-        // Get user's active Plaid items to filter by (SmartPockets parity)
-        const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
-            userId: viewer.externalId,
-        });
-        const activeItemIds = new Set(userItems.filter((item) => item.isActive !== false).map((item) => item._id));
-
-        const allCards = await ctx.table("creditCards", "by_user_active", (q) => q.eq("userId", viewer._id).eq("isActive", true)).map((card) => card.doc());
-
-        // Filter cards by active Plaid items (manual cards always included)
-        const cards = allCards.filter((card) => !card.plaidItemId || activeItemIds.has(card.plaidItemId));
-
-        const stats = {
-            totalBalance: 0,
-            totalAvailableCredit: 0,
-            totalCreditLimit: 0,
-            overdueCount: 0,
-            lockedCount: 0,
-            cardCount: cards.length,
-        };
-
-        for (const card of cards) {
-            stats.totalBalance += card.currentBalance ?? 0;
-            stats.totalAvailableCredit += card.availableCredit ?? 0;
-            stats.totalCreditLimit += card.creditLimit ?? 0;
-            if (card.isOverdue) stats.overdueCount++;
-            if (card.isLocked) stats.lockedCount++;
-        }
-
-        // Calculate average utilization
-        const averageUtilization = stats.totalCreditLimit > 0 ? (stats.totalBalance / stats.totalCreditLimit) * 100 : 0;
-
-        return {
-            ...stats,
-            averageUtilization: Math.round(averageUtilization * 100) / 100,
-        };
+        // Shared with the MCP bridge (mcp/bridge.ts) — logic lives in shared.ts.
+        return getCardStatsForUser(ctx, ctx.viewerX());
     },
 });

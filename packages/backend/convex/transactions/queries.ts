@@ -104,10 +104,14 @@ const transactionPaginationValidator = v.object({
     hasPreviousPage: v.boolean(),
 });
 
-async function assertViewerOwnsAccount(ctx: any, accountId: string) {
-    const viewer = ctx.viewerX();
+/**
+ * Verify a user owns the Plaid account. Shared with the MCP bridge
+ * (mcp/bridge.ts), which resolves the user by Clerk externalId instead of
+ * the viewer context.
+ */
+export async function assertUserOwnsAccount(ctx: any, user: { _id: string; externalId: string }, accountId: string) {
     const userItems = await ctx.runQuery(components.plaid.public.getItemsByUser, {
-        userId: viewer.externalId,
+        userId: user.externalId,
     });
     const ownedPlaidItemIds = new Set<string>();
 
@@ -123,10 +127,41 @@ async function assertViewerOwnsAccount(ctx: any, accountId: string) {
     }
 
     if (ownedPlaidItemIds.size > 0) {
-        return { viewer, ownedPlaidItemIds };
+        return { ownedPlaidItemIds };
     }
 
     throw new Error("Unauthorized: Account does not belong to user");
+}
+
+async function assertViewerOwnsAccount(ctx: any, accountId: string) {
+    const viewer = ctx.viewerX();
+    const { ownedPlaidItemIds } = await assertUserOwnsAccount(ctx, viewer, accountId);
+    return { viewer, ownedPlaidItemIds };
+}
+
+/**
+ * Account transactions with merchant enrichment, ownership pre-verified.
+ * Shared between getTransactionsByAccountId (viewer) and the MCP bridge.
+ */
+export async function getAccountTransactionsForUser(
+    ctx: any,
+    user: { _id: string; externalId: string },
+    accountId: string,
+) {
+    const { ownedPlaidItemIds } = await assertUserOwnsAccount(ctx, user, accountId);
+
+    const transactions = (await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId })).filter(
+        (tx: { userId: string; plaidItemId: string }) =>
+            tx.userId === user.externalId && ownedPlaidItemIds.has(tx.plaidItemId),
+    );
+
+    // Enrich with merchant data (with cache to deduplicate)
+    const merchantCache = new Map<string, MerchantEnrichmentResult>();
+    return await Promise.all(
+        transactions.map((tx: Parameters<typeof enrichTransactionWithMerchant>[1]) =>
+            enrichTransactionWithMerchant(ctx, tx, merchantCache),
+        ),
+    );
 }
 
 /**
@@ -315,16 +350,9 @@ export const getTransactionsByAccountId = query({
     args: { accountId: v.string() },
     returns: v.array(transactionWithMerchantValidator),
     handler: async (ctx, args) => {
-        const { viewer, ownedPlaidItemIds } = await assertViewerOwnsAccount(ctx, args.accountId);
-
-        // Get transactions from component
-        const transactions = (await ctx.runQuery(components.plaid.public.getTransactionsByAccount, { accountId: args.accountId })).filter(
-            (tx) => tx.userId === viewer.externalId && ownedPlaidItemIds.has(tx.plaidItemId),
-        );
-
-        // Enrich with merchant data (with cache to deduplicate)
-        const merchantCache = new Map<string, MerchantEnrichmentResult>();
-        return await Promise.all(transactions.map((tx) => enrichTransactionWithMerchant(ctx, tx, merchantCache)));
+        // Shared with the MCP bridge (mcp/bridge.ts) — logic lives in
+        // getAccountTransactionsForUser.
+        return getAccountTransactionsForUser(ctx, ctx.viewerX(), args.accountId);
     },
 });
 
