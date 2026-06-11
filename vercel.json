@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "bun install",
+  "installCommand": "bash scripts/fetch-private-ui.sh && bun install",
   "buildCommand": "turbo build --filter=@repo/app",
   "outputDirectory": "apps/app/.next",
   "framework": "nextjs"

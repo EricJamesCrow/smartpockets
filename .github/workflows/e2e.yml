@@ -46,6 +46,15 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
+            # CROWDEV-462: the paid UntitledUI source is untracked. Restore it
+            # before install/build. Falls back to pinned public history when
+            # UNTITLEDUI_REPO_TOKEN is unset; switch to the private-mirror
+            # token path if/when git history is rewritten.
+            - name: Restore UntitledUI source (paid kit, untracked)
+              env:
+                  UNTITLEDUI_REPO_TOKEN: ${{ secrets.UNTITLEDUI_REPO_TOKEN }}
+              run: bash scripts/fetch-private-ui.sh
+
             - name: Setup Bun
               uses: oven-sh/setup-bun@v2
               with:

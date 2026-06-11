@@ -108,6 +108,10 @@ validate_clerk_env() {
 main() {
   echo "[vercel-build] VERCEL_ENV=${VERCEL_ENV_VALUE}"
 
+  # CROWDEV-462: the paid UntitledUI source is untracked; restore it before
+  # building. No-op when the tree is already present.
+  bash "${WEB_DIR}/../../scripts/fetch-private-ui.sh"
+
   validate_clerk_env
 
   echo "[vercel-build] Building web only."
