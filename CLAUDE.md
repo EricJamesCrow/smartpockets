@@ -286,9 +286,48 @@ For tasks over 10 minutes:
 
 ## MCP Servers
 
-Configured servers (see `AGENTS.md` for setup):
-- **Convex MCP** — Live schema and function access
-- **Clerk MCP** — User management operations
-- **Plaid Sandbox MCP** — Development testing
-- **Plaid Dashboard MCP** — Production debugging
-- **Graphite MCP** — Stacked PR management (`gt mcp`)
+Configure in Claude Code for live schema/function access.
+
+### Convex MCP (Required)
+
+```bash
+claude mcp add convex -- npx convex mcp start
+```
+
+Provides: schema inspection, function execution, logs, env vars
+
+### Clerk MCP
+
+```bash
+claude mcp add clerk -- npx -y @clerk/agent-toolkit -p local-mcp
+```
+
+Provides: user management, organization operations
+
+### Plaid Sandbox MCP (Development)
+
+```bash
+claude mcp add plaid -- uvx mcp-server-plaid --client-id $PLAID_CLIENT_ID --secret $PLAID_SANDBOX_SECRET
+```
+
+Provides: mock data generation, docs search, webhook simulation
+
+> **Note:** Only configure if sandbox credentials are in env. Do not commit credentials.
+
+### Plaid Dashboard MCP (Production Debugging)
+
+```bash
+claude mcp add plaid-dashboard --url https://api.dashboard.plaid.com/mcp/sse
+```
+
+Provides: diagnose live Plaid items, Link analytics, API usage metrics
+
+> **Note:** Uses OAuth authentication via Plaid Dashboard. Use for troubleshooting real bank connection issues.
+
+### Graphite MCP (Stacked PRs)
+
+```bash
+claude mcp add graphite -- gt mcp
+```
+
+Provides: stacked PR creation, branch management, stack submission and navigation
