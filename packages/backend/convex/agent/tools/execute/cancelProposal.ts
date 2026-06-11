@@ -2,10 +2,11 @@ import { v } from "convex/values";
 import { agentMutation } from "../../functions";
 import { assertAgentSideEffectsAllowed } from "../../writeTool";
 
-// W2.12 stub; real body in W2.12 mirrors the agent/proposals.ts cancel logic.
+// Agent-callable cancel; mirrors the user-facing agent/proposals.ts cancel
+// logic (ownership check, awaiting_confirmation guard, idempotent on
+// already-resolved proposals).
 export const cancelProposal = agentMutation({
   args: {
-    
     threadId: v.id("agentThreads"),
     proposalId: v.id("agentProposals"),
   },

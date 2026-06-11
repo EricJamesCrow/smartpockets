@@ -146,7 +146,7 @@ export const confirm = mutation({
             userConfirmedDestructive: confirmDestructive === true ? true : undefined,
         } as const;
         await proposal.patch(updates);
-        // W2.11 stubs the executor; W5 fills the body.
+        // Executor implemented in agent/tools/execute/executeConfirmedProposal (W5).
         await ctx.scheduler.runAfter(0, (internal as any).agent.tools.execute.executeConfirmedProposal.executeConfirmedProposal, {
             userId: viewer._id,
             proposalId,
