@@ -3,6 +3,8 @@
 
 <p align="center">
 
+[![Checks](https://github.com/EricJamesCrow/smartpockets/actions/workflows/checks.yml/badge.svg)](https://github.com/EricJamesCrow/smartpockets/actions/workflows/checks.yml)
+[![E2E](https://github.com/EricJamesCrow/smartpockets/actions/workflows/e2e.yml/badge.svg)](https://github.com/EricJamesCrow/smartpockets/actions/workflows/e2e.yml)
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)
 ![Next.js 16](https://img.shields.io/badge/Next.js-16-black)
 ![Powered by Convex](https://img.shields.io/badge/Powered_by-Convex-ff6600)
