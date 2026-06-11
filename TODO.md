@@ -22,9 +22,9 @@
 ### 2. Marketing → App Architecture
 
 - [x] Move landing page from `apps/app` to `apps/web`
-- [ ] Configure subdomain routing (www → marketing, app → authenticated app)
-- [ ] Set up Clerk auth handoff between domains
-- [ ] Remove marketing components from `apps/app`
+- [x] Configure subdomain routing (www → marketing, app → authenticated app) — live in production (smartpockets.com / app.smartpockets.com)
+- [x] Set up Clerk auth handoff between domains — live in production
+- [x] Remove marketing components from `apps/app` (PR #287)
 - [x] Update Vercel deployment config for both apps (preview deployments now use consistent Convex deployment)
 - [x] Document Graphite PR preview verification and Clerk preview environment requirements
 
@@ -96,7 +96,6 @@
 - [ ] Verify wallet drag-and-drop, pin, lock/autopay toggles are fully functional
 - [ ] Add screenshots/video to README hero section
 - [x] Landing page redesign — updated copy reflecting personal finance platform positioning
-- [ ] Figma UI Kit — full design system artifact
 - [ ] Self-hosting guide (Docker setup)
 - [ ] Set up GitHub Discussions
 - [ ] Hosted version — managed deployment with Plaid costs included

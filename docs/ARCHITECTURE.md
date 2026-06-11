@@ -6,13 +6,13 @@ This document provides a high-level overview of the SmartPockets application arc
 
 | Layer | Technology |
 |-------|------------|
-| **Framework** | Next.js 15 App Router + React 19 |
+| **Framework** | Next.js 16 App Router + React 19 |
 | **Database** | Convex with Ents ORM |
-| **Auth** | Clerk (users, orgs, billing sync) |
+| **Auth** | Clerk (users, billing sync — no org model, removed in CROWDEV-431) |
 | **UI** | UntitledUI components + Tailwind CSS v4 |
 | **Banking** | Plaid via `@crowdevelopment/convex-plaid` |
 | **AI** | Anthropic via custom Convex agent runtime |
-| **Email** | Resend (migration to `@convex-dev/resend` pending) |
+| **Email** | Resend via the `@convex-dev/resend` component |
 
 ## Directory Structure
 
@@ -28,7 +28,7 @@ This document provides a high-level overview of the SmartPockets application arc
 ├── packages/
 │   ├── backend/                 # Convex backend
 │   │   └── convex/
-│   │       ├── ai/              # AI chat (agent, threads, messages)
+│   │       ├── agent/           # AI chat (runtime, threads, tools, budgets)
 │   │       ├── creditCards/     # Credit card queries/mutations
 │   │       ├── transactions/    # Transaction queries
 │   │       ├── items/           # Plaid items management
@@ -43,10 +43,11 @@ This document provides a high-level overview of the SmartPockets application arc
 ### 1. Authentication & Authorization
 
 - **Clerk** handles authentication and user management
-- Users sync to Convex via webhooks (`http.ts`)
-- **4 roles**: owner, admin, member, viewer
-- **Permission types**: read, write, delete, manage, share
-- Permission flow: `User → Member(role) → Organization → Project → Chat`
+- Users sync to Convex via webhooks (`http.ts`, svix-verified)
+- Authorization is **per-user ownership**: every query/mutation derives the
+  viewer from the custom context (`ctx.viewer` / `ctx.viewerX()`) and scopes
+  reads/writes to that user's rows. There is no organization/role model
+  (Clerk Organizations were removed in CROWDEV-431).
 
 ### 2. Plaid Integration (Credit Cards)
 
@@ -107,26 +108,29 @@ migrate to the component runtime, or remove the unused registration.
 ### Core Entities
 
 ```
-users ──┬── members ──── organizations
-        │                     │
-        │                     ├── projects ──── chats ──── messages
-        │                     │      │
-        └── shares ───────────┘      │
-                                     │
-creditCards ────────────────────────(standalone, linked via userId)
+users ──┬── creditCards ──── walletCards ──── wallets
+        ├── agentThreads ──── agentMessages / agentProposals
+        ├── transactionOverlays / transactionAttachments
+        ├── reminders / auditLog / userPreferences
+        └── usageCounters / agentUsage          (billing + budgets)
+
+plaid:* component tables ── linked via creditCards.accountId / users.externalId
 ```
 
 ### Key Tables
 
 | Table | Purpose | Key Fields |
 |-------|---------|------------|
-| `users` | User profiles (Clerk sync) | `externalId`, `name` |
-| `organizations` | Org hierarchy | `slug`, `name` |
-| `members` | Org membership | `organizationId`, `userId`, `roleId` |
-| `roles` | Permission definitions | `name`, `permissions[]` |
-| `projects` | User projects | `organizationId`, `ownerId` |
+| `users` | User profiles (Clerk sync) | `externalId`, `name`, `plan` |
 | `creditCards` | Denormalized card data | `userId`, `accountId`, balances, APRs |
-| `chatThreads` | AI chat threads | `threadId`, `entityType`, `entityId` |
+| `wallets` / `walletCards` | Card grouping + join table | `userId`, `sortOrder` |
+| `agentThreads` / `agentMessages` | AI chat threads + rows | `userId`, turn state |
+| `agentProposals` | Propose-confirm-execute write flow | `state`, `toolName` |
+| `usageCounters` / `agentUsage` | Plan-gated chat budgets | period keys, tokens |
+| `transactionOverlays` | User edits over Plaid transactions | `transactionId` |
+
+See `packages/backend/convex/schema.ts` for the full list (and AGENTS.md →
+Schema Overview for the grouped map).
 
 ## API Patterns
 

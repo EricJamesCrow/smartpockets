@@ -516,17 +516,19 @@ The tipping point is: did the model ever, in real testing, render this value wro
 
 ## Schema Overview
 
-| Table | Purpose | Key Edges |
-|-------|---------|-----------|
-| `users` | Clerk-synced users | → members, creditCards, wallets |
-| `organizations` | Org hierarchy | → members, roles |
-| `members` | Org membership | → organization, user, role |
-| `roles` | Permission sets | → organization, members |
-| `creditCards` | Denormalized card data | → user, walletCards |
-| `wallets` | Card organization groups | → user, walletCards |
-| `walletCards` | Wallet-Card join table | → wallet, creditCard |
-| `userPreferences` | Appearance settings | indexed by userId |
-| `paymentAttempts` | Clerk billing events | indexed by paymentId, userId |
+Core domain tables (see `packages/backend/convex/schema.ts` for the full
+definitions — it is the source of truth; this table is the map, not the
+territory). There is no organizations/members/roles model — Clerk
+Organizations were removed in CROWDEV-431.
+
+| Group | Tables |
+|-------|--------|
+| Identity & billing | `users`, `userPreferences`, `paymentAttempts`, `usageCounters`, `plaidConnectionReservations` |
+| Cards & wallets | `creditCards` (denormalized Plaid account + liability data), `wallets`, `walletCards`, `statementSnapshots`, `promoRates`, `installmentPlans` |
+| Transactions | `transactionOverlays` (user edits over Plaid rows), `transactionAttachments` |
+| Agent chat | `agentThreads`, `agentMessages`, `agentProposals`, `agentProposalRows`, `agentUsage`, `promptVersions` |
+| Email | `emailEvents`, `emailSuppressions`, `notificationPreferences` |
+| Misc | `reminders`, `auditLog` |
 
 ### Key Indexes
 
@@ -536,7 +538,6 @@ The tipping point is: did the model ever, in real testing, render this value wro
 | `creditCards` | `by_user_active` | `userId`, `isActive` |
 | `wallets` | `by_user_sortOrder` | `userId`, `sortOrder` |
 | `walletCards` | `by_wallet_sortOrder` | `walletId`, `sortOrder` |
-| `members` | `orgUser` | `organizationId`, `userId` |
 
 ### Plaid Component Tables
 
@@ -629,7 +630,6 @@ This Python approach is necessary because secret values are redacted by the Clou
 ### Gotchas
 
 - **bun.lock version mismatch**: if a local or cloud Bun version cannot read the committed `bun.lock`, it may warn `Unknown lockfile version` and regenerate dependency resolution. Do not commit a regenerated `bun.lock` unless the task is explicitly updating the package manager/lockfile and Vercel/local Bun versions have been verified together. If `bun.lock` is modified accidentally, revert it before committing: `git checkout -- bun.lock`.
-- **Pre-existing typecheck error**: `apps/app/src/components/chat/tool-results/charts/SpendByCategoryChart.tsx` has a type error on `main` related to `recharts` `Pie` component callback types. This is not a setup issue.
 - **Turbo lockfile warning**: Turborepo may warn about `Could not resolve workspaces` from `bun.lock` format. This does not affect task execution.
 - **Convex deploy key is `preview:` type**: The `CONVEX_DEPLOY_KEY` secret is a preview deploy key, which means `bunx convex dev` and `bunx convex dev --once` will **not work** (they error with "Use `npx convex deploy` to use preview deployments"). Instead, push backend changes with: `cd packages/backend && bunx convex deploy --preview-name main --yes`. This creates/reuses a preview deployment. The preview deployment URL (printed at the end of the deploy output) must match `NEXT_PUBLIC_CONVEX_URL` in `.env.local` for the app to connect. If the URLs don't match, update `.env.local` and restart the app.
 - **Backend changes must be deployed before testing**: Any edit under `packages/backend/convex/` is not visible until pushed. Run `cd packages/backend && bunx convex deploy --preview-name main --yes` after changes.
