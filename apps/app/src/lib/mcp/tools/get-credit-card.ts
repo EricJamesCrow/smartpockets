@@ -1,59 +1,22 @@
 // apps/app/src/lib/mcp/tools/get-credit-card.ts
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { fetchQuery } from "convex/nextjs";
-import { formatMoneyFromDollars, milliunitsToDollarsOrNull } from "@/utils/money";
+import { formatMoneyFromDollars } from "@/utils/money";
+import { callMcpBridge, type BridgeCard } from "../bridge-client";
 import type { MCPCreditCard, MCPToolResponse } from "../types";
+import { mapBridgeCard } from "./list-credit-cards";
 
 /**
- * Get details for a single credit card.
+ * Get details for a single credit card owned by the OAuth-authenticated user.
  */
-export async function getCreditCard(token: string, cardId: string): Promise<MCPToolResponse<MCPCreditCard | null>> {
-    const card = await fetchQuery(api.creditCards.queries.get, { cardId: cardId as Id<"creditCards"> }, { token });
-
-    if (!card) {
+export async function getCreditCard(externalId: string, cardId: string): Promise<MCPToolResponse<MCPCreditCard | null>> {
+    const result = await callMcpBridge<BridgeCard | null>("get_credit_card", { cardId }, externalId);
+    if (!result.ok || !result.data) {
         return {
             data: null,
             summary: "Card not found.",
         };
     }
 
-    const currentBalance = card.currentBalance ?? 0;
-    const creditLimit = card.creditLimit ?? null;
-
-    const mappedCard: MCPCreditCard = {
-        id: card._id,
-        accountId: card.accountId,
-        displayName: card.displayName,
-        company: card.company ?? null,
-        brand: card.brand ?? "other",
-        lastFour: card.lastFour ?? null,
-
-        currentBalance,
-        availableCredit: card.availableCredit ?? null,
-        creditLimit,
-        utilization: creditLimit ? (currentBalance / creditLimit) * 100 : null,
-
-        minimumPaymentAmount: card.minimumPaymentAmount ?? null,
-        nextPaymentDueDate: card.nextPaymentDueDate ?? null,
-        isOverdue: card.isOverdue,
-
-        lastStatementBalance: card.lastStatementBalance ?? null,
-        lastStatementIssueDate: card.lastStatementIssueDate ?? null,
-        lastPaymentAmount: card.lastPaymentAmount ?? null,
-        lastPaymentDate: card.lastPaymentDate ?? null,
-
-        aprs: (card.aprs ?? []).map((apr) => ({
-            aprPercentage: apr.aprPercentage,
-            aprType: apr.aprType,
-            balanceSubjectToApr: milliunitsToDollarsOrNull(apr.balanceSubjectToApr),
-            interestChargeAmount: milliunitsToDollarsOrNull(apr.interestChargeAmount),
-        })),
-
-        isLocked: card.isLocked,
-        syncStatus: card.syncStatus ?? "synced",
-        lastSyncedAt: card.lastSyncedAt ?? null,
-    };
+    const mappedCard = mapBridgeCard(result.data);
 
     // Generate summary
     const name = mappedCard.displayName || mappedCard.company || "Card";

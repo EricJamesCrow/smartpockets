@@ -1,40 +1,45 @@
 // apps/app/src/lib/mcp/tools/list-transactions.ts
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { fetchQuery } from "convex/nextjs";
 import { parseLocalDate } from "@/types/credit-cards";
 import { formatMoneyFromDollars, milliunitsToDollars } from "@/utils/money";
+import { callMcpBridge, type BridgeCard, type BridgeTransaction } from "../bridge-client";
 import type { MCPToolResponse, MCPTransaction } from "../types";
 
 /**
- * List recent transactions for a credit card.
+ * List recent transactions for a credit card owned by the
+ * OAuth-authenticated user.
  */
-export async function listTransactions(token: string, cardId: string, startDate?: string, endDate?: string): Promise<MCPToolResponse<MCPTransaction[]>> {
+export async function listTransactions(
+    externalId: string,
+    cardId: string,
+    startDate?: string,
+    endDate?: string,
+): Promise<MCPToolResponse<MCPTransaction[]>> {
     // Default to last 30 days (use local-midnight to match parseLocalDate on tx.date)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const end = endDate ? parseLocalDate(endDate) : today;
     const start = startDate ? parseLocalDate(startDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // First get the card to find the accountId
-    const card = await fetchQuery(api.creditCards.queries.get, { cardId: cardId as Id<"creditCards"> }, { token });
+    // One bridge call returns the ownership-checked card plus its transactions.
+    const result = await callMcpBridge<{ card: BridgeCard; transactions: BridgeTransaction[] } | null>(
+        "list_transactions",
+        { cardId },
+        externalId,
+    );
 
-    if (!card) {
+    if (!result.ok || !result.data) {
         return {
             data: [],
             summary: "Card not found.",
         };
     }
 
-    // Fetch transactions for this account using the correct query name
-    const transactions = await fetchQuery(api.transactions.queries.getTransactionsByAccountId, { accountId: card.accountId }, { token });
-
     // Filter by date range and map to MCP format. Each transaction carries
     // Plaid-convention (`amount`), human-convention (`displayAmount`), a
     // verbatim `amountFormatted`, and `direction` so external MCP clients can
     // echo amounts without reasoning through Plaid's inverted sign rule. See
     // MCPTransaction docstring in `../types.ts`.
-    const mappedTransactions: MCPTransaction[] = transactions
+    const mappedTransactions: MCPTransaction[] = result.data.transactions
         .filter((tx) => {
             const txDate = parseLocalDate(tx.date);
             return txDate >= start && txDate <= end;
