@@ -179,36 +179,6 @@ export const countActivePlaidItems = internalQuery({
 });
 
 /**
- * Search users by name (for sharing UI)
- */
-export const search = query({
-    args: {
-        query: v.string(),
-    },
-    returns: v.array(
-        v.object({
-            _id: v.id("users"),
-            name: v.string(),
-        }),
-    ),
-    async handler(ctx, { query: searchQuery }) {
-        const viewer = ctx.viewer;
-        if (!viewer) return [];
-
-        // Search all users (limited for now)
-        // In production, you'd want a search index
-        const allUsers = await ctx.table("users");
-        return allUsers
-            .filter((u) => u._id !== viewer._id && u.name.toLowerCase().includes(searchQuery.toLowerCase()))
-            .slice(0, 10)
-            .map((u) => ({
-                _id: u._id,
-                name: u.name,
-            }));
-    },
-});
-
-/**
  * Internal: resolve viewer by Clerk externalId. Used by the agent HTTP action
  * after `ctx.auth.getUserIdentity()` to translate the JWT subject to an
  * `Id<"users">` that propagates through the agent trust boundary.
