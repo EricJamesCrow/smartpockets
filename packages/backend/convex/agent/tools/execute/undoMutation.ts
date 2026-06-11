@@ -3,7 +3,6 @@ import { agentMutation } from "../../functions";
 import { undoByToken } from "../../writeTool";
 import "../propose/proposeBulkTransactionUpdate";
 import "../propose/proposeCreditCardMetadataUpdate";
-import "../propose/proposeManualPromo";
 import "../propose/proposeReminderCreate";
 import "../propose/proposeReminderDelete";
 import "../propose/proposeTransactionUpdate";

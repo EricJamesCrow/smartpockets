@@ -6,11 +6,11 @@
 // (ToolName = ReadToolName | ProposeToolName | ExecuteToolName). The
 // `Partial<Record<ToolName, ToolIcon>>` type makes mapping holes explicit at
 // compile time — `getToolIcon` falls back to Settings01 for any unmapped name.
+import type { ComponentType, SVGProps } from "react";
 import {
     ActivityHeart,
     BarChart01,
     Bell01,
-    ClockFastForward,
     CreditCard02,
     Edit05,
     File05,
@@ -21,10 +21,8 @@ import {
     Send01,
     Settings01,
     SlashCircle01,
-    Tag01,
     Trash01,
 } from "@untitledui/icons";
-import type { ComponentType, SVGProps } from "react";
 import type { ToolName } from "@/components/chat/tool-results/types";
 
 export type ToolIcon = ComponentType<SVGProps<SVGSVGElement>>;
@@ -39,10 +37,7 @@ export const toolIconMap: Partial<Record<ToolName, ToolIcon>> = {
     get_transaction_detail: Receipt,
     get_spend_by_category: BarChart01,
     get_spend_over_time: BarChart01,
-    get_upcoming_statements: ClockFastForward,
     list_reminders: Bell01,
-    list_deferred_interest_promos: Tag01,
-    list_installment_plans: Tag01,
     search_merchants: SearchSm,
     get_plaid_health: ActivityHeart,
     get_proposal: Edit05,
@@ -50,7 +45,6 @@ export const toolIconMap: Partial<Record<ToolName, ToolIcon>> = {
     propose_transaction_update: Edit05,
     propose_bulk_transaction_update: Edit05,
     propose_credit_card_metadata_update: Edit05,
-    propose_manual_promo: Tag01,
     propose_reminder_create: Bell01,
     propose_reminder_delete: Trash01,
     // Execute tools

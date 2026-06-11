@@ -25,13 +25,6 @@ import { milliunitsToDollarsOrNull } from "../../../money";
  *   `minimumPaymentAmount`, `aprs[].balanceSubjectToApr`,
  *   `aprs[].interestChargeAmount`): all positive = amount owed / paid /
  *   charged. User-intuitive as-is.
- * - **Promo balances** (`originalBalance`, `remainingBalance`,
- *   `accruedDeferredInterest`, `monthlyMinimumPayment`): positive =
- *   amount owed / accrued. User-intuitive as-is.
- * - **Installment plan fields** (`originalPrincipal`, `remainingPrincipal`,
- *   `monthlyPrincipal`, `monthlyFee`): positive = amount owed / paid.
- *   User-intuitive as-is.
- *
  * If you add a new field here whose semantics are NOT "positive = amount
  * the user has/owes/paid", consider whether it needs a parallel
  * `display*` field in human convention. See
@@ -71,30 +64,6 @@ export function creditCardPreviewForModel(card: any): any {
             balanceSubjectToApr: milliunitsToDollarsOrNull(apr.balanceSubjectToApr),
             interestChargeAmount: milliunitsToDollarsOrNull(apr.interestChargeAmount),
         })),
-        moneyUnit: "dollars",
-    };
-}
-
-export function promoPreviewForModel(promo: any): any {
-    const plain = toPlain(promo);
-    return {
-        ...plain,
-        originalBalance: plain.originalBalance ?? null,
-        remainingBalance: plain.remainingBalance ?? null,
-        accruedDeferredInterest: plain.accruedDeferredInterest ?? null,
-        monthlyMinimumPayment: plain.monthlyMinimumPayment ?? null,
-        moneyUnit: "dollars",
-    };
-}
-
-export function installmentPreviewForModel(plan: any): any {
-    const plain = toPlain(plan);
-    return {
-        ...plain,
-        originalPrincipal: plain.originalPrincipal ?? null,
-        remainingPrincipal: plain.remainingPrincipal ?? null,
-        monthlyPrincipal: plain.monthlyPrincipal ?? null,
-        monthlyFee: plain.monthlyFee ?? null,
         moneyUnit: "dollars",
     };
 }

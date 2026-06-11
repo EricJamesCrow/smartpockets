@@ -1,19 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-import { cx } from "@/utils/cx";
-
 import type { Id } from "@convex/_generated/dataModel";
-
+import { cx } from "@/utils/cx";
 import { ToolCardShell } from "../shared/ToolCardShell";
-import {
-    useLiveCreditCards,
-    useLiveProposal,
-    useLiveReminders,
-    useLiveTransactions,
-    type AgentProposalRow,
-} from "../shared/liveRowsHooks";
+import { type AgentProposalRow, useLiveCreditCards, useLiveProposal, useLiveReminders, useLiveTransactions } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
 import type { AgentProposalId } from "../types";
 import { ProposalConfirmCardSkeleton } from "./ProposalConfirmCardSkeleton";
@@ -57,7 +48,7 @@ function DiffList({ patch }: { patch: Record<string, unknown> }) {
                 if (Array.isArray(value) && value.length === 2) {
                     const [before, after] = value;
                     return (
-                        <li key={key} className="flex flex-wrap items-baseline gap-2">
+                        <li key={key} className="gap-2 flex flex-wrap items-baseline">
                             <span className="text-tertiary">{key}:</span>
                             <span className="text-tertiary line-through">{formatDiffValue(before)}</span>
                             <span className="text-utility-success-700">{formatDiffValue(after)}</span>
@@ -65,7 +56,7 @@ function DiffList({ patch }: { patch: Record<string, unknown> }) {
                     );
                 }
                 return (
-                    <li key={key} className="flex flex-wrap items-baseline gap-2">
+                    <li key={key} className="gap-2 flex flex-wrap items-baseline">
                         <span className="text-tertiary">{key}:</span>
                         <span className="text-primary">{formatDiffValue(value)}</span>
                     </li>
@@ -77,41 +68,30 @@ function DiffList({ patch }: { patch: Record<string, unknown> }) {
 
 // Pick the live-row hook by the propose tool that created this proposal.
 // Transactions, credit cards, and reminders each live in distinct tables, so a
-// single `useLiveTransactions` call can miss drift on card / promo / reminder
-// proposals (the rows never resolve). Every hook is called unconditionally so
+// single `useLiveTransactions` call can miss drift on card / reminder proposals
+// (the rows never resolve). Every hook is called unconditionally so
 // hook order stays stable; empty-id calls are cheap and return `undefined`.
 function useDriftDetection(proposal: AgentProposalRow | null | undefined): boolean {
     const toolName = proposal?.toolName ?? "";
     const ids = proposal?.affectedIds ?? [];
 
-    const wantsTransactions =
-        toolName === "propose_transaction_update" || toolName === "propose_bulk_transaction_update";
-    const wantsCards =
-        toolName === "propose_credit_card_metadata_update" || toolName === "propose_manual_promo";
-    const wantsReminders =
-        toolName === "propose_reminder_create" || toolName === "propose_reminder_delete";
+    const wantsTransactions = toolName === "propose_transaction_update" || toolName === "propose_bulk_transaction_update";
+    const wantsCards = toolName === "propose_credit_card_metadata_update";
+    const wantsReminders = toolName === "propose_reminder_create" || toolName === "propose_reminder_delete";
 
     const transactionRows = useLiveTransactions(wantsTransactions ? ids : []);
-    const cardRows = useLiveCreditCards(
-        wantsCards ? (ids as Array<Id<"creditCards">>) : [],
-    );
+    const cardRows = useLiveCreditCards(wantsCards ? (ids as Array<Id<"creditCards">>) : []);
     const reminderRows = useLiveReminders(wantsReminders ? ids : []);
 
     if (!proposal) return false;
-    const rows = wantsTransactions
-        ? transactionRows
-        : wantsCards
-            ? cardRows
-            : wantsReminders
-                ? reminderRows
-                : undefined;
+    const rows = wantsTransactions ? transactionRows : wantsCards ? cardRows : wantsReminders ? reminderRows : undefined;
     if (!rows) return false;
     return rows.some((row) => (row._updateTime ?? 0) > proposal.createdAt);
 }
 
 function DriftBanner() {
     return (
-        <div className="mb-3 rounded-md border border-utility-warning-300 bg-utility-warning-50 p-3 text-xs text-utility-warning-700">
+        <div className="mb-3 rounded-md border-utility-warning-300 bg-utility-warning-50 p-3 text-xs text-utility-warning-700 border">
             Underlying data changed while this proposal was pending. Recomputed preview below.
         </div>
     );
@@ -119,18 +99,15 @@ function DriftBanner() {
 
 function IrreversibleBanner() {
     return (
-        <div className="mb-3 rounded-md border border-utility-error-300 bg-utility-error-50 p-3 text-xs text-utility-error-700">
-            This proposal affects more than {IRREVERSIBLE_THRESHOLD} rows. Chunked execution will
-            run and cannot be undone as a single action. Individual-row undo remains available for
-            10 minutes via separate agent prompts.
+        <div className="mb-3 rounded-md border-utility-error-300 bg-utility-error-50 p-3 text-xs text-utility-error-700 border">
+            This proposal affects more than {IRREVERSIBLE_THRESHOLD} rows. Chunked execution will run and cannot be undone as a single action. Individual-row
+            undo remains available for 10 minutes via separate agent prompts.
         </div>
     );
 }
 
 function useConfirmUnlockedAt(isIrreversible: boolean): number {
-    const [unlockAt] = useState(() =>
-        Date.now() + (isIrreversible ? CONFIRM_COUNTDOWN_IRREVERSIBLE_MS : CONFIRM_MOUNT_DISABLE_MS),
-    );
+    const [unlockAt] = useState(() => Date.now() + (isIrreversible ? CONFIRM_COUNTDOWN_IRREVERSIBLE_MS : CONFIRM_MOUNT_DISABLE_MS));
     return unlockAt;
 }
 
@@ -144,15 +121,7 @@ function useCountdownSecondsLeft(targetMs: number): number {
     return Math.max(0, Math.ceil((targetMs - now) / 1000));
 }
 
-function AwaitingView({
-    proposal,
-    onConfirm,
-    onCancel,
-}: {
-    proposal: AgentProposalRow;
-    onConfirm: () => void;
-    onCancel: () => void;
-}) {
+function AwaitingView({ proposal, onConfirm, onCancel }: { proposal: AgentProposalRow; onConfirm: () => void; onCancel: () => void }) {
     const patch = parsePatch(proposal);
     const isIrreversible = proposal.affectedCount > IRREVERSIBLE_THRESHOLD;
     const hasDrift = useDriftDetection(proposal);
@@ -163,11 +132,7 @@ function AwaitingView({
     return (
         <ToolCardShell
             title={proposal.summaryText || `Proposed ${proposal.toolName}`}
-            subtitle={
-                proposal.scope === "bulk"
-                    ? `${proposal.affectedCount} rows affected`
-                    : "Awaiting your confirmation"
-            }
+            subtitle={proposal.scope === "bulk" ? `${proposal.affectedCount} rows affected` : "Awaiting your confirmation"}
         >
             {hasDrift && <DriftBanner />}
             {isIrreversible && <IrreversibleBanner />}
@@ -176,19 +141,15 @@ function AwaitingView({
             ) : (
                 <div className="space-y-2">
                     <DiffList patch={patch} />
-                    <p className="text-xs text-tertiary">
-                        Sample of affected rows:
-                    </p>
-                    <pre className="max-h-40 overflow-auto rounded-md bg-secondary/30 p-2 text-xs text-tertiary">
-                        {proposal.sampleJson}
-                    </pre>
+                    <p className="text-xs text-tertiary">Sample of affected rows:</p>
+                    <pre className="max-h-40 rounded-md bg-secondary/30 p-2 text-xs text-tertiary overflow-auto">{proposal.sampleJson}</pre>
                 </div>
             )}
-            <div className="mt-4 flex items-center justify-end gap-2">
+            <div className="mt-4 gap-2 flex items-center justify-end">
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="rounded-md border border-secondary px-3 py-1.5 text-sm font-medium text-secondary hover:bg-secondary/50"
+                    className="rounded-md border-secondary px-3 py-1.5 text-sm font-medium text-secondary hover:bg-secondary/50 border"
                 >
                     Cancel
                 </button>
@@ -198,9 +159,7 @@ function AwaitingView({
                     disabled={disabled}
                     className={cx(
                         "rounded-md px-3 py-1.5 text-sm font-medium text-white",
-                        disabled
-                            ? "bg-utility-brand-300"
-                            : "bg-utility-brand-600 hover:bg-utility-brand-700",
+                        disabled ? "bg-utility-brand-300" : "bg-utility-brand-600 hover:bg-utility-brand-700",
                     )}
                 >
                     {disabled && isIrreversible ? `Confirm (${secondsLeft}s)` : "Confirm"}
@@ -212,36 +171,24 @@ function AwaitingView({
 
 function ExecutingView({ proposal }: { proposal: AgentProposalRow }) {
     return (
-        <ToolCardShell
-            title={proposal.summaryText || proposal.toolName}
-            subtitle="Applying changes..."
-        >
-            <div className="flex items-center gap-3 text-sm text-tertiary">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-utility-brand-500 border-t-transparent" />
+        <ToolCardShell title={proposal.summaryText || proposal.toolName} subtitle="Applying changes...">
+            <div className="gap-3 text-sm text-tertiary flex items-center">
+                <span className="h-4 w-4 animate-spin border-utility-brand-500 rounded-full border-2 border-t-transparent" />
                 <span>Executing proposal</span>
             </div>
         </ToolCardShell>
     );
 }
 
-function ExecutedView({
-    proposal,
-    onUndo,
-}: {
-    proposal: AgentProposalRow;
-    onUndo: (token: string) => void;
-}) {
+function ExecutedView({ proposal, onUndo }: { proposal: AgentProposalRow; onUndo: (token: string) => void }) {
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), UNDO_POLL_MS);
         return () => clearInterval(id);
     }, []);
-    const undoWindowOpen =
-        proposal.undoExpiresAt != null && now < proposal.undoExpiresAt && proposal.reversalToken;
+    const undoWindowOpen = proposal.undoExpiresAt != null && now < proposal.undoExpiresAt && proposal.reversalToken;
     const token = proposal.reversalToken;
-    const minutesLeft = proposal.undoExpiresAt
-        ? Math.max(0, Math.round((proposal.undoExpiresAt - now) / 60_000))
-        : 0;
+    const minutesLeft = proposal.undoExpiresAt ? Math.max(0, Math.round((proposal.undoExpiresAt - now) / 60_000)) : 0;
     return (
         <ToolCardShell
             title={proposal.summaryText || proposal.toolName}
@@ -249,11 +196,11 @@ function ExecutedView({
         >
             <p className="text-sm text-utility-success-700">Change applied successfully.</p>
             {undoWindowOpen && token && (
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 gap-2 flex items-center">
                     <button
                         type="button"
                         onClick={() => onUndo(token)}
-                        className="rounded-md border border-secondary px-3 py-1.5 text-sm font-medium text-secondary hover:bg-secondary/50"
+                        className="rounded-md border-secondary px-3 py-1.5 text-sm font-medium text-secondary hover:bg-secondary/50 border"
                     >
                         Undo
                     </button>
@@ -268,11 +215,7 @@ function ExecutedView({
 
 function CancelledView({ proposal }: { proposal: AgentProposalRow }) {
     return (
-        <ToolCardShell
-            title={proposal.summaryText || proposal.toolName}
-            subtitle="Cancelled"
-            className="opacity-70"
-        >
+        <ToolCardShell title={proposal.summaryText || proposal.toolName} subtitle="Cancelled" className="opacity-70">
             <p className="text-sm text-tertiary">This proposal was cancelled.</p>
         </ToolCardShell>
     );
@@ -281,9 +224,7 @@ function CancelledView({ proposal }: { proposal: AgentProposalRow }) {
 function TimedOutView({ proposal }: { proposal: AgentProposalRow }) {
     return (
         <ToolCardShell title={proposal.summaryText || proposal.toolName} subtitle="Expired">
-            <p className="text-sm text-utility-warning-700">
-                Proposal expired. Ask the agent to retry if you still want the change.
-            </p>
+            <p className="text-sm text-utility-warning-700">Proposal expired. Ask the agent to retry if you still want the change.</p>
         </ToolCardShell>
     );
 }
@@ -299,9 +240,7 @@ function RevertedView({ proposal }: { proposal: AgentProposalRow }) {
         : null;
     return (
         <ToolCardShell title={proposal.summaryText || proposal.toolName} subtitle="Reverted">
-            <p className="text-sm text-tertiary">
-                {revertedAt ? `Reverted at ${revertedAt}.` : "This change was reverted."}
-            </p>
+            <p className="text-sm text-tertiary">{revertedAt ? `Reverted at ${revertedAt}.` : "This change was reverted."}</p>
         </ToolCardShell>
     );
 }
@@ -309,9 +248,7 @@ function RevertedView({ proposal }: { proposal: AgentProposalRow }) {
 function FailedView({ proposal }: { proposal: AgentProposalRow }) {
     return (
         <ToolCardShell title={proposal.summaryText || proposal.toolName} subtitle="Failed">
-            <p className="text-sm text-utility-error-700">
-                {proposal.errorSummary ?? "The change failed to apply."}
-            </p>
+            <p className="text-sm text-utility-error-700">{proposal.errorSummary ?? "The change failed to apply."}</p>
         </ToolCardShell>
     );
 }
@@ -324,9 +261,7 @@ export function ProposalConfirmCard({ proposalId }: Props) {
     if (proposal === null) {
         return (
             <ToolCardShell title="Proposal not found">
-                <p className="text-sm text-tertiary">
-                    The proposal may have expired or been reverted.
-                </p>
+                <p className="text-sm text-tertiary">The proposal may have expired or been reverted.</p>
             </ToolCardShell>
         );
     }

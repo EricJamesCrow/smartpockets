@@ -1,8 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { render } from "@react-email/render";
-import { StatementClosing } from "@repo/email/templates/statement-closing";
-import React from "react";
 import { describe, expect, it } from "vitest";
 import { accountPreviewForModel, creditCardPreviewForModel } from "../agent/tools/read/moneyPreview";
 import {
@@ -46,20 +43,6 @@ type MoneyUnitSmokeFixture = {
             aprType: string;
             balanceSubjectToApr: number;
             interestChargeAmount: number;
-        }>;
-    };
-    statementEmailPayload: {
-        firstName: string;
-        cadence: 3 | 1;
-        cadenceLabel: string;
-        statements: Array<{
-            cardId: string;
-            cardName: string;
-            closingDate: string;
-            projectedBalanceCents: number;
-            minimumDueCents: number;
-            dueDate: string;
-            cardDetailUrl: string;
         }>;
     };
 };
@@ -157,22 +140,5 @@ describe("money unit contract", () => {
             interestChargeAmount: 95.12,
         });
         expect(formatMoneyFromDollars(preview.aprs[0]!.balanceSubjectToApr)).toBe("$8,005.64");
-    });
-
-    it("renders statement reminder emails from cents-suffixed payload fields", async () => {
-        const { statementEmailPayload } = loadFixture();
-        const statement = statementEmailPayload.statements[0]!;
-
-        expect(statement).toHaveProperty("projectedBalanceCents", 800_564);
-        expect(statement).toHaveProperty("minimumDueCents", 3_500);
-        expect(statement).not.toHaveProperty("projectedBalance");
-        expect(statement).not.toHaveProperty("minimumDue");
-
-        const html = await render(React.createElement(StatementClosing, statementEmailPayload));
-
-        expect(html).toContain("$8,005.64");
-        expect(html).toContain("$35.00");
-        expect(html).not.toContain("$8,005,640.00");
-        expect(html).not.toContain("$800,564.00");
     });
 });

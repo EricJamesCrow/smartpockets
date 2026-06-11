@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { components, internal } from "../_generated/api";
 import { query } from "../functions";
-import { enrichTransactionWithMerchant, type MerchantEnrichmentResult } from "../transactions/helpers";
+import { type MerchantEnrichmentResult, enrichTransactionWithMerchant } from "../transactions/helpers";
 
 type TransactionOverlayLike = {
     plaidTransactionId: string;
@@ -25,13 +25,6 @@ const MAX_TRANSACTION_LIVE_ROW_IDS = 500;
 function normalizeTransactionId(id: string): string {
     const parts = id.split(":");
     return parts[parts.length - 1] ?? id;
-}
-
-function planEndDate(startDate: string, totalPayments: number): string {
-    const date = new Date(`${startDate}T00:00:00.000Z`);
-    if (Number.isNaN(date.getTime())) return startDate;
-    date.setUTCMonth(date.getUTCMonth() + Math.max(0, totalPayments - 1));
-    return date.toISOString().slice(0, 10);
 }
 
 function applyOverlay<T extends { transactionId: string }>(tx: T, overlay: TransactionOverlayLike | undefined) {
@@ -100,7 +93,7 @@ export const getTransactions = query({
                 displayName: card.displayName,
                 lastFour: card.lastFour,
                 brand: card.brand,
-                institutionName: card.plaidItemId ? institutionByItem.get(card.plaidItemId) ?? card.company : card.company,
+                institutionName: card.plaidItemId ? (institutionByItem.get(card.plaidItemId) ?? card.company) : card.company,
             });
         }
 
@@ -121,9 +114,7 @@ export const getTransactions = query({
             // enrichTransactionWithMerchant pick the fields it cares about.
             enrichmentData?: Record<string, unknown>;
         };
-        const filtered = (transactions as PlaidTxLike[]).filter((tx) =>
-            wanted.has(normalizeTransactionId(tx.transactionId)),
-        );
+        const filtered = (transactions as PlaidTxLike[]).filter((tx) => wanted.has(normalizeTransactionId(tx.transactionId)));
 
         // Enrich each transaction with merchant data (logoUrl + canonical merchant name).
         // Reuses the same cache + resolution logic the /transactions page uses
@@ -240,57 +231,6 @@ export const getPlaidAccounts = query({
                     institutionPrimaryColor: branding?.color,
                 };
             });
-    },
-});
-
-export const getPromoRates = query({
-    args: { ids: v.array(v.string()) },
-    returns: v.any(),
-    handler: async (ctx, { ids }) => {
-        const viewer = ctx.viewerX();
-        const rows = [];
-        for (const rawId of ids) {
-            const id = normalizeTransactionId(rawId);
-            const row = await ctx.table("promoRates").get(id as any);
-            if (!row || row.userId !== viewer._id) continue;
-            rows.push({
-                _id: row._id,
-                creditCardId: row.creditCardId,
-                kind: row.description,
-                apr: row.aprPercentage,
-                startDate: row.startDate,
-                endDate: row.expirationDate,
-                balance: row.remainingBalance,
-                note: row.isManual ? "Manual promo" : undefined,
-            });
-        }
-        return rows;
-    },
-});
-
-export const getInstallmentPlans = query({
-    args: { ids: v.array(v.string()) },
-    returns: v.any(),
-    handler: async (ctx, { ids }) => {
-        const viewer = ctx.viewerX();
-        const rows = [];
-        for (const rawId of ids) {
-            const id = normalizeTransactionId(rawId);
-            const row = await ctx.table("installmentPlans").get(id as any);
-            if (!row || row.userId !== viewer._id) continue;
-            rows.push({
-                _id: row._id,
-                creditCardId: row.creditCardId,
-                merchantName: row.description,
-                totalAmount: row.originalPrincipal,
-                monthlyPayment: row.monthlyPrincipal + row.monthlyFee,
-                totalPayments: row.totalPayments,
-                remainingPayments: row.remainingPayments,
-                startDate: row.startDate,
-                endDate: planEndDate(row.startDate, row.totalPayments),
-            });
-        }
-        return rows;
     },
 });
 

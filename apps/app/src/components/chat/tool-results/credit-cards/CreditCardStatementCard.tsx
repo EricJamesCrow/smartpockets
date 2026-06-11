@@ -2,19 +2,11 @@
 
 import type { Id } from "@convex/_generated/dataModel";
 import { Table } from "@repo/ui/untitledui/application/table/table";
-import { Badge } from "@repo/ui/untitledui/base/badges/badges";
 import { CreditCardStatusBadge } from "@/components/credit-cards/CreditCardStatusBadge";
 import { PaymentDueBadge } from "@/components/credit-cards/PaymentDueBadge";
 import { UtilizationBar } from "@/components/credit-cards/UtilizationProgress";
 import { InstitutionLogo } from "@/features/institutions";
-import {
-    calculateUtilization,
-    formatApr,
-    formatDisplayCurrency,
-    formatDueDate,
-    formatPercentage,
-    getPurchaseApr,
-} from "@/types/credit-cards";
+import { calculateUtilization, formatApr, formatDisplayCurrency, formatDueDate, formatPercentage, getPurchaseApr } from "@/types/credit-cards";
 import { ToolCardShell } from "../shared/ToolCardShell";
 import { type CreditCardRow, useLiveCreditCards } from "../shared/liveRowsHooks";
 import { useToolHintSend } from "../shared/useToolHintSend";
@@ -26,19 +18,6 @@ type Preview = {
 };
 
 type OpenCard = (id: Id<"creditCards">) => void;
-
-function formatClosingDay(day?: number | null): string {
-    if (day == null) return "Closing day unknown";
-    const suffix =
-        day % 10 === 1 && day !== 11
-            ? "st"
-            : day % 10 === 2 && day !== 12
-              ? "nd"
-              : day % 10 === 3 && day !== 13
-                ? "rd"
-                : "th";
-    return `Closes ${day}${suffix}`;
-}
 
 function brandLabel(brand: CreditCardRow["brand"]): string | null {
     switch (brand) {
@@ -58,7 +37,7 @@ function brandLabel(brand: CreditCardRow["brand"]): string | null {
 function CardIdentityCell({ card }: { card: CreditCardRow }) {
     const brand = brandLabel(card.brand);
     return (
-        <div className="flex items-center gap-2.5">
+        <div className="gap-2.5 flex items-center">
             <InstitutionLogo
                 institutionName={card.institutionName ?? card.company}
                 logoBase64={card.institutionLogoBase64}
@@ -66,8 +45,8 @@ function CardIdentityCell({ card }: { card: CreditCardRow }) {
                 size="sm"
             />
             <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-primary">{card.displayName}</p>
-                <p className="truncate text-xs text-tertiary">
+                <p className="text-sm font-medium text-primary truncate">{card.displayName}</p>
+                <p className="text-xs text-tertiary truncate">
                     {card.mask ? `•••• ${card.mask}` : "No mask"}
                     {brand ? ` · ${brand}` : ""}
                 </p>
@@ -90,29 +69,18 @@ function StatusCell({ card }: { card: CreditCardRow }) {
             />
         );
     }
-    return (
-        <CreditCardStatusBadge
-            isLocked={card.isLocked ?? false}
-            isActive={card.isActive ?? true}
-            isOverdue={card.isOverdue ?? false}
-            size="sm"
-        />
-    );
+    return <CreditCardStatusBadge isLocked={card.isLocked ?? false} isActive={card.isActive ?? true} isOverdue={card.isOverdue ?? false} size="sm" />;
 }
 
 function LimitCell({ card }: { card: CreditCardRow }) {
     const utilization = calculateUtilization(card.currentBalance ?? null, card.creditLimit ?? null);
     return (
-        <div className="flex min-w-[7rem] flex-col gap-1">
-            <span className="text-sm tabular-nums text-primary">
-                {formatDisplayCurrency(card.creditLimit ?? null)}
-            </span>
+        <div className="gap-1 flex min-w-[7rem] flex-col">
+            <span className="text-sm text-primary tabular-nums">{formatDisplayCurrency(card.creditLimit ?? null)}</span>
             {utilization != null && (
-                <div className="flex items-center gap-1.5">
+                <div className="gap-1.5 flex items-center">
                     <UtilizationBar utilization={utilization} className="w-16" />
-                    <span className="text-xs tabular-nums text-tertiary">
-                        {formatPercentage(utilization, 0)}
-                    </span>
+                    <span className="text-xs text-tertiary tabular-nums">{formatPercentage(utilization, 0)}</span>
                 </div>
             )}
         </div>
@@ -139,20 +107,20 @@ function ListView({ cards, onOpen }: { cards: CreditCardRow[]; onOpen: OpenCard 
             className="max-w-[820px]!"
         >
             <Table aria-label="Credit cards" selectionMode="none" size="sm" className="text-sm">
-                <Table.Header bordered={false} className="bg-transparent! h-auto!">
-                    <Table.Head id="card" isRowHeader className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-4 px-0!">
+                <Table.Header bordered={false} className="h-auto! bg-transparent!">
+                    <Table.Head id="card" isRowHeader className="text-tertiary text-xs font-medium py-2 pr-4 px-0! text-left uppercase">
                         Card
                     </Table.Head>
-                    <Table.Head id="balance" className="text-tertiary text-right text-xs font-medium uppercase py-2 pr-6 px-0! [&>div]:justify-end">
+                    <Table.Head id="balance" className="text-tertiary text-xs font-medium py-2 pr-6 px-0! text-right uppercase [&>div]:justify-end">
                         Balance
                     </Table.Head>
-                    <Table.Head id="available" className="text-tertiary text-right text-xs font-medium uppercase py-2 pr-6 px-0! [&>div]:justify-end">
+                    <Table.Head id="available" className="text-tertiary text-xs font-medium py-2 pr-6 px-0! text-right uppercase [&>div]:justify-end">
                         Available
                     </Table.Head>
-                    <Table.Head id="limit" className="text-tertiary text-left text-xs font-medium uppercase py-2 pr-4 px-0!">
+                    <Table.Head id="limit" className="text-tertiary text-xs font-medium py-2 pr-4 px-0! text-left uppercase">
                         Limit
                     </Table.Head>
-                    <Table.Head id="status" className="text-tertiary text-left text-xs font-medium uppercase py-2 px-0!">
+                    <Table.Head id="status" className="text-tertiary text-xs font-medium py-2 px-0! text-left uppercase">
                         Status
                     </Table.Head>
                 </Table.Header>
@@ -161,15 +129,15 @@ function ListView({ cards, onOpen }: { cards: CreditCardRow[]; onOpen: OpenCard 
                         <Table.Row
                             id={card._id}
                             onAction={() => onOpen(card._id)}
-                            className="hover:bg-secondary/40 has-[:focus-visible]:bg-secondary/60 cursor-pointer h-auto!"
+                            className="hover:bg-secondary/40 has-[:focus-visible]:bg-secondary/60 h-auto! cursor-pointer"
                         >
                             <Table.Cell className="py-2.5 pr-4 px-0!">
                                 <CardIdentityCell card={card} />
                             </Table.Cell>
-                            <Table.Cell className="py-2.5 pr-6 px-0! text-right tabular-nums font-medium text-primary whitespace-nowrap">
+                            <Table.Cell className="py-2.5 pr-6 px-0! font-medium text-primary text-right whitespace-nowrap tabular-nums">
                                 {formatDisplayCurrency(card.currentBalance ?? null)}
                             </Table.Cell>
-                            <Table.Cell className="py-2.5 pr-6 px-0! text-right tabular-nums text-secondary whitespace-nowrap">
+                            <Table.Cell className="py-2.5 pr-6 px-0! text-secondary text-right whitespace-nowrap tabular-nums">
                                 {formatDisplayCurrency(card.availableCredit ?? null)}
                             </Table.Cell>
                             <Table.Cell className="py-2.5 pr-4 px-0!">
@@ -186,49 +154,6 @@ function ListView({ cards, onOpen }: { cards: CreditCardRow[]; onOpen: OpenCard 
     );
 }
 
-function UpcomingStrip({ cards, onOpen }: { cards: CreditCardRow[]; onOpen: OpenCard }) {
-    return (
-        <ToolCardShell title="Upcoming statements">
-            <ul className="divide-y divide-secondary">
-                {cards.map((card) => (
-                    <li key={card._id}>
-                        <button
-                            type="button"
-                            onClick={() => onOpen(card._id)}
-                            className="flex w-full items-center gap-3 py-2.5 text-left hover:bg-secondary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-                        >
-                            <InstitutionLogo
-                                institutionName={card.institutionName ?? card.company}
-                                logoBase64={card.institutionLogoBase64}
-                                primaryColor={card.institutionPrimaryColor}
-                                size="sm"
-                            />
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium text-primary">{card.displayName}</p>
-                                <p className="truncate text-xs text-tertiary">
-                                    {card.mask ? `•••• ${card.mask}` : "No mask"} · {formatClosingDay(card.statementClosingDay)}
-                                </p>
-                            </div>
-                            {card.nextPaymentDueDate ? (
-                                <PaymentDueBadge
-                                    nextPaymentDueDate={card.nextPaymentDueDate}
-                                    isOverdue={card.isOverdue ?? false}
-                                    minimumPaymentAmount={card.minimumPaymentAmount ?? null}
-                                    size="sm"
-                                />
-                            ) : (
-                                <Badge color="gray" size="sm">
-                                    No due date
-                                </Badge>
-                            )}
-                        </button>
-                    </li>
-                ))}
-            </ul>
-        </ToolCardShell>
-    );
-}
-
 function SingleStatement({ card, onOpen }: { card: CreditCardRow; onOpen: OpenCard }) {
     const utilization = calculateUtilization(card.currentBalance ?? null, card.creditLimit ?? null);
     const apr = getPurchaseApr(card.aprs ?? undefined);
@@ -241,13 +166,13 @@ function SingleStatement({ card, onOpen }: { card: CreditCardRow; onOpen: OpenCa
                 <button
                     type="button"
                     onClick={() => onOpen(card._id)}
-                    className="rounded-md border border-secondary px-2 py-1 text-xs font-medium text-secondary hover:bg-secondary/50"
+                    className="rounded-md border-secondary px-2 py-1 text-xs font-medium text-secondary hover:bg-secondary/50 border"
                 >
                     Open card
                 </button>
             }
         >
-            <header className="mb-4 flex items-center gap-3">
+            <header className="mb-4 gap-3 flex items-center">
                 <InstitutionLogo
                     institutionName={card.institutionName ?? card.company}
                     logoBase64={card.institutionLogoBase64}
@@ -255,9 +180,7 @@ function SingleStatement({ card, onOpen }: { card: CreditCardRow; onOpen: OpenCa
                     size="md"
                 />
                 <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-primary">
-                        {card.institutionName ?? card.company ?? "Issuer"}
-                    </p>
+                    <p className="text-sm font-medium text-primary truncate">{card.institutionName ?? card.company ?? "Issuer"}</p>
                     <p className="text-xs text-tertiary">
                         {card.mask ? `•••• ${card.mask}` : "No mask"}
                         {brand ? ` · ${brand}` : ""}
@@ -266,55 +189,41 @@ function SingleStatement({ card, onOpen }: { card: CreditCardRow; onOpen: OpenCa
                 <StatusCell card={card} />
             </header>
 
-            <div className="rounded-lg border border-secondary bg-secondary/30 p-4">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <div className="rounded-lg border-secondary bg-secondary/30 p-4 border">
+                <div className="gap-x-4 gap-y-3 grid grid-cols-2">
                     <div>
                         <p className="text-xs text-tertiary">Current balance</p>
-                        <p className="mt-0.5 text-base font-semibold tabular-nums text-primary">
-                            {formatDisplayCurrency(card.currentBalance ?? null)}
-                        </p>
+                        <p className="mt-0.5 text-base font-semibold text-primary tabular-nums">{formatDisplayCurrency(card.currentBalance ?? null)}</p>
                     </div>
                     <div>
                         <p className="text-xs text-tertiary">Available credit</p>
-                        <p className="mt-0.5 text-base font-semibold tabular-nums text-primary">
-                            {formatDisplayCurrency(card.availableCredit ?? null)}
-                        </p>
+                        <p className="mt-0.5 text-base font-semibold text-primary tabular-nums">{formatDisplayCurrency(card.availableCredit ?? null)}</p>
                     </div>
                     <div>
                         <p className="text-xs text-tertiary">Credit limit</p>
-                        <p className="mt-0.5 text-sm tabular-nums text-primary">
-                            {formatDisplayCurrency(card.creditLimit ?? null)}
-                        </p>
+                        <p className="mt-0.5 text-sm text-primary tabular-nums">{formatDisplayCurrency(card.creditLimit ?? null)}</p>
                     </div>
                     <div>
                         <p className="text-xs text-tertiary">Utilization</p>
-                        <p className="mt-0.5 text-sm tabular-nums text-primary">
-                            {utilization != null ? formatPercentage(utilization, 0) : "-"}
-                        </p>
+                        <p className="mt-0.5 text-sm text-primary tabular-nums">{utilization != null ? formatPercentage(utilization, 0) : "-"}</p>
                     </div>
                 </div>
                 {utilization != null && <UtilizationBar utilization={utilization} className="mt-3" />}
             </div>
 
-            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <dl className="mt-4 gap-x-4 gap-y-2 text-sm grid grid-cols-2">
                 <dt className="text-tertiary">Statement balance</dt>
-                <dd className="text-right tabular-nums text-primary">
-                    {formatDisplayCurrency(card.lastStatementBalance ?? null)}
-                </dd>
+                <dd className="text-primary text-right tabular-nums">{formatDisplayCurrency(card.lastStatementBalance ?? null)}</dd>
                 <dt className="text-tertiary">Minimum payment</dt>
-                <dd className="text-right tabular-nums text-primary">
-                    {formatDisplayCurrency(card.minimumPaymentAmount ?? null)}
-                </dd>
+                <dd className="text-primary text-right tabular-nums">{formatDisplayCurrency(card.minimumPaymentAmount ?? null)}</dd>
                 {card.nextPaymentDueDate && (
                     <>
                         <dt className="text-tertiary">Next payment due</dt>
-                        <dd className="text-right tabular-nums text-primary">
-                            {formatDueDate(card.nextPaymentDueDate)}
-                        </dd>
+                        <dd className="text-primary text-right tabular-nums">{formatDueDate(card.nextPaymentDueDate)}</dd>
                     </>
                 )}
                 <dt className="text-tertiary">Purchase APR</dt>
-                <dd className="text-right tabular-nums text-primary">{formatApr(apr)}</dd>
+                <dd className="text-primary text-right tabular-nums">{formatApr(apr)}</dd>
             </dl>
         </ToolCardShell>
     );
@@ -344,9 +253,6 @@ export function CreditCardStatementCard(props: ToolResultComponentProps<unknown,
         return <CreditCardStatementCardSkeleton />;
     }
 
-    if (toolName === "get_upcoming_statements") {
-        return <UpcomingStrip cards={cards} onOpen={openCard} />;
-    }
     if (toolName === "list_credit_cards" || cards.length > 1) {
         return <ListView cards={cards} onOpen={openCard} />;
     }

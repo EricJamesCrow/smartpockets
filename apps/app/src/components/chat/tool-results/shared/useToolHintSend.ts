@@ -67,11 +67,6 @@ export function useToolHintSend() {
                     args: { transactionId, currentCategory },
                 },
             }),
-        addManualPromo: (cardId: Id<"creditCards">) =>
-            sendMessage({
-                text: "Add a manual promo for this card",
-                toolHint: { tool: "propose_manual_promo", args: { cardId } },
-            }),
         editCardMetadata: (cardId: Id<"creditCards">, field: string) =>
             sendMessage({
                 text: `Edit ${field} on this card`,

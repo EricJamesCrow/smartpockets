@@ -10,11 +10,7 @@ import type { GenericId } from "convex/values";
 export type AgentThreadId = GenericId<"agentThreads">;
 export type AgentProposalId = GenericId<"agentProposals">;
 
-export type PartState =
-    | "input-streaming"
-    | "input-available"
-    | "output-available"
-    | "output-error";
+export type PartState = "input-streaming" | "input-available" | "output-available" | "output-error";
 
 export type ReadToolName =
     | "list_accounts"
@@ -23,11 +19,8 @@ export type ReadToolName =
     | "get_transaction_detail"
     | "list_credit_cards"
     | "get_credit_card_detail"
-    | "list_deferred_interest_promos"
-    | "list_installment_plans"
     | "get_spend_by_category"
     | "get_spend_over_time"
-    | "get_upcoming_statements"
     | "list_reminders"
     | "search_merchants"
     | "get_plaid_health"
@@ -37,7 +30,6 @@ export type ProposeToolName =
     | "propose_transaction_update"
     | "propose_bulk_transaction_update"
     | "propose_credit_card_metadata_update"
-    | "propose_manual_promo"
     | "propose_reminder_create"
     | "propose_reminder_delete";
 
