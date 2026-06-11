@@ -10,18 +10,6 @@ const WELCOME_SEND_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 const STUCK_WORKFLOW_MS = 60 * 60 * 1000;
 
 // ============================================================================
-// Retired weekly digest dispatch. Root cron removal is owned elsewhere.
-// ============================================================================
-
-export const dispatchWeeklyDigestForAllUsers = internalAction({
-    args: {},
-    returns: v.object({ dispatched: v.number(), skipped: v.number() }),
-    handler: async () => {
-        return { dispatched: 0, skipped: 0 };
-    },
-});
-
-// ============================================================================
 // Welcome signup-only fallback (hourly)
 // ============================================================================
 

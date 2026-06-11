@@ -49,13 +49,6 @@ crons.interval("Plaid Persistent Error Check", { hours: 6 }, internal.plaid.pers
 // =============================================================================
 
 /**
- * Weekly digest: every Sunday at 09:00 UTC. Iterates users, assembles
- * payload from W6 intelligence tables, calls dispatchWeeklyDigest per
- * user. The workflow's zero-signal skip handles empty-payload users.
- */
-crons.weekly("Weekly digest", { dayOfWeek: "sunday", hourUTC: 9, minuteUTC: 0 }, internal.email.crons.dispatchWeeklyDigestForAllUsers);
-
-/**
  * Welcome signup-only fallback: hourly. Dispatches
  * welcome-onboarding variant "signup-only" for users created >= 48h
  * ago who never received a welcome (either variant).
