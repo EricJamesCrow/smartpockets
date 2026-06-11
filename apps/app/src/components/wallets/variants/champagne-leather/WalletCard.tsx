@@ -10,6 +10,7 @@ import {
   useWalletCardActions,
   type WalletCardProps,
 } from "../../shared";
+import { DeleteWalletConfirm } from "../../DeleteWalletConfirm";
 import { MiniCardPreview } from "./MiniCardPreview";
 import { ExtendedStats } from "./ExtendedStats";
 import { TiltCard } from "./TiltCard";
@@ -38,6 +39,7 @@ import { CardSpotlight } from "./CardSpotlight";
 export function WalletCard({ wallet, isExtended }: WalletCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [editName, setEditName] = useState(wallet.name);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -85,6 +87,11 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
     } else if (e.key === "Escape") {
       handleRenameCancel();
     }
+  };
+
+  const handleDeleteConfirmed = async () => {
+    await actions.remove();
+    setDeleteConfirmOpen(false);
   };
 
   return (
@@ -252,15 +259,7 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
                     </Dropdown.Item>
                     <Dropdown.Item
                       icon={Trash01}
-                      onAction={() => {
-                        if (
-                          confirm(
-                            `Delete "${wallet.name}"? Cards will not be deleted.`,
-                          )
-                        ) {
-                          actions.remove();
-                        }
-                      }}
+                      onAction={() => setDeleteConfirmOpen(true)}
                     >
                       <span className="pr-4 text-error-primary">Delete</span>
                     </Dropdown.Item>
@@ -274,6 +273,13 @@ export function WalletCard({ wallet, isExtended }: WalletCardProps) {
       </TiltCard>
 
       <ExtendedStats isExtended={isExtended} walletStats={walletStats} />
+
+      <DeleteWalletConfirm
+        open={deleteConfirmOpen}
+        walletName={wallet.name}
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </motion.div>
   );
 }
