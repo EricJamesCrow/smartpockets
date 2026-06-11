@@ -1,14 +1,28 @@
 // apps/app/src/lib/mcp/tools/get-credit-card-stats.ts
-import { api } from "@convex/_generated/api";
-import { fetchQuery } from "convex/nextjs";
 import { formatMoneyFromDollars } from "@/utils/money";
+import { callMcpBridge, type BridgeStats } from "../bridge-client";
 import type { MCPCreditCardStats, MCPToolResponse } from "../types";
 
 /**
- * Get aggregated statistics across all credit cards.
+ * Get aggregated statistics across all credit cards for the
+ * OAuth-authenticated user.
  */
-export async function getCreditCardStats(token: string): Promise<MCPToolResponse<MCPCreditCardStats>> {
-    const stats = await fetchQuery(api.creditCards.queries.getStats, {}, { token });
+export async function getCreditCardStats(externalId: string): Promise<MCPToolResponse<MCPCreditCardStats>> {
+    const result = await callMcpBridge<BridgeStats>("get_credit_card_stats", {}, externalId);
+    if (!result.ok) {
+        const empty: MCPCreditCardStats = {
+            totalBalance: 0,
+            totalAvailableCredit: 0,
+            totalCreditLimit: 0,
+            averageUtilization: 0,
+            overdueCount: 0,
+            lockedCount: 0,
+            cardCount: 0,
+            narrative: `Unable to load stats (${result.error}).`,
+        };
+        return { data: empty, summary: empty.narrative };
+    }
+    const stats = result.data;
 
     const mappedStats: MCPCreditCardStats = {
         totalBalance: stats.totalBalance,

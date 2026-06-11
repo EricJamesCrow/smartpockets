@@ -53,7 +53,8 @@
 
 **For Developers**
 
-- **100% Convex-Native**: Zero Next.js API routes. Every query, mutation, and action runs on Convex with real-time subscriptions.
+- **Convex-Native**: No app-data API routes — every query, mutation, and action runs on Convex with real-time subscriptions. (Route handlers exist only for external protocols: the MCP server and webhooks.)
+- **MCP Server**: Connect Claude Code or Claude Desktop to your own financial data over streamable HTTP with OAuth 2.1 (Clerk as authorization server, dynamic client registration). See [`docs/mcp.md`](docs/mcp.md).
 - **Plaid Integration Patterns**: Production-grade Plaid component with denormalized data model, webhook handlers, cron sync, and error recovery.
 - **Type-Safe Everything**: Full argument and return validators on every function, viewer-context authentication, and typed schema with relationships.
 - **Figma UI Kit** *(coming soon)*: Full design system artifact — code AND design, not just code.

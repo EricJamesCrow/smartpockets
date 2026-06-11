@@ -7,6 +7,12 @@ import { NextResponse } from "next/server";
 // API routes should not redirect (they return 401 instead)
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 
+// CROWDEV-54: OAuth discovery metadata for the MCP server must be readable
+// without a session — clients fetch these BEFORE authenticating. The routes
+// serve static RFC 8414/9728 metadata via @clerk/mcp-tools and expose no
+// user data.
+const isWellKnownRoute = createRouteMatcher(["/.well-known/(.*)"]);
+
 // Test-only entry point that loads `<ClerkProvider>` so `window.Clerk` is
 // available for Playwright's `clerk.signIn` helper. The route is gated to
 // non-production at the page level (`apps/app/src/app/e2e-bootstrap/page.tsx`
@@ -41,6 +47,11 @@ const MARKETING_URL =
 export default clerkMiddleware(async (auth, req) => {
   // Skip redirect for API routes
   if (isApiRoute(req)) {
+    return NextResponse.next();
+  }
+
+  // Skip redirect for OAuth discovery metadata (unauthenticated by design)
+  if (isWellKnownRoute(req)) {
     return NextResponse.next();
   }
 

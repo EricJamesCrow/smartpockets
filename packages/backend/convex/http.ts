@@ -769,4 +769,74 @@ http.route({
   }),
 });
 
+// =============================================================================
+// MCP BRIDGE (CROWDEV-54)
+// =============================================================================
+
+/**
+ * Constant-time string comparison (Convex httpActions run in a V8 isolate,
+ * so node:crypto.timingSafeEqual is unavailable).
+ */
+function timingSafeEqualStrings(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a);
+  const bb = enc.encode(b);
+  let diff = ab.length ^ bb.length;
+  const len = Math.max(ab.length, bb.length);
+  for (let i = 0; i < len; i++) {
+    diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
+  }
+  return diff === 0;
+}
+
+/**
+ * Server-to-server bridge for the external MCP server (apps/app /api/mcp).
+ *
+ * The Next.js route verifies the client's Clerk OAuth token, then calls this
+ * endpoint with MCP_BRIDGE_SECRET to run read tools as the resolved user.
+ * Never expose this secret to browsers or MCP clients. See
+ * docs/decisions/0001-mcp-server-oauth-rebuild.md.
+ */
+http.route({
+  path: "/mcp-tools",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const secret = process.env.MCP_BRIDGE_SECRET;
+    if (!secret) {
+      return Response.json(
+        { ok: false, error: "bridge_not_configured", detail: "MCP_BRIDGE_SECRET is not set on this deployment" },
+        { status: 503 },
+      );
+    }
+
+    const authHeader = request.headers.get("authorization") ?? "";
+    const provided = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    if (!timingSafeEqualStrings(provided, secret)) {
+      return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    }
+
+    let body: { externalId?: unknown; tool?: unknown; args?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
+    }
+
+    if (typeof body.externalId !== "string" || body.externalId.length === 0 || typeof body.tool !== "string") {
+      return Response.json({ ok: false, error: "invalid_args" }, { status: 400 });
+    }
+
+    // Cast pending `convex codegen` (requires deployment auth); same pattern
+    // as the agent executor reference in agent/proposals.ts. The path proxy
+    // resolves `internal.mcp.bridge.runReadTool` at runtime.
+    const result = await ctx.runQuery((internal as any).mcp.bridge.runReadTool, {
+      externalId: body.externalId,
+      tool: body.tool,
+      args: body.args ?? {},
+    });
+
+    return Response.json(result, { status: 200 });
+  }),
+});
+
 export default http;
