@@ -1,5 +1,10 @@
 @import "tailwindcss";
 @source "../components";
+/* CROWDEV-462: the UntitledUI kit is gitignored (paid source, restored at
+   build time by scripts/fetch-private-ui.sh). Tailwind v4's scanner skips
+   gitignored paths, so the kit MUST be registered explicitly or every build
+   ships CSS without its classes (JS compiles fine — only styles vanish). */
+@source "../components/untitledui";
 @import "./theme.css";
 @import "./typography.css";
 
