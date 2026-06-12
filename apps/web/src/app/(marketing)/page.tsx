@@ -4,9 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { Button } from "@repo/ui/untitledui/base/buttons/button";
 import { gsap } from "gsap";
-
-const primaryButtonClassName = "rounded-full bg-stone-100 text-[#0a1410] shadow-none ring-transparent hover:bg-white";
-const secondaryButtonClassName = "rounded-full bg-transparent text-stone-300 shadow-none ring-white/15 hover:bg-white/[0.06] hover:text-white";
+import { marketingPrimaryButton, marketingSecondaryButton } from "@/components/marketing/button-styles";
 
 const walletRows = [
     { wallet: "Daily driver", network: "Visa ··4821", balance: "$1,240", due: "Due Jun 28" },
@@ -72,7 +70,7 @@ const SectionHeading = ({ children }: { children: ReactNode }) => (
 
 const HeroCtas = () => (
     <>
-        <Button href="/sign-up" size="lg" className={primaryButtonClassName}>
+        <Button href="/sign-up" size="lg" className={marketingPrimaryButton}>
             Request an invite
         </Button>
         <Button
@@ -81,7 +79,7 @@ const HeroCtas = () => (
             rel="noopener noreferrer"
             color="secondary"
             size="lg"
-            className={secondaryButtonClassName}
+            className={marketingSecondaryButton}
         >
             View on GitHub
         </Button>
