@@ -1,7 +1,6 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import "@repo/ui/globals.css";
 import "@repo/ui/theme.css";
-import "./globals.css";
 import type { Viewport } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 
@@ -18,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 // IMPORTANT: must include `style: ["italic"]` so the italic axis is actually
-// downloaded. Without it, every Fraunces italic accent on the marketing
-// landing falls back to a synthetic italic over the system serif.
+// downloaded. Without it, the Fraunces italic accents on the about and legal
+// pages fall back to a synthetic italic over the system serif.
 const fraunces = Fraunces({
     subsets: ["latin"],
     variable: "--font-fraunces",
@@ -31,8 +30,9 @@ const fraunces = Fraunces({
 const APP_URL = process.env.NEXT_PUBLIC_APP_ORIGIN ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://app.smartpockets.com";
 
 export const metadata = {
-    title: "SmartPockets - Smart Credit Card Management",
-    description: "Open-source personal finance for people who manage more than one card. Built for clarity, ownership, and careful agent-assist.",
+    title: "SmartPockets · Open-source credit card management",
+    description:
+        "SmartPockets tracks balances, utilization, and due dates across every card you carry. Synced through Plaid, open source, and self-hostable.",
 };
 
 export const viewport: Viewport = {
