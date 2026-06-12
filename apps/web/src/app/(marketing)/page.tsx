@@ -19,11 +19,11 @@ const principles = [
     },
     {
         title: "Open to audit",
-        body: "The entire codebase is public. You can verify what happens to your data instead of taking anyone's word for it.",
+        body: "The entire codebase is public. You can verify what happens to your data instead of taking anyone’s word for it.",
     },
     {
         title: "Not an ad business",
-        body: "Your data is synced so you can see your own accounts. It isn't resold and it isn't used to target ads.",
+        body: "Your data is synced so you can see your own accounts. It isn’t resold and it isn’t used to target ads.",
     },
 ];
 
@@ -213,7 +213,7 @@ export default function HomePage() {
                     </div>
                     <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#080a0c]">
                         <pre className="overflow-x-auto px-5 py-4 font-[family-name:var(--font-geist-mono)] text-[13px] leading-6 text-stone-300">
-                            <span className="text-[#7fb89a]">$</span> git clone github.com/EricJamesCrow/smartpockets{"\n"}
+                            <span className="text-[#7fb89a]">$</span> git clone https://github.com/EricJamesCrow/smartpockets{"\n"}
                             <span className="text-[#7fb89a]">$</span> bun install && bun dev{"\n"}
                             <span className="text-stone-500"># the full stack, on your machine</span>
                         </pre>
@@ -235,7 +235,7 @@ export default function HomePage() {
                     <div>
                         <SectionHeading>Agent-assisted, never agent-acting.</SectionHeading>
                         <p className="mt-4 max-w-xl text-base leading-7 text-stone-400">
-                            The next phase adds an assistant for the work you'd rather not do by hand. It can spot a utilization
+                            The next phase adds an assistant for the work you’d rather not do by hand. It can spot a utilization
                             change, tidy a wallet, or flag an approaching due date. It reads and suggests; nothing in the roadmap
                             gives it the power to move money.
                         </p>

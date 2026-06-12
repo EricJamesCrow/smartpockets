@@ -40,7 +40,7 @@ export const Header = () => {
                     ))}
                 </ul>
 
-                <div className="hidden items-center gap-2.5 md:flex">
+                <div className="hidden items-center gap-2.5 lg:flex">
                     <Button href="/sign-in" color="secondary" size="md" className={marketingSecondaryButton}>
                         Log in
                     </Button>
@@ -54,7 +54,7 @@ export const Header = () => {
                     aria-label="Toggle navigation menu"
                     aria-expanded={isOpen}
                     onClick={() => setIsOpen((value) => !value)}
-                    className="outline-focus-ring relative inline-flex size-10 items-center justify-center text-stone-200 focus-visible:outline-2 focus-visible:outline-offset-2 md:hidden"
+                    className="outline-focus-ring relative inline-flex size-10 items-center justify-center text-stone-200 focus-visible:outline-2 focus-visible:outline-offset-2 lg:hidden"
                 >
                     <span
                         className={cx(
@@ -78,7 +78,7 @@ export const Header = () => {
             </nav>
 
             {isOpen && (
-                <div className="border-t border-white/[0.06] bg-[#0a0d10] px-4 pb-6 pt-2 sm:px-6 md:hidden">
+                <div className="border-t border-white/[0.06] bg-[#0a0d10] px-4 pb-6 pt-2 sm:px-6 lg:hidden">
                     <ul className="flex flex-col">
                         {navItems.map((item) => (
                             <li key={item.href}>
