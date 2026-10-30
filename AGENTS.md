@@ -13,11 +13,17 @@ SmartPockets is a fintech application for credit card power users who manage mul
 | Data Source | Plaid API (real bank connections) |
 | Auth | Clerk (user management synced to Convex) |
 
-## Linear + Graphite Work Tracking
+## Work tracking (GitHub Issues)
 
-Linear is the source of truth for implementation work. Before meaningful code or documentation changes, search Linear for an existing issue that matches the task. If one exists, use it. If none exists, create a lightweight issue in the SmartPockets project. Do not create duplicates, and confirm the Linear issue ID before opening a branch or making changes.
+Work is tracked in this repo's GitHub Issues (`EricJamesCrow/smartpockets`). Linear is a read-only archive: never create or change work there. Old `CROWDEV-###` keys in history and notes are archive references only. Before meaningful code or documentation changes, search for an existing issue that matches the task:
 
-A Linear issue is required for features, bug fixes, refactors, tests, infrastructure, UI changes, data/model changes, documentation changes, and any multi-step investigation that may produce a branch or PR. A Linear issue is not required for read-only exploration, conceptual questions, or tiny checks with no code changes.
+```bash
+gh issue list --search "<words>" --state all
+```
+
+If one exists, use it. If none exists, create a lightweight issue with `gh issue create`. Agents have standing authorization to create issues in this repo. Do not create duplicates, and confirm the issue number before opening a branch or making changes. Available labels are only GitHub's defaults (`bug`, `documentation`, `enhancement`, ...); there are no milestones.
+
+An issue is required for features, bug fixes, refactors, tests, infrastructure, UI changes, data/model changes, documentation changes, and any multi-step investigation that may produce a branch or PR. An issue is not required for read-only exploration, conceptual questions, or tiny checks with no code changes.
 
 When creating a new issue, keep it short and use:
 
@@ -36,62 +42,47 @@ What should be true when this is done?
 Created from AI coding session.
 ```
 
-The Linear issue ID must appear in:
-- Branch name: `<issue-id>-short-description` (for example, `crowdev-123-add-empty-state`)
-- When a PR is explicitly requested/submitted, PR title: `<ISSUE-ID> Short description`
-- When a PR is explicitly requested/submitted, PR body: use `Fixes <ISSUE-ID>` only when the PR fully completes the issue; use `Refs <ISSUE-ID>` when the PR is partial, exploratory, documentation-only, or has follow-up work.
+The issue number must appear in:
+- Branch name: `eric/<issue#>-<slug>` (for example, `eric/42-add-empty-state`). Branches created before 2026-10-29 used `crowdev-<#>-<slug>`.
+- When a PR is explicitly requested/submitted, PR title: a plain descriptive title (past PRs used `CROWDEV-### <description>`).
+- When a PR is explicitly requested/submitted, PR body: use `Fixes #N` only when the PR fully completes the issue; use `Refs #N` when the PR is partial, exploratory, documentation-only, or has follow-up work.
 
-Post a Linear comment when:
+Comment on the GitHub issue when:
 - Starting work: intended approach, key assumptions, and files likely to change.
 - Blocked: what is blocked, why, and what input or decision is needed.
-- Explicitly opening a PR: Graphite PR link, summary of changes, verification performed, known risks, and follow-up work.
+- Explicitly opening a PR: PR link, summary of changes, verification performed, known risks, and follow-up work.
 
-If an issue or PR reasonably blocks verification, merge, or deployment of another issue, update Linear before continuing: add the blocker relationship (`blocks` / `blocked by`) and comment on both issues with the evidence and the affected PR links. Do not leave blockers only in chat, PR comments, or local notes.
+If an issue or PR reasonably blocks verification, merge, or deployment of another issue, note the blocker on both GitHub issues before continuing: comment on each with the evidence and the affected PR links. Do not leave blockers only in chat, PR comments, or local notes.
 
-When starting or resuming work on a sub-issue, check its parent issue. If the parent is still To-do or Backlog while child work is active, move the parent to In Progress and leave a short comment naming the active child issue. Never move a parent issue to Done manually.
+When starting or resuming work on a sub-issue, check its parent issue and leave a short comment on the parent naming the active child issue. Never close a parent issue by hand while child work remains.
 
-### Icebox and Deferred Work
+### Deferred Work
 
-The Backlog category has two statuses with different semantics:
-- **Backlog** — queued for future work. Eligible for agent pickup when batching.
-- **Icebox** — explicitly parked. Not picked up unless the user names the issue by ID. Use for issues we want to keep visible for tracking but aren't actively scheduling.
+Issues that are explicitly parked (for example labeled `icebox`) or active-but-externally-blocked (for example labeled `on-hold`) are not picked up unless the user names the issue by number. When listing issues for batch implementation, "what should I work on next" prompts, or any "find me something to work on" flow, **skip issues carrying those labels**. These labels do not exist in the repo yet; do not create them without approval, but honor them if they appear.
 
-When listing issues for batch implementation, "what should I work on next" prompts, or any "find me something to work on" flow, **exclude Icebox status**. Treat it like Linear's own Icebox convention — issues live there because we've decided not to schedule them, not because they're forgotten.
+### Closing issues
 
-For the narrower case where an active issue (Todo / In Progress / In Review) is blocked by an external dependency (vendor reply, customer decision, third-party API), apply the **`on-hold`** label instead of moving the issue back to Backlog/Icebox. The label preserves workflow position while signaling pause; agents must exclude `on-hold` from batch pickup the same way as Icebox.
-
-To unpark an issue, move it from Icebox to Backlog/Todo, or remove the `on-hold` label.
-
-Keep Linear state in sync with reality. The default path is `Fixes <ISSUE-ID>` in the PR body so the GitHub-Linear automation moves the issue to Done on merge — prefer that over manual updates. But when automation didn't fire (a `Refs` magic word was used, an issue bundled multiple PRs, the integration was offline, etc.) and the work is verifiably shipped to `main`, manually move the issue to Done with a closing comment that cites the merged commit SHA + PR link. Don't mark Done speculatively or for partial work; only when the shipped state on `main` matches the issue's acceptance criteria.
+GitHub closes a `Fixes #N` issue only when the PR merges into the default branch. A stacked PR that merges into another branch closes nothing, and a bare mention never closes anything. After every merge, check each issue's real state and fix it by hand: when the work is verifiably shipped to `main` and matches the issue's acceptance criteria, close the issue with a comment citing the merged commit SHA + PR link. Don't close speculatively or for partial work.
 
 Do not merge PRs unless explicitly instructed. Prefer small, reviewable PRs and run verification before opening a PR when possible. If verification cannot be run, say why.
 
-For reliable linking across Linear, GitHub, and Graphite:
-- Use the Linear issue's generated branch name when available.
-- Include the issue ID in the branch name, PR title, and PR body.
-- Use `Refs <ISSUE-ID>` for non-closing links and `Fixes <ISSUE-ID>` only for complete fixes.
-- Configure Linear's GitHub integration and commit-linking webhook for magic-word commit links.
-- Configure GitHub autolinks for the `CROWDEV-` prefix so issue IDs render as links in GitHub and Graphite.
-- Use Graphite's Linear integration as a secondary check so related Linear issues appear in the Graphite PR sidebar.
-
-Do not create new Linear projects, labels, statuses, automations, or views without approval. Do not introduce new dependencies without approval.
+Do not create new GitHub labels, milestones, automations, or projects without approval. Do not introduce new dependencies without approval.
 
 When finishing any code-changing task, unless the user explicitly says not to:
 - Stage only the files changed for the task.
-- Commit with the Linear issue ID in the commit subject.
+- Commit with a `Refs #N` (or `Fixes #N`) trailer referencing the issue.
 - Run or report the appropriate local verification.
-- Stop before Graphite submission. Do not run `gt submit`, open a draft PR, push only to trigger Vercel, or post the PR handoff Linear comment unless the user explicitly asks to submit/open a PR.
+- Stop before opening a PR. Do not run `gh pr create`, open a draft PR, push only to trigger Vercel, or post the PR handoff comment on the issue unless the user explicitly asks to submit/open a PR.
 - If any step is blocked, do not silently stop; report the exact blocker and the command/output.
 
-When finishing local-only work, summarize the Linear issue used or created, branch name, local commit(s), files changed, verification performed, and remaining risks or follow-ups. Explicitly state `No PR submitted`.
+When finishing local-only work, summarize the issue used or created, branch name, local commit(s), files changed, verification performed, and remaining risks or follow-ups. Explicitly state `No PR submitted`.
 
 When the user explicitly asks to submit/open a PR, then:
-- Track the branch in Graphite if needed.
-- Submit a draft Graphite PR.
-- Update the PR title/body with the Linear issue, summary, verification, risks, and preview/check status.
+- Push the branch and run `gh pr create` (draft is fine).
+- Set the PR title/body with the issue link (`Fixes #N` / `Refs #N`), summary, verification, risks, and preview/check status.
 - Verify PR checks and preview status before handoff when possible.
-- Post the PR handoff comment on the Linear issue.
-- Include the Graphite PR link and Vercel preview/deployment URL only after the PR actually exists.
+- Post the PR handoff comment on the GitHub issue.
+- Include the PR link (a normal GitHub PR URL) and Vercel preview/deployment URL only after the PR actually exists.
 
 ## Investigation Discipline (Before Asking the User)
 
@@ -106,10 +97,10 @@ Order of operations:
 |--------|-----------|
 | Vercel env vars / project config / deployments / domains | `npx vercel env ls <env>`, `npx vercel env pull <file> --environment=<env>` (then grep), `npx vercel inspect <url>`, `npx vercel project ls`, `npx vercel domains ls` |
 | Convex schema / functions / data / logs / env | Convex MCP — `mcp__convex__tables`, `mcp__convex__functionSpec`, `mcp__convex__data`, `mcp__convex__logs`, `mcp__convex__envGet`, `mcp__convex__envList` |
-| Linear issues, comments, sub-issue state | Linear MCP |
+| GitHub issues, comments | `gh` CLI |
 | Clerk users, orgs, roles, sessions | Clerk MCP |
 | Plaid sandbox state / production diagnostics | Plaid Sandbox MCP / Plaid Dashboard MCP |
-| Graphite stacks, PR linkage, branches | Graphite MCP (`mcp__graphite__run_gt_cmd`) or `gt` / `gh` CLIs |
+| PRs, branches | `gh` / `git` |
 | GitHub PRs, checks, comments, releases | `gh pr view`, `gh pr checks`, `gh api ...` |
 | Library / framework / API docs | Context7 MCP — `mcp__plugin_context7_context7__query-docs` |
 | Browser-side debugging (dev server, preview) | Chrome DevTools MCP / Playwright MCP |
@@ -350,9 +341,8 @@ Things AI agents frequently get wrong in this codebase.
 | Large commits with multiple changes | One logical change per commit |
 | Amend after pre-commit hook failure | Create NEW commit (hook failure = no commit happened) |
 | `git add -A` or `git add .` | Stage specific files by name |
-| Branch without Linear issue ID | Search/create Linear issue first, then use the issue ID in the branch name |
-| Push to main without PR | Create a Linear-linked feature branch, open PR via Graphite |
-| Showing `github.com/.../pull/<N>` URLs in user-facing output | Always use the Graphite URL — never show GitHub PR links unless the user explicitly asks |
+| Branch without a GitHub issue number | Search/create the GitHub issue first, then use `eric/<issue#>-<slug>` as the branch name |
+| Push to main without PR | Create an issue-linked feature branch, open PR via `gh pr create` |
 
 ### Sub-Agent Mistakes
 
@@ -361,7 +351,7 @@ Things AI agents frequently get wrong in this codebase.
 | Dispatching parallel sub-agents into the shared worktree | Pass `isolation: "worktree"` to every parallel Agent call so each one gets its own checkout |
 | Assuming sub-agents inherit `.env.local` and `node_modules` from the parent | Brief them to bootstrap: `cp <parent-worktree>/apps/app/.env.local apps/app/.env.local && bun install` before any backend deploy or app build |
 | One sub-agent running `git branch -f` or `git symbolic-ref HEAD ...` to "recover" | That's a sign two agents collided in one worktree — abort and re-dispatch with isolation instead of patching corruption |
-| Letting parallel sub-agents stack PRs off the same parent without telling them which parent commit | Name the explicit parent SHA / Graphite branch in each prompt so their stacks don't overlap |
+| Letting parallel sub-agents stack PRs off the same parent without telling them which parent commit | Name the explicit parent branch / SHA in each prompt so their PRs don't overlap |
 | Asking a sub-agent to "audit X" without naming surfaces | Specify every surface to check by name. "Audit amount-bearing fields" missed model-emitted markdown and the external MCP path; "Audit React tool-result components + agent-emitted markdown/prose + external MCP outputs + email templates + spend chart axes" doesn't. |
 | Trusting a sub-agent's "audit done" report without verification | Read the actual files. Spec compliance reviewer subagents exist for exactly this — dispatch one, or do the spot-check yourself before declaring done. |
 
@@ -380,7 +370,7 @@ bun install
 
 The cached `node_modules` from the parent worktree is NOT shared — each worktree gets its own. Skipping `bun install` will surface as missing-module errors at typecheck or build time.
 
-When you want all the parallel sub-agents to land on the same eventual stack, give each one an explicit `parent commit SHA` or `Graphite branch name` to branch from. Don't leave them to guess; otherwise they'll each fork off `main` and their stacks will collide at consolidation time.
+When you want all the parallel sub-agents to land on the same eventual stack, give each one an explicit `parent commit SHA` or parent branch name to branch from. Don't leave them to guess; otherwise they'll each fork off `main` and their changes will collide at consolidation time.
 
 #### Audit scope discipline
 
@@ -397,23 +387,11 @@ Pattern that works:
 
 The reviewer (you, or a `spec-reviewer` subagent) should not accept "audit done" without a per-surface enumeration in the audit report.
 
-### Graphite PR Links
+### PR Preview Verification
 
-SmartPockets uses Graphite as the primary review surface. When referring to a PR in any user-facing output — chat responses, summaries, status updates, Linear comments, tables — **always** use the Graphite link. **Never include `github.com/.../pull/<N>` URLs** unless the user explicitly asks for the GitHub link.
+Only submit/open PRs when the user explicitly asks for PR submission. Every submitted PR should have a working Vercel preview for `apps/app` before handoff.
 
-Use the Graphite URL printed by `gt submit`. If a command (e.g., `gh pr view`, `gh pr checks`, `gh pr list`) returns only a GitHub PR number or URL, convert it to this repo's Graphite format before showing it:
-
-```
-https://app.graphite.com/github/pr/EricJamesCrow/smartpockets/<PR_NUMBER>
-```
-
-Do not present Graphite and GitHub links side by side. Graphite is the canonical user-facing link; GitHub URLs are for tooling use only (`gh pr` commands consume them, but they should not appear in messages, summaries, or Linear comments).
-
-### Graphite PR Preview Verification
-
-Only submit/open Graphite PRs when the user explicitly asks for PR submission. Every submitted Graphite PR should have a working Vercel preview for `apps/app` before handoff.
-
-After `gt submit`, verify checks:
+After `gh pr create`/push, verify checks:
 
 ```bash
 gh pr checks <PR_NUMBER>
@@ -426,7 +404,7 @@ npx vercel inspect <DEPLOYMENT_ID_OR_URL> --logs
 ```
 
 When reporting a submitted PR, include:
-- Graphite PR link first
+- PR link first
 - Vercel `smartpockets-app` preview URL or Vercel deployment link second
 - Any failed checks and the exact inspect command needed for follow-up
 
@@ -448,7 +426,7 @@ For auth smoke tests, SmartPockets uses stable shared preview domains:
 After a PR/preview deployment exists, or when the user explicitly asks for preview-domain testing, ask: "Do you want me to point the shared preview domains at this branch so you can manually test the changes?"
 
 If the user says yes:
-- Identify the current implementation branch from `git branch --show-current`, Graphite metadata, or Vercel deployment metadata.
+- Identify the current implementation branch from `git branch --show-current`, `gh pr view`, or Vercel deployment metadata.
 - Find or create a fresh successful preview deployment for each affected project.
 - Before changing anything, report what branch/deployment each shared domain currently points to. These domains are shared singletons and changing them can interrupt someone else's manual test session.
 - Prefer Vercel branch-domain assignment for Git Integration projects by updating the project domain `gitBranch`.
@@ -475,7 +453,7 @@ Use non-production values for the Vercel **Preview** environment:
 
 The browser error `Clerk: Production Keys are only allowed for domain "smartpockets.com"` means a preview origin is using production Clerk keys. Fix the Vercel Preview environment variables and redeploy the branch.
 
-Only share production Clerk settings/data with a preview if the preview is intentionally hosted on an approved `smartpockets.com` subdomain. The default Graphite/Vercel preview workflow should use Clerk development keys and non-production Convex data.
+Only share production Clerk settings/data with a preview if the preview is intentionally hosted on an approved `smartpockets.com` subdomain. The default Vercel preview workflow should use Clerk development keys and non-production Convex data.
 
 Preview auth should use the shared `https://preview.smartpockets.com` auth host and force post-login redirects to the configured stable app origin. Do not build custom app-side `redirect_url` values from generated or shared preview URLs, do not add Clerk satellite props unless the Clerk instance is explicitly configured and smoke-tested for those domains, and do not use generated `smartpockets-app-*.vercel.app` URLs as post-login destinations.
 

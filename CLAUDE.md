@@ -8,18 +8,18 @@ This file configures Claude Code behavior for SmartPockets.
 
 Follow the repository instructions in `AGENTS.md`. The most important rules:
 
-1. Before meaningful implementation work, find or create a Linear issue.
-2. Put the Linear issue ID in the branch name. When a PR is explicitly requested/submitted, also put the issue ID in the PR title and PR description.
-3. Use `Fixes <ISSUE-ID>` only when an explicitly requested PR fully completes the issue. Use `Refs <ISSUE-ID>` when partial, exploratory, documentation-only, or related.
-4. Post a Linear comment when starting work, when blocked, and when explicitly opening a PR.
-5. Keep Linear state in sync with reality. The default path is `Fixes <ISSUE-ID>` in the PR body so the GitHub-Linear automation moves the issue to Done on merge — prefer that over manual updates. But when automation didn't fire (a `Refs` magic word was used, an issue bundled multiple PRs, the integration was offline, etc.) and the work is verifiably in `main`, it's fine — and expected — to manually move the issue to Done with a closing comment that cites the merged commit SHA + PR link. Don't mark Done speculatively ("should be done soon") or for partial work; only when the shipped state on `main` matches the issue's acceptance criteria.
-6. Do not submit, open, or merge PRs unless explicitly instructed. The default finish path is local verification plus local Linear-linked commits.
-7. If an issue blocks verification, merge, or deployment of another issue, add the Linear blocker relationship and comment on both issues with the evidence and PR links.
-8. When working a sub-issue, move its parent to In Progress if the parent is still To-do or Backlog, then comment with the active child issue.
+1. Before meaningful implementation work, find or create a GitHub issue (`gh issue list --search "<words>" --state all`, else `gh issue create`). Linear is a read-only archive; never create or change work there.
+2. Name branches `eric/<issue#>-<slug>` (e.g. `eric/42-add-empty-state`). When a PR is explicitly requested/submitted, also link the issue in the PR body.
+3. Use `Fixes #N` only when an explicitly requested PR fully completes the issue. Use `Refs #N` when partial, exploratory, documentation-only, or related.
+4. Comment on the GitHub issue when starting work, when blocked, and when explicitly opening a PR.
+5. Keep issue state in sync with reality. The default path is `Fixes #N` in the PR body so GitHub closes the issue on merge into the default branch — prefer that over manual updates. A stacked PR merging into another branch closes nothing, so check each issue's real state after merge. When the issue didn't close (a `Refs` was used, an issue bundled multiple PRs, the PR merged into a non-default branch, etc.) and the work is verifiably in `main`, it's fine — and expected — to close it by hand with a comment that cites the merged commit SHA + PR link. Don't close speculatively ("should be done soon") or for partial work; only when the shipped state on `main` matches the issue's acceptance criteria.
+6. Do not submit, open, or merge PRs unless explicitly instructed. The default finish path is local verification plus local issue-linked commits.
+7. If an issue blocks verification, merge, or deployment of another issue, note the blocker on both GitHub issues with a comment containing the evidence and PR links.
+8. When working a sub-issue, comment on its parent issue naming the active child issue.
 9. **After modifying any file in `packages/backend/convex/`** (schema, queries, mutations, actions, agent tools), push the updated functions to the dev deployment **before claiming the work is complete or asking the user to test it**. Either keep `bun dev:backend` running in a separate terminal, OR run `cd packages/backend && bunx convex dev --once` as a one-shot deploy. Without this step, the Vercel preview's Convex client (which points at `dev:canny-turtle-982`) will reference functions that don't exist in the deployed backend — surfacing as `Could not find public function for ...` errors at runtime even though the client bundle has the new references compiled in.
 10. **After backend changes**, also run `cd apps/app && bun typecheck` to catch type drift between the two tsconfig strictness levels. The backend's tsconfig and `apps/app`'s shared base config both enable `noUncheckedIndexedAccess`, but other strictness drift may surface only on the app side.
 11. **Parallel sub-agents must run in isolated worktrees.** When dispatching two or more sub-agents at the same time (single message with multiple Agent tool calls), every parallel agent MUST be launched with `isolation: "worktree"`. Sharing one worktree across parallel agents causes destructive `git branch -f` collisions, lost commits, and `HEAD` corruption requiring `git symbolic-ref` recovery. A single sub-agent running alone can use the parent worktree, but the moment you fan out, isolate. See AGENTS.md → Common Pitfalls → Sub-Agent Mistakes for the worktree bootstrap recipe (`.env.local` copy + `bun install`).
-12. When listing or batching Linear issues, exclude **Icebox** status and **`on-hold`** labeled issues unless the user explicitly names them by ID. Icebox = parked; `on-hold` = active but externally blocked. See `AGENTS.md` → Linear + Graphite Work Tracking → Icebox and Deferred Work.
+12. When listing or batching issues, skip any labeled `icebox` or `on-hold` (if those labels are in use; they don't exist in the repo yet) unless the user explicitly names them by number. Icebox = parked; `on-hold` = active but externally blocked. See `AGENTS.md` → Work tracking (GitHub Issues) → Deferred Work.
 
 ## Session Startup
 
@@ -31,7 +31,7 @@ At the start of each session:
 
 ## Investigate Before Asking
 
-Before asking any clarifying question, exhaust the read-only paths that can answer it. Most questions about external state are one tool call away — Vercel CLI (`npx vercel env ls/pull/inspect`), Convex MCP, Linear MCP, Clerk MCP, Plaid MCPs, Graphite MCP, `gh`, Context7 MCP — plus `Read`/`grep`/`find` for the codebase. Ask only what's left after the investigation, and cite where you looked so the user doesn't redo your work.
+Before asking any clarifying question, exhaust the read-only paths that can answer it. Most questions about external state are one tool call away — Vercel CLI (`npx vercel env ls/pull/inspect`), Convex MCP, Clerk MCP, Plaid MCPs, `gh`, Context7 MCP — plus `Read`/`grep`/`find` for the codebase. Ask only what's left after the investigation, and cite where you looked so the user doesn't redo your work.
 
 When pulling secret-bearing data (e.g. `vercel env pull`), write to `/tmp/...`, grep just the non-secret keys you need, and `rm` the file in the same command. Never paste secret values into chat. Deployment names, project slugs, and public URLs are not secrets.
 
@@ -63,7 +63,7 @@ When finishing a session or completing significant work, review TODO.md to ensur
 - Read any file in the codebase
 - Run `bun dev`, `bun build`, `bun typecheck`, `bun lint`
 - Run `git status`, `git log`, `git diff`, `git branch`
-- Create/switch Linear-linked local branches
+- Create/switch issue-linked local branches
 - Stage and commit changes (with proper format)
 - Run Convex dev commands
 
@@ -81,7 +81,7 @@ When finishing a session or completing significant work, review TODO.md to ensur
 
 - Delete database records
 - Changes affecting billing/payments
-- Submit branches through Graphite (`gt submit`) or open/update a PR
+- Open/update a PR (`gh pr create`)
 - Actions that cannot be undone
 
 ## Git Workflow
@@ -101,12 +101,12 @@ Each commit must be:
 
 [optional body]
 
-Refs <ISSUE-ID>
+Refs #<ISSUE#>
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
-Use `Fixes <ISSUE-ID>` instead of `Refs <ISSUE-ID>` only when the PR fully completes the Linear issue.
+Use `Fixes #<ISSUE#>` instead of `Refs #<ISSUE#>` only when the PR fully completes the issue.
 
 ### Commit Types
 
@@ -127,19 +127,17 @@ Commit immediately after:
 - Single bug fixed
 - Single refactor completed
 
-### Stacked PRs with Graphite
+### Branches and PRs
 
-Use Linear-linked branches for implementation tasks. Use Graphite (`gt`) for PR submission and stack management only when the user explicitly asks to submit/open a PR.
+Use issue-linked branches for implementation tasks. Open PRs with `gh pr create` (draft is fine) only when the user explicitly asks to submit/open a PR.
 
-Before creating a branch, confirm the relevant Linear issue ID. Use the Linear-generated branch name when available, or use `<issue-id>-short-description`.
+Before creating a branch, confirm the relevant GitHub issue number and name the branch `eric/<issue#>-<slug>`.
 
 When given a task with multiple logical changes, keep local commits atomic by default. If the user explicitly asks to submit/open PRs for the work:
 1. Break the work into independent, atomic changes that each pass CI on their own
-2. Create a Graphite stack where each PR builds on the previous one
-3. Each PR in the stack should be a single logical unit (one schema change, one component, one API route, etc.)
-4. Every PR in the stack must compile and pass tests independently
-5. Use `gt create <branch-name> -m "description"` for each new layer
-6. Use `gt submit --stack` to submit the entire stack
+2. Where one PR builds on another, name the explicit parent branch/SHA and target the PR at that parent branch (a stacked PR merging into a non-default branch closes no issues; see `AGENTS.md` → Closing issues)
+3. Each PR should be a single logical unit (one schema change, one component, one API route, etc.)
+4. Every PR must compile and pass tests independently
 
 | Rule | Why |
 |------|-----|
@@ -150,23 +148,13 @@ When given a task with multiple logical changes, keep local commits atomic by de
 
 ### PR Links
 
-When referring to a PR in any user-facing output — chat responses, table rows, summaries, Linear comments, status updates — **always** use the Graphite link. **Never include `github.com/.../pull/<N>` URLs** unless the user explicitly asks for the GitHub link.
-
-For this repo, Graphite PR links use:
-
-```
-https://app.graphite.com/github/pr/EricJamesCrow/smartpockets/<PR_NUMBER>
-```
-
-After `gt submit`, use the Graphite URL printed by Graphite in the final response. If a command (`gh pr view`, `gh pr checks`, `gh pr list`, etc.) returns only a GitHub PR number or URL, **convert it to the Graphite URL format above before showing it**. Do not present both — Graphite is the canonical user-facing link, GitHub URLs are for tooling use only (`gh pr` commands consume them but they don't appear in your messages to me).
-
-After opening or updating a PR, comment on the linked Linear issue with the Graphite PR link, summary, verification, known risks, and follow-up work.
+Use normal GitHub PR URLs in user-facing output. After opening or updating a PR, comment on the linked GitHub issue with the PR link, summary, verification, known risks, and follow-up work.
 
 ### Preview Deployments
 
-Only submit/open Graphite PRs when the user explicitly asks for PR submission. Every submitted Graphite PR should have a working Vercel preview for `apps/app` before handoff.
+Only submit/open PRs when the user explicitly asks for PR submission. Every submitted PR should have a working Vercel preview for `apps/app` before handoff.
 
-After `gt submit`, verify the PR checks and preview deployment:
+After `gh pr create`/push, verify the PR checks and preview deployment:
 
 ```bash
 gh pr checks <PR_NUMBER>
@@ -179,11 +167,11 @@ npx vercel inspect <DEPLOYMENT_ID_OR_URL> --logs
 ```
 
 When summarizing submitted work, include:
-- Graphite PR link first
+- PR link first
 - Vercel `smartpockets-app` preview URL or Vercel deployment link second
 - Any failed checks and the exact inspect command needed to debug them
 
-Vercel branch preview URLs are tied to the Git branch and should track the latest commit on that Graphite branch. Do not hand-compose the final user-facing preview URL unless Vercel printed or commented it; prefer the URL from Vercel checks/comments.
+Vercel branch preview URLs are tied to the Git branch and should track the latest commit on that branch. Do not hand-compose the final user-facing preview URL unless Vercel printed or commented it; prefer the URL from Vercel checks/comments.
 
 Generated Vercel preview URLs are for build/check verification. They are not Clerk auth return targets.
 
@@ -266,7 +254,7 @@ Skip plan mode for:
 For tasks over 10 minutes:
 1. Break into smaller commits
 2. Commit working checkpoints
-3. Stop after local verification and local commits unless the user explicitly asks for Graphite PR submission
+3. Stop after local verification and local commits unless the user explicitly asks for PR submission
 
 ### Code Style
 
@@ -323,11 +311,3 @@ claude mcp add plaid-dashboard --url https://api.dashboard.plaid.com/mcp/sse
 Provides: diagnose live Plaid items, Link analytics, API usage metrics
 
 > **Note:** Uses OAuth authentication via Plaid Dashboard. Use for troubleshooting real bank connection issues.
-
-### Graphite MCP (Stacked PRs)
-
-```bash
-claude mcp add graphite -- gt mcp
-```
-
-Provides: stacked PR creation, branch management, stack submission and navigation
