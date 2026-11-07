@@ -633,3 +633,7 @@ python3 -c "import os; print(os.environ['TEST_LOGIN_PASSWORD'])"
 ```
 
 The test account has "Bypass Client Trust" enabled in the Clerk dashboard. This is a fresh test account with 0 credit cards — it will show empty states for cards, wallets, and transactions.
+
+## Agent skills and plugins
+
+Plugin enabled in committed `.claude/settings.json`: `vercel@claude-plugins-official`. Committed skills live in `.agents/skills/` (symlinked from `.claude/skills/`).
