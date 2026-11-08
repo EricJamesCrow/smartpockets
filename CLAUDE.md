@@ -8,53 +8,7 @@ This file configures Claude Code behavior for SmartPockets.
 
 Follow the repository instructions in `AGENTS.md`. The most important rules:
 
-1. Before meaningful implementation work, find or create a GitHub issue (`gh issue list --search "<words>" --state all`, else `gh issue create`). Linear is a read-only archive; never create or change work there.
-2. Name branches `eric/<issue#>-<slug>` (e.g. `eric/42-add-empty-state`). When a PR is explicitly requested/submitted, also link the issue in the PR body.
-3. Use `Fixes #N` only when an explicitly requested PR fully completes the issue. Use `Refs #N` when partial, exploratory, documentation-only, or related.
-4. Comment on the GitHub issue when starting work, when blocked, and when explicitly opening a PR.
-5. Keep issue state in sync with reality. The default path is `Fixes #N` in the PR body so GitHub closes the issue on merge into the default branch — prefer that over manual updates. A stacked PR merging into another branch closes nothing, so check each issue's real state after merge. When the issue didn't close (a `Refs` was used, an issue bundled multiple PRs, the PR merged into a non-default branch, etc.) and the work is verifiably in `main`, it's fine — and expected — to close it by hand with a comment that cites the merged commit SHA + PR link. Don't close speculatively ("should be done soon") or for partial work; only when the shipped state on `main` matches the issue's acceptance criteria.
-6. Do not submit, open, or merge PRs unless explicitly instructed. The default finish path is local verification plus local issue-linked commits.
-7. If an issue blocks verification, merge, or deployment of another issue, note the blocker on both GitHub issues with a comment containing the evidence and PR links.
-8. When working a sub-issue, comment on its parent issue naming the active child issue.
-9. **After modifying any file in `packages/backend/convex/`** (schema, queries, mutations, actions, agent tools), push the updated functions to the dev deployment **before claiming the work is complete or asking the user to test it**. Either keep `bun dev:backend` running in a separate terminal, OR run `cd packages/backend && bunx convex dev --once` as a one-shot deploy. Without this step, the Vercel preview's Convex client (which points at `dev:canny-turtle-982`) will reference functions that don't exist in the deployed backend — surfacing as `Could not find public function for ...` errors at runtime even though the client bundle has the new references compiled in.
-10. **After backend changes**, also run `cd apps/app && bun typecheck` to catch type drift between the two tsconfig strictness levels. The backend's tsconfig and `apps/app`'s shared base config both enable `noUncheckedIndexedAccess`, but other strictness drift may surface only on the app side.
-11. **Parallel sub-agents must run in isolated worktrees.** When dispatching two or more sub-agents at the same time (single message with multiple Agent tool calls), every parallel agent MUST be launched with `isolation: "worktree"`. Sharing one worktree across parallel agents causes destructive `git branch -f` collisions, lost commits, and `HEAD` corruption requiring `git symbolic-ref` recovery. A single sub-agent running alone can use the parent worktree, but the moment you fan out, isolate. See AGENTS.md → Common Pitfalls → Sub-Agent Mistakes for the worktree bootstrap recipe (`.env.local` copy + `bun install`).
-12. When listing or batching issues, skip any labeled `icebox` or `on-hold` (if those labels are in use; they don't exist in the repo yet) unless the user explicitly names them by number. Icebox = parked; `on-hold` = active but externally blocked. See `AGENTS.md` → Work tracking (GitHub Issues) → Deferred Work.
-
-## Session Startup
-
-At the start of each session:
-1. Check current branch: `git branch --show-current`
-2. Sync with remote: `git fetch origin`
-3. Review recent commits: `git log --oneline -10`
-4. Read `AGENTS.md` for full project context
-
-## Investigate Before Asking
-
-Before asking any clarifying question, exhaust the read-only paths that can answer it. Most questions about external state are one tool call away — Vercel CLI (`npx vercel env ls/pull/inspect`), Convex MCP, Clerk MCP, Plaid MCPs, `gh`, Context7 MCP — plus `Read`/`grep`/`find` for the codebase. Ask only what's left after the investigation, and cite where you looked so the user doesn't redo your work.
-
-When pulling secret-bearing data (e.g. `vercel env pull`), write to `/tmp/...`, grep just the non-secret keys you need, and `rm` the file in the same command. Never paste secret values into chat. Deployment names, project slugs, and public URLs are not secrets.
-
-See `AGENTS.md` → "Investigation Discipline" for the full read-path table.
-
-## Task Tracking
-
-**Always update `TODO.md` when completing tasks:**
-- Check off completed items: `- [ ]` → `- [x]`
-- Remove items that are no longer relevant
-- Add new tasks discovered during work
-
-When finishing a session or completing significant work, review TODO.md to ensure it reflects current state.
-
-## Quick Reference
-
-| Command | Purpose |
-|---------|---------|
-| `bun dev` | Start all workspaces |
-| `bun dev:app` | Start app only (localhost:3000) |
-| `bun dev:backend` | Start Convex with logs |
-| `bun build` | Production build |
-| `bun typecheck` | Type check all workspaces |
+1. **After backend changes**, also run `cd apps/app && bun typecheck` to catch type drift between the two tsconfig strictness levels. The backend's tsconfig and `apps/app`'s shared base config both enable `noUncheckedIndexedAccess`, but other strictness drift may surface only on the app side.
 
 ## Agent Permissions
 
@@ -120,18 +74,7 @@ Use `Fixes #<ISSUE#>` instead of `Refs #<ISSUE#>` only when the PR fully complet
 | `chore` | Maintenance |
 | `test` | Tests |
 
-### Commit Frequency
-
-Commit immediately after:
-- Single component added
-- Single bug fixed
-- Single refactor completed
-
 ### Branches and PRs
-
-Use issue-linked branches for implementation tasks. Open PRs with `gh pr create` (draft is fine) only when the user explicitly asks to submit/open a PR.
-
-Before creating a branch, confirm the relevant GitHub issue number and name the branch `eric/<issue#>-<slug>`.
 
 When given a task with multiple logical changes, keep local commits atomic by default. If the user explicitly asks to submit/open PRs for the work:
 1. Break the work into independent, atomic changes that each pass CI on their own
@@ -146,61 +89,9 @@ When given a task with multiple logical changes, keep local commits atomic by de
 | Tests go in the same PR as the code they test | Atomic logical units |
 | Max ~200-400 lines changed per PR in the stack | Keep reviews fast |
 
-### PR Links
-
-Use normal GitHub PR URLs in user-facing output. After opening or updating a PR, comment on the linked GitHub issue with the PR link, summary, verification, known risks, and follow-up work.
-
-### Preview Deployments
-
-Only submit/open PRs when the user explicitly asks for PR submission. Every submitted PR should have a working Vercel preview for `apps/app` before handoff.
-
-After `gh pr create`/push, verify the PR checks and preview deployment:
-
-```bash
-gh pr checks <PR_NUMBER>
-```
-
-If `Vercel – smartpockets-app` fails, inspect the deployment before reporting success:
-
-```bash
-npx vercel inspect <DEPLOYMENT_ID_OR_URL> --logs
-```
-
-When summarizing submitted work, include:
-- PR link first
-- Vercel `smartpockets-app` preview URL or Vercel deployment link second
-- Any failed checks and the exact inspect command needed to debug them
-
-Vercel branch preview URLs are tied to the Git branch and should track the latest commit on that branch. Do not hand-compose the final user-facing preview URL unless Vercel printed or commented it; prefer the URL from Vercel checks/comments.
-
-Generated Vercel preview URLs are for build/check verification. They are not Clerk auth return targets.
-
-For auth smoke tests, use the shared stable preview domains:
-- `preview.smartpockets.com` for `smartpockets-web`
-- `app.preview.smartpockets.com` for `smartpockets-app`
-
-After a PR/preview deployment exists, or when the user explicitly asks for preview-domain testing, ask: "Do you want me to point the shared preview domains at this branch so you can manually test the changes?"
-
-If the user says yes, inspect and report the current domain mappings first, then point only the shared preview domains at the selected branch/deployments. Prefer Vercel project domain `gitBranch` assignment; fall back to `vercel alias set <deployment-url> <domain> --scope crow-commerce`. Never change production domains or DNS records. After updating, verify project, branch/deployment, commit SHA, and the `preview.smartpockets.com` sign-in flow returning to `app.preview.smartpockets.com`.
-
 ### Clerk In Previews
 
-Never point Vercel Preview deployments at production Clerk keys or production Convex.
-
-For Vercel Preview environment variables, use a non-production auth/data stack:
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...`
-- `CLERK_SECRET_KEY=sk_test_...`
-- `NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://<dev-clerk-domain>.clerk.accounts.dev`
-- `NEXT_PUBLIC_APP_ORIGIN=https://app.preview.smartpockets.com` or `NEXT_PUBLIC_APP_URL=https://app.preview.smartpockets.com`
-- `NEXT_PUBLIC_MARKETING_URL=https://preview.smartpockets.com`
-- `NEXT_PUBLIC_CONVEX_URL=https://<dev-or-staging-convex>.convex.cloud`
-- `CONVEX_DEPLOYMENT=dev:<deployment>` or leave unset; never `prod:*`
-
-The error `Clerk: Production Keys are only allowed for domain "smartpockets.com"` means a non-production origin, usually a Vercel preview URL, is using production Clerk keys. Fix the Vercel Preview environment variables and redeploy. `apps/app/scripts/vercel-build.sh` already blocks Preview builds from using `CONVEX_DEPLOYMENT=prod:*`; keep that guardrail intact.
-
-Only use production Clerk keys on previews if the preview is hosted on an approved `smartpockets.com` subdomain and intentionally shares production auth settings/data. That is not the default workflow.
-
-Preview auth should use the shared `https://preview.smartpockets.com` auth host and force post-login redirects to the configured stable app origin. Do not build custom app-side `redirect_url` values from generated or shared preview URLs, do not add Clerk satellite props unless the Clerk instance is explicitly configured and smoke-tested for those domains, and do not use generated `smartpockets-app-*.vercel.app` URLs as post-login destinations.
+`apps/app/scripts/vercel-build.sh` already blocks Preview builds from using `CONVEX_DEPLOYMENT=prod:*`; keep that guardrail intact.
 
 ### Plaid In Previews
 
@@ -224,54 +115,6 @@ The actual Plaid env value usually lives in the Convex deployment's env vars, no
 | `--no-verify` | Skips safety checks |
 | Amend after hook failure | Hook failure = no commit happened |
 
-## Claude Code-Specific Rules
-
-### When to Ask vs Proceed
-
-| Situation | Action |
-|-----------|--------|
-| Clear bug fix | Proceed |
-| Clear feature request | Proceed |
-| Ambiguous requirements | Ask |
-| Multiple valid approaches | Ask |
-| Affects security/payments | Ask |
-| Deletes user data | Ask |
-
-### Plan Mode
-
-Use plan mode for:
-- Multi-file refactors
-- New features touching 3+ files
-- Architecture changes
-
-Skip plan mode for:
-- Single file fixes
-- Small UI tweaks
-- Documentation updates
-
-### Long-Running Tasks
-
-For tasks over 10 minutes:
-1. Break into smaller commits
-2. Commit working checkpoints
-3. Stop after local verification and local commits unless the user explicitly asks for PR submission
-
-### Code Style
-
-- Use UntitledUI components (never create duplicates)
-- Use `cx()` for class merging
-- Keep components as RSC unless interactivity needed
-- Convex-first: no Next.js API routes
-
-## See Also
-
-| Document | Contains |
-|----------|----------|
-| `AGENTS.md` | Architecture, patterns, schema, security |
-| `docs/ARCHITECTURE.md` | Detailed system design |
-| `docs/email-infrastructure-roadmap.md` | Email system status |
-| `TODO.md` | Current task list |
-
 ## MCP Servers
 
 Configure in Claude Code for live schema/function access.
@@ -287,10 +130,10 @@ Provides: schema inspection, function execution, logs, env vars
 ### Clerk MCP
 
 ```bash
-claude mcp add clerk -- npx -y @clerk/agent-toolkit -p local-mcp
+claude mcp add clerk -- npx -y mcp-remote https://mcp.clerk.com/mcp
 ```
 
-Provides: user management, organization operations
+Provides: user management
 
 ### Plaid Sandbox MCP (Development)
 
@@ -311,7 +154,3 @@ claude mcp add plaid-dashboard --url https://api.dashboard.plaid.com/mcp/sse
 Provides: diagnose live Plaid items, Link analytics, API usage metrics
 
 > **Note:** Uses OAuth authentication via Plaid Dashboard. Use for troubleshooting real bank connection issues.
-
-## Agent skills and plugins
-
-Plugin enabled in committed `.claude/settings.json`: `vercel@claude-plugins-official`. Committed skills live in `.agents/skills/` (symlinked from `.claude/skills/`).
