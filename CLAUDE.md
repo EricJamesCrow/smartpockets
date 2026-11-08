@@ -311,3 +311,7 @@ claude mcp add plaid-dashboard --url https://api.dashboard.plaid.com/mcp/sse
 Provides: diagnose live Plaid items, Link analytics, API usage metrics
 
 > **Note:** Uses OAuth authentication via Plaid Dashboard. Use for troubleshooting real bank connection issues.
+
+## Agent skills and plugins
+
+Plugin enabled in committed `.claude/settings.json`: `vercel@claude-plugins-official`. Committed skills live in `.agents/skills/` (symlinked from `.claude/skills/`).
