@@ -21,10 +21,6 @@
     "plaid-dashboard": {
       "type": "sse",
       "url": "https://api.dashboard.plaid.com/mcp/sse"
-    },
-    "graphite": {
-      "command": "gt",
-      "args": ["mcp"]
     }
   }
 }

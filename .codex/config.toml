@@ -13,7 +13,3 @@ args = [
     "mcp",
     "start",
 ]
-
-[mcp_servers.graphite]
-command = "gt"
-args = ["mcp"]
