@@ -34,7 +34,7 @@ Follow the repository instructions in `AGENTS.md`. The most important rules:
 ### Always Ask First
 
 - Delete database records
-- Changes affecting billing/payments
+- Changes affecting security or billing/payments
 - Open/update a PR (`gh pr create`)
 - Actions that cannot be undone
 
