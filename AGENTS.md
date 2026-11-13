@@ -43,8 +43,8 @@ Created from AI coding session.
 ```
 
 The issue number must appear in:
-- Branch name: `eric/<issue#>-<slug>` (for example, `eric/42-add-empty-state`). Branches created before 2026-10-29 used `crowdev-<#>-<slug>`.
-- When a PR is explicitly requested/submitted, PR title: a plain descriptive title (past PRs used `CROWDEV-### <description>`).
+- Branch name: `eric/<issue#>-<slug>` (for example, `eric/42-add-empty-state`).
+- When a PR is explicitly requested/submitted, PR title: a plain descriptive title.
 - When a PR is explicitly requested/submitted, PR body: use `Fixes #N` only when the PR fully completes the issue; use `Refs #N` when the PR is partial, exploratory, documentation-only, or has follow-up work.
 
 Comment on the GitHub issue when:
@@ -370,16 +370,9 @@ bun install
 
 The cached `node_modules` from the parent worktree is NOT shared — each worktree gets its own. Skipping `bun install` will surface as missing-module errors at typecheck or build time.
 
-When you want all the parallel sub-agents to land on the same eventual stack, give each one an explicit `parent commit SHA` or parent branch name to branch from. Don't leave them to guess; otherwise they'll each fork off `main` and their changes will collide at consolidation time.
-
 #### Audit scope discipline
 
 When you ask a sub-agent (or yourself) to "audit X for issue Y", **enumerate every surface in scope by name** before any code reads happen. Vague audits miss surfaces.
-
-Pattern that has failed twice in this codebase:
-
-1. CROWDEV-348/CROWDEV-349 (search merchants / get plaid health raw-text dumps): the original fix patched only `searchMerchants` because the audit was scoped to "tool-result components", and `getPlaidHealth` was overlooked despite having the same JSON-dump bug.
-2. CROWDEV-366/CROWDEV-368/CROWDEV-369 (Plaid sign convention): the original fix patched only React tool-result components because the audit was scoped to "where amounts are displayed in the UI". It missed (a) model-emitted markdown tables, (b) model-emitted prose, (c) merchant aggregation totals in `searchMerchants`, (d) the external MCP `MCPTransaction` payload. Each gap took its own follow-up PR.
 
 Pattern that works:
 
@@ -535,7 +528,6 @@ Managed by `@crowdevelopment/convex-plaid` — query via component API:
 | `CLAUDE.md` | Claude Code-specific behavior (git, permissions, MCP server setup) |
 | `ARCHITECTURE.md` | Next.js/React standards, Convex Ents patterns, Plaid architecture, Security requirements |
 | `docs/ARCHITECTURE.md` | High-level system architecture overview |
-| `docs/email-infrastructure-roadmap.md` | Email system status |
 | `packages/backend/convex/schema.ts` | Full schema definition |
 
 ## Cursor Cloud specific instructions
@@ -602,7 +594,7 @@ This Python approach is necessary because secret values are redacted by the Clou
 |-------|---------|
 | Lint | `bun lint` |
 | Typecheck | `bun typecheck` |
-| Backend unit tests | `cd packages/backend && npx vitest run --typecheck` |
+| Backend unit tests | `cd packages/backend && bunx vitest run --typecheck` |
 | App-only typecheck | `cd apps/app && bun typecheck` |
 
 ### Gotchas
@@ -610,7 +602,6 @@ This Python approach is necessary because secret values are redacted by the Clou
 - **bun.lock version mismatch**: if a local or cloud Bun version cannot read the committed `bun.lock`, it may warn `Unknown lockfile version` and regenerate dependency resolution. Do not commit a regenerated `bun.lock` unless the task is explicitly updating the package manager/lockfile and Vercel/local Bun versions have been verified together. If `bun.lock` is modified accidentally, revert it before committing: `git checkout -- bun.lock`.
 - **Turbo lockfile warning**: Turborepo may warn about `Could not resolve workspaces` from `bun.lock` format. This does not affect task execution.
 - **Convex deploy key is `preview:` type**: The `CONVEX_DEPLOY_KEY` secret is a preview deploy key, which means `bunx convex dev` and `bunx convex dev --once` will **not work** (they error with "Use `npx convex deploy` to use preview deployments"). Instead, push backend changes with: `cd packages/backend && bunx convex deploy --preview-name main --yes`. This creates/reuses a preview deployment. The preview deployment URL (printed at the end of the deploy output) must match `NEXT_PUBLIC_CONVEX_URL` in `.env.local` for the app to connect. If the URLs don't match, update `.env.local` and restart the app.
-- **Backend changes must be deployed before testing**: Any edit under `packages/backend/convex/` is not visible until pushed. Run `cd packages/backend && bunx convex deploy --preview-name main --yes` after changes.
 - **No git hooks**: The repo has no pre-commit or pre-push hooks (no `.husky/`, no `.pre-commit-config.yaml`).
 - **Auth flow**: Unauthenticated requests to `localhost:3000` redirect to `localhost:3001` (marketing site). Sign-in/sign-up is via Clerk UI on the marketing site, which redirects back to `localhost:3000` after auth. Both `bun dev:app` and `bun dev:web` must be running for the full sign-in flow.
 - **Secret redaction**: Shell commands like `printenv`, `echo $VAR`, and even `grep` redact secret values in Cloud Agent VMs. Always use `python3 -c "import os; ..."` to write secrets into files.
